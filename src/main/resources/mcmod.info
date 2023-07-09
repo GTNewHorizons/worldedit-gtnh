@@ -1,21 +1,21 @@
-{
-	"modListVersion": 2,
-	"modList": [{
-		"modid": "${modId}",
-		"name": "${modName}",
-		"description": "An example mod for Minecraft 1.7.10 with Forge focused on a stable setup.",
-		"version": "${modVersion}",
-		"mcversion": "${minecraftVersion}",
-		"url": "https://github.com/SinTh0r4s/MyMod",
-		"updateUrl": "",
-		"authorList": ["SinTho0r4s"],
-		"credits": "",
-		"logoFile": "",
-		"screenshots": [],
-		"parent": "",
-		"requiredMods": [],
-		"dependencies": [],
-		"dependants": [],
-		"useDependencyInformation": true
-	}]
-}
+[{
+    "modid": "WorldEdit",
+    "name": "WorldEdit",
+    "description": "WorldEdit is an easy-to-use in-game world editor for Minecraft, supporting both single player and multiplayer.",
+    "version": "${internalVersion}",
+    "mcversion": "${mcVersion}",
+    "url": "http://wiki.sk89q.com/wiki/WorldEdit",
+    "updateUrl": "",
+    "authors": [ "sk89q", "wizjany", "TomyLobo" ],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "requiredMods": [
+        "Forge@[${forgeVersion},)"
+    ],
+    "dependencies": [
+        "Forge@[${forgeVersion},)",
+        "ForgeMultipart"
+    ],
+    "dependants": []
+}]
