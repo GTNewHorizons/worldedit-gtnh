@@ -39,13 +39,9 @@ import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
-import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
-import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
-import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
 import com.sk89q.worldedit.internal.LocalWorldAdapter;
 
 import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.Mod.Instance;
@@ -82,7 +78,6 @@ public class ForgeWorldEdit {
     private ForgePlatform platform;
     private ForgeConfiguration config;
     private File workingDir;
-    private ForgeMultipartCompat compat = new NoForgeMultipartCompat();
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -93,10 +88,6 @@ public class ForgeWorldEdit {
 
         config = new ForgeConfiguration(this);
         config.load();
-
-        if (Loader.isModLoaded("ForgeMultipart")) {
-            compat = new ForgeMultipartExistsCompat();
-        }
 
         FMLCommonHandler.instance()
             .bus()
@@ -288,10 +279,6 @@ public class ForgeWorldEdit {
      */
     public File getWorkingDir() {
         return this.workingDir;
-    }
-
-    public ForgeMultipartCompat getFMPCompat() {
-        return compat;
     }
 
     /**
