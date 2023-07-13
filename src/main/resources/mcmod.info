@@ -11,6 +11,8 @@
     "logoFile": "",
     "screenshots": [],
     "requiredMods": [],
-    "dependencies": [],
+    "dependencies": [
+        "ForgeMultipart"
+    ],
     "dependants": []
 }]
