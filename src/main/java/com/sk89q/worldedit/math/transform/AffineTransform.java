@@ -237,6 +237,53 @@ public class AffineTransform implements Transform {
         return concatenate(new AffineTransform(cot, -sit, 0, 0, sit, cot, 0, 0, 0, 0, 1, 0));
     }
 
+    public Vector getRotations() {
+        Vector scale = getScale();
+
+        double angleX, angleY, angleZ;
+        if (m20 == 1) {
+            angleY = -Math.PI / 2;
+            angleX = Math.atan2(-m01 / scale.getX(), -m02 / scale.getX());
+            angleZ = 0;
+        } else if (m20 == -1) {
+            angleY = Math.PI / 2;
+            angleX = Math.atan2(m01 / scale.getX(), m02 / scale.getX());
+            angleZ = 0;
+        } else {
+            angleY = -Math.asin(m20 / scale.getX());
+            angleX = Math.atan2(m21 / scale.getY() / Math.cos(angleY), m22 / scale.getZ() / Math.cos(angleY));
+            angleZ = Math.atan2(m10 / scale.getX() / Math.cos(angleY), m00 / scale.getX() / Math.cos(angleY));
+
+            double angleY2 = Math.PI - angleY;
+            double angleX2 = Math.atan2(m21 / Math.cos(angleY2), m22 / Math.cos(angleY2));
+            double angleZ2 = Math.atan2(m10 / Math.cos(angleY2), m00 / Math.cos(angleY2));
+
+            if (new Vector(angleX, angleY, angleZ).lengthSq() > new Vector(angleX2, angleY2, angleZ2).lengthSq()) {
+                // Both X,Y,Z and X2,Y2,Z2 are valid solutions
+                // so use the one that has the least total changes.
+                angleX = angleX2;
+                angleY = angleY2;
+                angleZ = angleZ2;
+            }
+        }
+
+        angleX = Math.toDegrees(angleX) % 360;
+        angleY = Math.toDegrees(angleY) % 360;
+        angleZ = Math.toDegrees(angleZ) % 360;
+
+        if (angleX < 0) {
+            angleX += 360;
+        }
+        if (angleY < 0) {
+            angleY += 360;
+        }
+        if (angleZ < 0) {
+            angleZ += 360;
+        }
+
+        return new Vector(angleX, angleY, angleZ);
+    }
+
     public AffineTransform scale(double s) {
         return scale(s, s, s);
     }
@@ -247,6 +294,14 @@ public class AffineTransform implements Transform {
 
     public AffineTransform scale(Vector vec) {
         return scale(vec.getX(), vec.getY(), vec.getZ());
+    }
+
+    public Vector getScale() {
+        double scaleX = Math.sqrt(m00 * m00 + m10 * m10 + m20 * m20);
+        double scaleY = Math.sqrt(m01 * m01 + m11 * m11 + m21 * m21);
+        double scaleZ = Math.sqrt(m02 * m02 + m12 * m12 + m22 * m22);
+
+        return new Vector(scaleX, scaleY, scaleZ);
     }
 
     @Override
@@ -273,7 +328,7 @@ public class AffineTransform implements Transform {
     @Override
     public String toString() {
         return String.format(
-            "Affine[%g %g %g %g, %g %g %g %g, %g %g %g %g]}",
+            "Affine[%g %g %g %g, %g %g %g %g, %g %g %g %g]",
             m00,
             m01,
             m02,

@@ -16,6 +16,9 @@
 
 package com.sk89q.worldedit.world.registry;
 
+import com.sk89q.worldedit.extent.transform.BlockTransformHook;
+import com.sk89q.worldedit.extent.transform.BlockTransformHooks;
+
 /**
  * An implementation of {@link WorldData} that uses legacy numeric IDs and
  * a built-in block database.
@@ -27,6 +30,7 @@ public class LegacyWorldData implements WorldData {
     private final NullItemRegistry itemRegistry = new NullItemRegistry();
     private final NullEntityRegistry entityRegistry = new NullEntityRegistry();
     private final NullBiomeRegistry biomeRegistry = new NullBiomeRegistry();
+    protected final BlockTransformHooks blockTransformHooks = new BlockTransformHooks();
 
     /**
      * Create a new instance.
@@ -51,6 +55,15 @@ public class LegacyWorldData implements WorldData {
     @Override
     public BiomeRegistry getBiomeRegistry() {
         return biomeRegistry;
+    }
+
+    @Override
+    public BlockTransformHook getBlockTransformHook() {
+        return blockTransformHooks;
+    }
+
+    public void addBlockTransformHook(BlockTransformHook hook) {
+        blockTransformHooks.addHook(hook);
     }
 
     /**

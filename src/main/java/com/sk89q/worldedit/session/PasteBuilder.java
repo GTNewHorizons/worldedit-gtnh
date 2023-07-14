@@ -90,7 +90,8 @@ public class PasteBuilder {
         BlockTransformExtent extent = new BlockTransformExtent(
             clipboard,
             transform,
-            targetWorldData.getBlockRegistry());
+            targetWorldData.getBlockRegistry(),
+            targetWorldData.getBlockTransformHook());
         ForwardExtentCopy copy = new ForwardExtentCopy(
             extent,
             clipboard.getRegion(),

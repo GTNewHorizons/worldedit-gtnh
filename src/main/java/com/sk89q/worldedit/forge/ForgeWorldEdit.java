@@ -39,6 +39,7 @@ import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
+import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
 import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
@@ -96,6 +97,10 @@ public class ForgeWorldEdit {
 
         if (Loader.isModLoaded("ForgeMultipart")) {
             compat = new ForgeMultipartExistsCompat();
+        }
+        if (Loader.isModLoaded("ArchitectureCraft")) {
+            ForgeWorldData.getInstance()
+                .addBlockTransformHook(new ArchitectureCraftBlockTransformHook());
         }
 
         FMLCommonHandler.instance()

@@ -42,6 +42,7 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
 
     private final Transform transform;
     private final BlockRegistry blockRegistry;
+    private final BlockTransformHook transformHook;
 
     /**
      * Create a new instance.
@@ -49,12 +50,15 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
      * @param extent        the extent
      * @param blockRegistry the block registry used for block direction data
      */
-    public BlockTransformExtent(Extent extent, Transform transform, BlockRegistry blockRegistry) {
+    public BlockTransformExtent(Extent extent, Transform transform, BlockRegistry blockRegistry,
+        BlockTransformHook transformHook) {
         super(extent);
         checkNotNull(transform);
         checkNotNull(blockRegistry);
+        checkNotNull(transformHook);
         this.transform = transform;
         this.blockRegistry = blockRegistry;
+        this.transformHook = transformHook;
     }
 
     /**
@@ -74,8 +78,9 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
      * @return the same block
      */
     private BaseBlock transformBlock(BaseBlock block, boolean reverse) {
-        transform(block, reverse ? transform.inverse() : transform, blockRegistry);
-        return block;
+        Transform useTransform = reverse ? transform.inverse() : transform;
+        block = transform(block, useTransform, blockRegistry);
+        return transformHook.transformBlock(block, useTransform);
     }
 
     @Override
