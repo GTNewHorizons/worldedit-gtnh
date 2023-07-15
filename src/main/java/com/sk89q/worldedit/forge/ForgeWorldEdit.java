@@ -63,7 +63,12 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 /**
  * The Forge implementation of WorldEdit.
  */
-@Mod(modid = ForgeWorldEdit.MOD_ID, name = "WorldEdit", version = "%VERSION%", acceptableRemoteVersions = "*")
+@Mod(
+    modid = ForgeWorldEdit.MOD_ID,
+    name = "WorldEdit",
+    version = "%VERSION%",
+    acceptableRemoteVersions = "*",
+    dependencies = "after:ForgeMultipart;after:ArchitectureCraft")
 public class ForgeWorldEdit {
 
     public static Logger logger;
@@ -97,6 +102,8 @@ public class ForgeWorldEdit {
 
         if (Loader.isModLoaded("ForgeMultipart")) {
             compat = new ForgeMultipartExistsCompat();
+            ForgeWorldData.getInstance()
+                .addBlockTransformHook((ForgeMultipartExistsCompat) compat);
         }
         if (Loader.isModLoaded("ArchitectureCraft")) {
             ForgeWorldData.getInstance()

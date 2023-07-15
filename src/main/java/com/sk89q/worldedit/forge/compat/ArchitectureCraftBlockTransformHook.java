@@ -109,5 +109,4 @@ public class ArchitectureCraftBlockTransformHook implements BlockTransformHook {
         }
         return -1;
     }
-
 }

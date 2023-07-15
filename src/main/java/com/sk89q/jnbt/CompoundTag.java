@@ -448,6 +448,8 @@ public final class CompoundTag extends Tag {
             .append(" entries\r\n{\r\n");
         for (Map.Entry<String, Tag> entry : value.entrySet()) {
             bldr.append("   ")
+                .append(entry.getKey())
+                .append(" = ")
                 .append(
                     entry.getValue()
                         .toString()
