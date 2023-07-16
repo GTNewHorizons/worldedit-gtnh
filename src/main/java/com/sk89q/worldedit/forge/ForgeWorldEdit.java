@@ -40,6 +40,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
+import com.sk89q.worldedit.forge.compat.CarpentersBlocksBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
 import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
@@ -68,7 +69,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
     name = "WorldEdit",
     version = "%VERSION%",
     acceptableRemoteVersions = "*",
-    dependencies = "after:ForgeMultipart;after:ArchitectureCraft")
+    dependencies = "after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
 public class ForgeWorldEdit {
 
     public static Logger logger;
@@ -108,6 +109,10 @@ public class ForgeWorldEdit {
         if (Loader.isModLoaded("ArchitectureCraft")) {
             ForgeWorldData.getInstance()
                 .addBlockTransformHook(new ArchitectureCraftBlockTransformHook());
+        }
+        if (Loader.isModLoaded("CarpentersBlocks")) {
+            ForgeWorldData.getInstance()
+                .addBlockTransformHook(new CarpentersBlocksBlockTransformHook());
         }
 
         FMLCommonHandler.instance()
