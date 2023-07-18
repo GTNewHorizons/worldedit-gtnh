@@ -18,6 +18,9 @@ package com.sk89q.worldedit.session.request;
 
 import javax.annotation.Nullable;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.world.World;
@@ -27,13 +30,9 @@ import com.sk89q.worldedit.world.World;
  */
 public final class Request {
 
-    private static final ThreadLocal<Request> threadLocal = new ThreadLocal<Request>() {
-
-        @Override
-        protected Request initialValue() {
-            return new Request();
-        }
-    };
+    private static final LoadingCache<Thread, Request> THREAD_TO_REQUEST = CacheBuilder.newBuilder()
+        .weakKeys()
+        .build(CacheLoader.from(Request::new));
 
     private @Nullable World world;
     private @Nullable LocalSession session;
@@ -101,13 +100,13 @@ public final class Request {
      * @return the current request
      */
     public static Request request() {
-        return threadLocal.get();
+        return THREAD_TO_REQUEST.getUnchecked(Thread.currentThread());
     }
 
     /**
      * Reset the current request and clear all fields.
      */
     public static void reset() {
-        threadLocal.remove();
+        THREAD_TO_REQUEST.invalidate(Thread.currentThread());
     }
 }
