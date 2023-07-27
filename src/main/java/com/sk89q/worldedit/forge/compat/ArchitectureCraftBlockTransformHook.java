@@ -92,10 +92,11 @@ public class ArchitectureCraftBlockTransformHook implements BlockTransformHook {
             } else {
                 int idx = rotationIndex(z_rotations, side);
                 side = z_rotations[(idx + 4 - ticks) % 4];
-                turn = (byte) ((turn - ticks) % 4);
+                turn = (byte) ((turn + 4 - ticks) % 4);
             }
         }
         CompoundTagBuilder newNbt = nbt.createBuilder();
+        turn = (byte) ((turn + 4) % 4); // make sure turn is positive
         newNbt.putByte("side", side);
         newNbt.putByte("turn", turn);
         return new BaseBlock(block.getId(), block.getData(), newNbt.build());
