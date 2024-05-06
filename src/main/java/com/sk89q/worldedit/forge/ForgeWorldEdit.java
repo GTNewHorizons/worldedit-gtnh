@@ -192,43 +192,46 @@ public class ForgeWorldEdit {
         if (event.useItem == Result.DENY || event.entity.worldObj.isRemote) return;
 
         WorldEdit we = WorldEdit.getInstance();
-        ForgePlayer player = wrap((EntityPlayerMP) event.entityPlayer);
-        ForgeWorld world = getWorld(event.entityPlayer.worldObj);
+        if (event.entityPlayer instanceof EntityPlayerMP) {
+            EntityPlayerMP playerMP = (EntityPlayerMP) event.entityPlayer; // Safe cast
+            ForgePlayer player = wrap(playerMP);
+            ForgeWorld world = getWorld(playerMP.worldObj);
 
-        Action action = event.action;
-        switch (action) {
-            case LEFT_CLICK_BLOCK: {
-                WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
+            Action action = event.action;
+            switch (action) {
+                case LEFT_CLICK_BLOCK: {
+                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
 
-                if (we.handleBlockLeftClick(player, pos)) {
-                    event.setCanceled(true);
+                    if (we.handleBlockLeftClick(player, pos)) {
+                        event.setCanceled(true);
+                    }
+
+                    if (we.handleArmSwing(player)) {
+                        event.setCanceled(true);
+                    }
+
+                    break;
                 }
+                case RIGHT_CLICK_BLOCK: {
+                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
 
-                if (we.handleArmSwing(player)) {
-                    event.setCanceled(true);
+                    if (we.handleBlockRightClick(player, pos)) {
+                        event.setCanceled(true);
+                    }
+
+                    if (we.handleRightClick(player)) {
+                        event.setCanceled(true);
+                    }
+
+                    break;
                 }
+                case RIGHT_CLICK_AIR: {
+                    if (we.handleRightClick(player)) {
+                        event.setCanceled(true);
+                    }
 
-                break;
-            }
-            case RIGHT_CLICK_BLOCK: {
-                WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
-
-                if (we.handleBlockRightClick(player, pos)) {
-                    event.setCanceled(true);
+                    break;
                 }
-
-                if (we.handleRightClick(player)) {
-                    event.setCanceled(true);
-                }
-
-                break;
-            }
-            case RIGHT_CLICK_AIR: {
-                if (we.handleRightClick(player)) {
-                    event.setCanceled(true);
-                }
-
-                break;
             }
         }
     }
