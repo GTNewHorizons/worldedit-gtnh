@@ -52,7 +52,7 @@ public interface RegionSelector {
 
     /**
      * Called when the first point is selected.
-     * 
+     *
      * @param position the position
      * @return true if something changed
      */
@@ -60,7 +60,7 @@ public interface RegionSelector {
 
     /**
      * Called when the second point is selected.
-     * 
+     *
      * @param position the position
      * @return true if something changed
      */
@@ -68,7 +68,7 @@ public interface RegionSelector {
 
     /**
      * Tell the player information about his/her primary selection.
-     * 
+     *
      * @param actor    the actor
      * @param session  the session
      * @param position position
@@ -95,7 +95,7 @@ public interface RegionSelector {
 
     /**
      * Get the primary position.
-     * 
+     *
      * @return the primary position
      * @throws IncompleteRegionException thrown if a region has not been fully defined
      */
@@ -103,7 +103,7 @@ public interface RegionSelector {
 
     /**
      * Get the selection.
-     * 
+     *
      * @return the created region
      * @throws IncompleteRegionException thrown if a region has not been fully defined
      */
@@ -111,21 +111,21 @@ public interface RegionSelector {
 
     /**
      * Get the region even if it's not fully defined.
-     * 
+     *
      * @return an incomplete region object that is incomplete
      */
     public Region getIncompleteRegion();
 
     /**
      * Returns whether the region has been fully defined.
-     * 
+     *
      * @return true if a selection is available
      */
     public boolean isDefined();
 
     /**
      * Get the number of blocks inside the region.
-     * 
+     *
      * @return number of blocks, or -1 if undefined
      */
     public int getArea();
@@ -142,14 +142,14 @@ public interface RegionSelector {
 
     /**
      * Get a lowercase name of this region selector type.
-     * 
+     *
      * @return a lower case name of the type
      */
     public String getTypeName();
 
     /**
      * Get lines of information about the selection.
-     * 
+     *
      * @return a list of lines describing the region
      */
     public List<String> getInformationLines();

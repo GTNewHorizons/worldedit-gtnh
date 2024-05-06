@@ -45,7 +45,7 @@ import com.thoughtworks.paranamer.Paranamer;
 /**
  * Creates commands using annotations placed on methods and individual parameters of
  * such methods.
- * 
+ *
  * @see Command defines a command
  * @see Switch defines a flag
  */
@@ -60,7 +60,7 @@ public class ParametricBuilder {
 
     /**
      * Create a new builder.
-     * 
+     *
      * <p>
      * This method will install {@link PrimitiveBindings} and
      * {@link StandardBindings} and default bindings.
@@ -73,14 +73,14 @@ public class ParametricBuilder {
 
     /**
      * Add a binding for a given type or classifier (annotation).
-     * 
+     *
      * <p>
      * Whenever a method parameter is encountered, a binding must be found for it
      * so that it can be called later to consume the stack of arguments provided by
      * the user and return an object that is later passed to
      * {@link Method#invoke(Object, Object...)}.
      * </p>
-     * 
+     *
      * <p>
      * Normally, a {@link Type} is used to discern between different bindings, but
      * if this is not specific enough, an annotation can be defined and used. This
@@ -91,7 +91,7 @@ public class ParametricBuilder {
      * associated with {@code @MyArg} rather than with the binding for
      * the {@link String} type.
      * </p>
-     * 
+     *
      * @param binding the binding
      * @param type    a list of types (if specified) to override the binding's types
      */
@@ -107,7 +107,7 @@ public class ParametricBuilder {
 
     /**
      * Attach an invocation listener.
-     * 
+     *
      * <p>
      * Invocation handlers are called in order that their listeners are
      * registered with a {@link ParametricBuilder}. It is not guaranteed that
@@ -118,7 +118,7 @@ public class ParametricBuilder {
      * be called for a invocation handler, but not the associated
      * {@link InvokeHandler#postInvoke(Object, Method, ParameterData[], Object[], CommandContext)}.
      * </p>
-     * 
+     *
      * <p>
      * An example of an invocation listener is one to handle
      * {@link CommandPermissions}, by first checking to see if permission is available
@@ -126,7 +126,7 @@ public class ParametricBuilder {
      * call. If permission is not found, then an appropriate {@link CommandException}
      * can be thrown to cease invocation.
      * </p>
-     * 
+     *
      * @param listener the listener
      * @see InvokeHandler the handler
      */
@@ -137,11 +137,11 @@ public class ParametricBuilder {
     /**
      * Attach an exception converter to this builder in order to wrap unknown
      * {@link Throwable}s into known {@link CommandException}s.
-     * 
+     *
      * <p>
      * Exception converters are called in order that they are registered.
      * </p>
-     * 
+     *
      * @param converter the converter
      * @see ExceptionConverter for an explanation
      */
@@ -153,7 +153,7 @@ public class ParametricBuilder {
      * Build a list of commands from methods specially annotated with {@link Command}
      * (and other relevant annotations) and register them all with the given
      * {@link Dispatcher}.
-     * 
+     *
      * @param dispatcher the dispatcher to register commands with
      * @param object     the object contain the methods
      * @throws ParametricException thrown if the commands cannot be registered
@@ -171,7 +171,7 @@ public class ParametricBuilder {
 
     /**
      * Build a {@link CommandCallable} for the given method.
-     * 
+     *
      * @param object     the object to be invoked on
      * @param method     the method to invoke
      * @param definition the command definition annotation
@@ -185,7 +185,7 @@ public class ParametricBuilder {
     /**
      * Get the object used to get method names on Java versions before 8 (assuming
      * that Java 8 is given the ability to reliably reflect method names at runtime).
-     * 
+     *
      * @return the paranamer
      */
     Paranamer getParanamer() {
@@ -194,7 +194,7 @@ public class ParametricBuilder {
 
     /**
      * Get the map of bindings.
-     * 
+     *
      * @return the map of bindings
      */
     Map<Type, Binding> getBindings() {
@@ -203,7 +203,7 @@ public class ParametricBuilder {
 
     /**
      * Get a list of invocation listeners.
-     * 
+     *
      * @return a list of invocation listeners
      */
     List<InvokeListener> getInvokeListeners() {
@@ -212,7 +212,7 @@ public class ParametricBuilder {
 
     /**
      * Get the list of exception converters.
-     * 
+     *
      * @return a list of exception converters
      */
     List<ExceptionConverter> getExceptionConverters() {

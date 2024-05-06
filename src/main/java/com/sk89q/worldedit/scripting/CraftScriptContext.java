@@ -22,7 +22,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.DisallowedItemException;
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalConfiguration;
+import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.UnknownItemException;
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.command.InsufficientArgumentsException;
 import com.sk89q.worldedit.entity.Player;
@@ -48,7 +54,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
     /**
      * Get an edit session. Every subsequent call returns a new edit session.
      * Usually you only need to use one edit session.
-     * 
+     *
      * @return an edit session
      */
     public EditSession remember() {
@@ -61,7 +67,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Get the player.
-     * 
+     *
      * @return the calling player
      */
     public Player getPlayer() {
@@ -70,7 +76,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Get the player's session.
-     * 
+     *
      * @return a session
      */
     public LocalSession getSession() {
@@ -79,7 +85,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Get the configuration for WorldEdit.
-     * 
+     *
      * @return the configuration
      */
     public LocalConfiguration getConfiguration() {
@@ -88,7 +94,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Get a list of edit sessions that have been created.
-     * 
+     *
      * @return a list of created {@code EditSession}s
      */
     public List<EditSession> getEditSessions() {
@@ -97,7 +103,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Print a regular message to the user.
-     * 
+     *
      * @param message a message
      */
     public void print(String message) {
@@ -106,7 +112,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Print an error message to the user.
-     * 
+     *
      * @param message a message
      */
     public void error(String message) {
@@ -115,7 +121,7 @@ public class CraftScriptContext extends CraftScriptEnvironment {
 
     /**
      * Print an raw message to the user.
-     * 
+     *
      * @param message a message
      */
     public void printRaw(String message) {
@@ -191,11 +197,11 @@ public class CraftScriptContext extends CraftScriptEnvironment {
      * has valid characters and has an extension. It also prevents directory
      * traversal exploits by checking the root directory and the file directory.
      * On success, a {@code java.io.File} object will be returned.
-     * 
+     *
      * <p>
      * Use this method if you need to read a file from a directory.
      * </p>
-     * 
+     *
      * @param folder   sub-directory to look in
      * @param filename filename (user-submitted)
      * @return a file
@@ -213,11 +219,11 @@ public class CraftScriptContext extends CraftScriptEnvironment {
      * directory traversal exploits by checking the root directory and the file
      * directory. On success, a {@code java.io.File} object will be
      * returned.
-     * 
+     *
      * <p>
      * Use this method if you need to read a file from a directory.
      * </p>
-     * 
+     *
      * @param folder     sub-directory to look in
      * @param filename   filename (user-submitted)
      * @param defaultExt default extension to append if there is none
@@ -237,11 +243,11 @@ public class CraftScriptContext extends CraftScriptEnvironment {
      * directory traversal exploits by checking the root directory and the file
      * directory. On success, a {@code java.io.File} object will be
      * returned.
-     * 
+     *
      * <p>
      * Use this method if you need to read a file from a directory.
      * </p>
-     * 
+     *
      * @param folder     sub-directory to look in
      * @param filename   filename (user-submitted)
      * @param defaultExt default extension to append if there is none

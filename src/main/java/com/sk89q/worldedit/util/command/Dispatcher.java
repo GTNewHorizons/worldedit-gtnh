@@ -28,7 +28,7 @@ public interface Dispatcher extends CommandCallable {
 
     /**
      * Register a command with this dispatcher.
-     * 
+     *
      * @param callable the command executor
      * @param alias    a list of aliases, where the first alias is the primary name
      */
@@ -37,34 +37,34 @@ public interface Dispatcher extends CommandCallable {
     /**
      * Get a list of commands. Each command, regardless of how many aliases
      * it may have, will only appear once in the returned set.
-     * 
+     *
      * <p>
      * The returned collection cannot be modified.
      * </p>
-     * 
+     *
      * @return a list of registrations
      */
     Set<CommandMapping> getCommands();
 
     /**
      * Get a list of primary aliases.
-     * 
+     *
      * <p>
      * The returned collection cannot be modified.
      * </p>
-     * 
+     *
      * @return a list of aliases
      */
     Collection<String> getPrimaryAliases();
 
     /**
      * Get a list of all the command aliases, which includes the primary alias.
-     * 
+     *
      * <p>
      * A command may have more than one alias assigned to it. The returned
      * collection cannot be modified.
      * </p>
-     * 
+     *
      * @return a list of aliases
      */
     Collection<String> getAliases();
@@ -72,7 +72,7 @@ public interface Dispatcher extends CommandCallable {
     /**
      * Get the {@link CommandCallable} associated with an alias. Returns
      * null if no command is named by the given alias.
-     * 
+     *
      * @param alias the alias
      * @return the command mapping (null if not found)
      */
@@ -81,7 +81,7 @@ public interface Dispatcher extends CommandCallable {
 
     /**
      * Returns whether the dispatcher contains a registered command for the given alias.
-     * 
+     *
      * @param alias the alias
      * @return true if a registered command exists
      */

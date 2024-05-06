@@ -16,7 +16,8 @@
 
 package com.sk89q.worldedit.patterns;
 
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.CuboidClipboard;
+import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.blocks.BaseBlock;
 
 /**

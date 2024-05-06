@@ -17,7 +17,9 @@
 package com.sk89q.worldedit.bags;
 
 import com.sk89q.worldedit.WorldVector;
-import com.sk89q.worldedit.blocks.*;
+import com.sk89q.worldedit.blocks.BaseItem;
+import com.sk89q.worldedit.blocks.BlockID;
+import com.sk89q.worldedit.blocks.BlockType;
 
 /**
  * @deprecated Block bags are currently not a supported feature of WorldEdit
@@ -29,7 +31,7 @@ public abstract class BlockBag {
 
     /**
      * Stores a block as if it was mined.
-     * 
+     *
      * @param id the ID of the block
      * @throws BlockBagException thrown on a error
      * @deprecated Use {@link BlockBag#storeDroppedBlock(int, int)} instead
@@ -41,7 +43,7 @@ public abstract class BlockBag {
 
     /**
      * Stores a block as if it was mined.
-     * 
+     *
      * @param id   the ID of the block
      * @param data the data value of the block
      * @throws BlockBagException thrown on a error
@@ -139,9 +141,9 @@ public abstract class BlockBag {
 
     /**
      * Store a block.
-     * 
+     *
      * Either this method or storeItem needs to be overridden
-     * 
+     *
      * @param id the ID of the block
      * @throws BlockBagException
      */
@@ -151,9 +153,9 @@ public abstract class BlockBag {
 
     /**
      * Store a block.
-     * 
+     *
      * Either this method or storeBlock needs to be overridden
-     * 
+     *
      * @param item the item
      * @throws BlockBagException
      */
@@ -163,7 +165,7 @@ public abstract class BlockBag {
 
     /**
      * Checks to see if a block exists without removing it.
-     * 
+     *
      * @param id the ID of the block
      * @return whether the block exists
      */

@@ -59,7 +59,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param worldEdit the WorldEdit instance to bind to
      */
     public WorldEditBinding(WorldEdit worldEdit) {
@@ -68,7 +68,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Gets a selection from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param selection the annotation
      * @return a selection
@@ -86,7 +86,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Gets an {@link EditSession} from a {@link ArgumentStack}.
-     * 
+     *
      * @param context the context
      * @return an edit session
      * @throws ParameterException on other error
@@ -107,7 +107,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Gets an {@link LocalSession} from a {@link ArgumentStack}.
-     * 
+     *
      * @param context the context
      * @return a local session
      * @throws ParameterException on error
@@ -196,7 +196,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Gets an {@link Pattern} from a {@link ArgumentStack}.
-     * 
+     *
      * @param context the context
      * @return a pattern
      * @throws ParameterException on error
@@ -231,7 +231,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Gets an {@link Mask} from a {@link ArgumentStack}.
-     * 
+     *
      * @param context the context
      * @return a pattern
      * @throws ParameterException on error
@@ -266,7 +266,7 @@ public class WorldEditBinding extends BindingHelper {
 
     /**
      * Get a direction from the player.
-     * 
+     *
      * @param context   the context
      * @param direction the direction annotation
      * @return a pattern

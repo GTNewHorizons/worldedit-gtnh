@@ -59,7 +59,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param builder    the parametric builder
      * @param object     the object to invoke on
      * @param method     the method to invoke
@@ -324,7 +324,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Get the right {@link ArgumentStack}.
-     * 
+     *
      * @param parameter the parameter
      * @param existing  the existing scoped context
      * @return the context to use
@@ -346,7 +346,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Get whether a parameter is allowed to consume arguments.
-     * 
+     *
      * @param i      the index of the parameter
      * @param scoped the scoped context
      * @return true if arguments may be consumed
@@ -386,7 +386,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Get the default value for a parameter.
-     * 
+     *
      * @param i      the index of the parameter
      * @param scoped the scoped context
      * @return a value
@@ -415,7 +415,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Check to see if all arguments, including flag arguments, were consumed.
-     * 
+     *
      * @param scoped the argument scope
      * @throws UnconsumedParameterException thrown if parameters were not consumed
      */
@@ -435,7 +435,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Get any unused flag arguments.
-     * 
+     *
      * @param context the command context
      */
     private String getUnusedFlags(CommandContext context) {
@@ -482,7 +482,7 @@ class ParametricCallable implements CommandCallable {
 
     /**
      * Generate a name for a parameter.
-     * 
+     *
      * @param type       the type
      * @param classifier the classifier
      * @param index      the index

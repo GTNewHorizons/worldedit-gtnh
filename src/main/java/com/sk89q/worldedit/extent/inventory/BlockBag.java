@@ -17,7 +17,9 @@
 package com.sk89q.worldedit.extent.inventory;
 
 import com.sk89q.worldedit.WorldVector;
-import com.sk89q.worldedit.blocks.*;
+import com.sk89q.worldedit.blocks.BaseItem;
+import com.sk89q.worldedit.blocks.BlockID;
+import com.sk89q.worldedit.blocks.BlockType;
 
 /**
  * Represents a source to get blocks from and store removed ones.
@@ -26,7 +28,7 @@ public abstract class BlockBag {
 
     /**
      * Stores a block as if it was mined.
-     * 
+     *
      * @param id the type ID
      * @throws BlockBagException on error
      * @deprecated Use {@link BlockBag#storeDroppedBlock(int, int)} instead
@@ -38,7 +40,7 @@ public abstract class BlockBag {
 
     /**
      * Stores a block as if it was mined.
-     * 
+     *
      * @param id   the type ID
      * @param data the data value
      * @throws BlockBagException on error
@@ -144,7 +146,7 @@ public abstract class BlockBag {
      * <p>
      * Either this method or fetchItem needs to be overridden.
      * </p>
-     * 
+     *
      * @param id the type ID
      * @throws BlockBagException on error
      */
@@ -158,7 +160,7 @@ public abstract class BlockBag {
      * <p>
      * Either this method or fetchItem needs to be overridden.
      * </p>
-     * 
+     *
      * @param item the item
      * @throws BlockBagException on error
      */
@@ -168,7 +170,7 @@ public abstract class BlockBag {
 
     /**
      * Checks to see if a block exists without removing it.
-     * 
+     *
      * @param id the type ID
      * @return whether the block exists
      */

@@ -22,7 +22,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sk89q.minecraft.util.commands.CommandException;
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.DisallowedItemException;
+import com.sk89q.worldedit.EmptyClipboardException;
+import com.sk89q.worldedit.IncompleteRegionException;
+import com.sk89q.worldedit.InvalidItemException;
+import com.sk89q.worldedit.MaxBrushRadiusException;
+import com.sk89q.worldedit.MaxChangedBlocksException;
+import com.sk89q.worldedit.MaxRadiusException;
+import com.sk89q.worldedit.UnknownDirectionException;
+import com.sk89q.worldedit.UnknownItemException;
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.ItemType;
 import com.sk89q.worldedit.command.InsufficientArgumentsException;
 import com.sk89q.worldedit.command.tool.InvalidToolBindException;

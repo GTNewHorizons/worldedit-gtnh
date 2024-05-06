@@ -16,7 +16,11 @@
 
 package com.sk89q.worldedit.masks;
 
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.IncompleteRegionException;
+import com.sk89q.worldedit.LocalPlayer;
+import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.request.RequestSelection;
 

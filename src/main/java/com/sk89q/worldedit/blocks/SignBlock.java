@@ -32,7 +32,7 @@ public class SignBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the sign without text.
-     * 
+     *
      * @param type type ID
      * @param data data value (orientation)
      */
@@ -43,7 +43,7 @@ public class SignBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the sign with text.
-     * 
+     *
      * @param type type ID
      * @param data data value (orientation)
      * @param text lines of text
@@ -58,7 +58,7 @@ public class SignBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get the text.
-     * 
+     *
      * @return the text
      */
     public String[] getText() {
@@ -67,7 +67,7 @@ public class SignBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the text.
-     * 
+     *
      * @param text the text to set
      */
     public void setText(String[] text) {

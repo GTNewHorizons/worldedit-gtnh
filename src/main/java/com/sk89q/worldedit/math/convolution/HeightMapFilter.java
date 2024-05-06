@@ -33,7 +33,7 @@ public class HeightMapFilter {
 
     /**
      * Construct the HeightMapFilter object.
-     * 
+     *
      * @param kernel the kernel
      */
     public HeightMapFilter(Kernel kernel) {
@@ -43,7 +43,7 @@ public class HeightMapFilter {
 
     /**
      * Construct the HeightMapFilter object.
-     * 
+     *
      * @param kernelWidth  the width
      * @param kernelHeight the height
      * @param kernelData   the data
@@ -62,7 +62,7 @@ public class HeightMapFilter {
 
     /**
      * Set Kernel
-     * 
+     *
      * @param kernel the kernel
      */
     public void setKernel(Kernel kernel) {

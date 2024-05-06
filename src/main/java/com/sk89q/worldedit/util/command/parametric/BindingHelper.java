@@ -29,18 +29,18 @@ import com.sk89q.minecraft.util.commands.CommandException;
 /**
  * A binding helper that uses the {@link BindingMatch} annotation to make
  * writing bindings extremely easy.
- * 
+ *
  * <p>
  * Methods must have the following and only the following parameters:
  * </p>
- * 
+ *
  * <ul>
  * <li>A {@link ArgumentStack}</li>
  * <li>A {@link Annotation} <strong>if there is a classifier set</strong></li>
  * <li>A {@link Annotation}[]
  * <strong>if there {@link BindingMatch#provideModifiers()} is true</strong></li>
  * </ul>
- * 
+ *
  * <p>
  * Methods may throw any exception. Exceptions may be converted using a
  * {@link ExceptionConverter} registered with the {@link ParametricBuilder}.
@@ -105,7 +105,7 @@ public class BindingHelper implements Binding {
 
     /**
      * Match a {@link BindingMatch} according to the given parameter.
-     * 
+     *
      * @param parameter the parameter
      * @return a binding
      */

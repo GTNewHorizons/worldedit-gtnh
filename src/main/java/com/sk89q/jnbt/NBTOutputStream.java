@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * This class writes <strong>NBT</strong>, or <strong>Named Binary Tag</strong>
  * {@code Tag} objects to an underlying {@code OutputStream}.
- * 
+ *
  * <p>
  * The NBT format was created by Markus Persson, and the specification may be
  * found at <a href="http://www.minecraft.net/docs/NBT.txt">
@@ -45,7 +45,7 @@ public final class NBTOutputStream implements Closeable {
     /**
      * Creates a new {@code NBTOutputStream}, which will write data to the
      * specified underlying output stream.
-     * 
+     *
      * @param os
      *           The output stream.
      * @throws IOException
@@ -57,7 +57,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a tag.
-     * 
+     *
      * @param tag
      *            The tag to write.
      * @throws IOException
@@ -83,7 +83,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes tag payload.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -135,7 +135,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Byte} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -147,7 +147,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Byte_Array} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -161,7 +161,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Compound} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -177,7 +177,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_List} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -197,7 +197,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_String} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -212,7 +212,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Double} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -224,7 +224,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Float} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -236,7 +236,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Long} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -248,7 +248,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Int} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -260,7 +260,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Short} tag.
-     * 
+     *
      * @param tag
      *            The tag.
      * @throws IOException
@@ -272,7 +272,7 @@ public final class NBTOutputStream implements Closeable {
 
     /**
      * Writes a {@code TAG_Empty} tag.
-     * 
+     *
      * @param tag the tag
      */
     private void writeEndTagPayload(EndTag tag) {

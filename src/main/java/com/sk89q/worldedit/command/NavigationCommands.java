@@ -151,7 +151,7 @@ public class NavigationCommands {
 
     /**
      * Helper function for /up and /ceil.
-     * 
+     *
      * @param args The {@link CommandContext} to extract the flags from.
      * @return true, if glass should always be put under the player
      */

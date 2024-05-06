@@ -16,7 +16,11 @@
 
 package com.sk89q.worldedit.internal.expression.parser;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
 
 import com.sk89q.worldedit.internal.expression.Identifiable;
 import com.sk89q.worldedit.internal.expression.lexer.tokens.OperatorToken;

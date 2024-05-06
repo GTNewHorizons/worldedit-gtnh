@@ -26,7 +26,7 @@ import com.google.common.collect.Maps;
 
 /**
  * All supported color values for chat.
- * 
+ *
  * <p>
  * From Bukkit.
  * </p>
@@ -163,7 +163,7 @@ public enum Style {
 
     /**
      * Checks if this code is a format code as opposed to a color code.
-     * 
+     *
      * @return the if the code is a formatting code
      */
     public boolean isFormat() {
@@ -172,7 +172,7 @@ public enum Style {
 
     /**
      * Checks if this code is a color code as opposed to a format code.
-     * 
+     *
      * @return the if the code is a color
      */
     public boolean isColor() {

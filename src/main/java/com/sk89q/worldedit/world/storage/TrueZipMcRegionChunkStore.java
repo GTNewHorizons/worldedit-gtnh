@@ -130,7 +130,7 @@ public class TrueZipMcRegionChunkStore extends McRegionChunkStore {
 
     /**
      * Get an entry from the ZIP, trying both types of slashes.
-     * 
+     *
      * @param file the file
      * @return an entry
      */

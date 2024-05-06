@@ -35,7 +35,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the skull block with a default type of skelton.
-     * 
+     *
      * @param data data value to set, controls placement
      */
     public SkullBlock(int data) {
@@ -49,7 +49,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
      * 2 - zombie
      * 3 - human
      * 4 - creeper
-     * 
+     *
      * @param data data value to set, controls placement
      * @param type type of skull
      */
@@ -59,7 +59,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the skull block with a given type and rotation.
-     * 
+     *
      * @param data data value to set, controls placement
      * @param type type of skull
      * @param rot  rotation (if on floor)
@@ -78,7 +78,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
     /**
      * Construct the skull block with a given rotation and owner.
      * The type is assumed to be player unless owner is null or empty.
-     * 
+     *
      * @param data  data value to set, controls placement
      * @param rot   rotation of skull
      * @param owner name of player
@@ -92,7 +92,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the skull's owner. Automatically sets type to player if not empty or null.
-     * 
+     *
      * @param owner player name to set the skull to
      */
     public void setOwner(String owner) {
@@ -107,7 +107,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get the skull's owner. Returns null if unset.
-     * 
+     *
      * @return player name or null
      */
     public String getOwner() {
@@ -116,7 +116,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get the type of skull.
-     * 
+     *
      * @return the skullType
      */
     public byte getSkullType() {
@@ -125,7 +125,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the type of skull;
-     * 
+     *
      * @param skullType the skullType to set
      */
     public void setSkullType(byte skullType) {
@@ -134,7 +134,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get rotation of skull. This only means anything if the block data is 1.
-     * 
+     *
      * @return the rotation
      */
     public byte getRot() {
@@ -143,7 +143,7 @@ public class SkullBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the rotation of skull.
-     * 
+     *
      * @param rot the rotation to set
      */
     public void setRot(byte rot) {

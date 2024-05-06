@@ -39,7 +39,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Construct an empty furnace block with the default orientation.
-     * 
+     *
      * @param type type ID
      */
     public FurnaceBlock(int type) {
@@ -48,7 +48,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Construct an empty furnace block with a given orientation.
-     * 
+     *
      * @param type type ID
      * @param data orientation
      */
@@ -58,7 +58,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Construct an furnace block with a given orientation and inventory.
-     * 
+     *
      * @param type  type ID
      * @param data  orientation
      * @param items inventory items
@@ -70,7 +70,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Get the burn time.
-     * 
+     *
      * @return the burn time
      */
     public short getBurnTime() {
@@ -79,7 +79,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Set the burn time.
-     * 
+     *
      * @param burnTime the burn time
      */
     public void setBurnTime(short burnTime) {
@@ -88,7 +88,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Get the cook time.
-     * 
+     *
      * @return the cook time
      */
     public short getCookTime() {
@@ -97,7 +97,7 @@ public class FurnaceBlock extends ContainerBlock {
 
     /**
      * Set the cook time.
-     * 
+     *
      * @param cookTime the cook time to set
      */
     public void setCookTime(short cookTime) {

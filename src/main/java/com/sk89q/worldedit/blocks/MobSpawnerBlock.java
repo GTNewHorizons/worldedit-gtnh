@@ -104,7 +104,7 @@ public class MobSpawnerBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get the spawn delay.
-     * 
+     *
      * @return the delay
      */
     public short getDelay() {
@@ -113,7 +113,7 @@ public class MobSpawnerBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the spawn delay.
-     * 
+     *
      * @param delay the delay to set
      */
     public void setDelay(short delay) {
