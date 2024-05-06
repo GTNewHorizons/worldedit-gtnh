@@ -16,7 +16,11 @@
 
 package com.sk89q.worldedit.util;
 
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.BlockWorldVector;
+import com.sk89q.worldedit.LocalPlayer;
+import com.sk89q.worldedit.LocalWorld;
+import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.WorldVectorFace;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.entity.Player;
@@ -25,7 +29,7 @@ import com.sk89q.worldedit.internal.LocalWorldAdapter;
 /**
  * This class uses an inefficient method to figure out what block a player
  * is looking towards.
- * 
+ *
  * <p>
  * Originally written by toi. It was ported to WorldEdit and trimmed down by
  * sk89q. Thanks to Raphfrk for optimization of toi's original class.
@@ -43,7 +47,7 @@ public class TargetBlock {
 
     /**
      * Constructor requiring a player, uses default values
-     * 
+     *
      * @param player player to work with
      */
     public TargetBlock(LocalPlayer player) {
@@ -76,7 +80,7 @@ public class TargetBlock {
 
     /**
      * Set the values, all constructors uses this function
-     * 
+     *
      * @param loc           location of the view
      * @param xRotation     the X rotation
      * @param yRotation     the Y rotation
@@ -107,7 +111,7 @@ public class TargetBlock {
     /**
      * Returns any block at the sight. Returns null if out of range or if no
      * viable target was found. Will try to return the last valid air block it finds.
-     * 
+     *
      * @return Block
      */
     public BlockWorldVector getAnyTargetBlock() {
@@ -132,7 +136,7 @@ public class TargetBlock {
     /**
      * Returns the block at the sight. Returns null if out of range or if no
      * viable target was found
-     * 
+     *
      * @return Block
      */
     public BlockWorldVector getTargetBlock() {
@@ -143,7 +147,7 @@ public class TargetBlock {
     /**
      * Returns the block at the sight. Returns null if out of range or if no
      * viable target was found
-     * 
+     *
      * @return Block
      */
     public BlockWorldVector getSolidTargetBlock() {
@@ -153,7 +157,7 @@ public class TargetBlock {
 
     /**
      * Get next block
-     * 
+     *
      * @return next block position
      */
     public BlockWorldVector getNextBlock() {
@@ -176,7 +180,7 @@ public class TargetBlock {
 
     /**
      * Returns the current block along the line of vision
-     * 
+     *
      * @return block position
      */
     public BlockWorldVector getCurrentBlock() {
@@ -189,7 +193,7 @@ public class TargetBlock {
 
     /**
      * Returns the previous block in the aimed path
-     * 
+     *
      * @return block position
      */
     public BlockWorldVector getPreviousBlock() {

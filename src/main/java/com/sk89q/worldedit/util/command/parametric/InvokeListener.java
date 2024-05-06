@@ -29,17 +29,17 @@ public interface InvokeListener {
 
     /**
      * Create a new invocation handler.
-     * 
+     *
      * <p>
      * An example use of an {@link InvokeHandler} would be to verify permissions
      * added by the {@link CommandPermissions} annotation.
      * </p>
-     * 
+     *
      * <p>
      * For simple {@link InvokeHandler}, an object can implement both this
      * interface and {@link InvokeHandler}.
      * </p>
-     * 
+     *
      * @return a new invocation handler
      */
     InvokeHandler createInvokeHandler();
@@ -47,7 +47,7 @@ public interface InvokeListener {
     /**
      * During creation of a {@link CommandCallable} by a {@link ParametricBuilder},
      * this will be called in case the description needs to be updated.
-     * 
+     *
      * @param object      the object
      * @param method      the method
      * @param parameters  a list of parameters

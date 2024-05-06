@@ -28,7 +28,7 @@ import com.sk89q.minecraft.util.commands.WrappedCommandException;
 /**
  * An implementation of an {@link ExceptionConverter} that automatically calls
  * the correct method defined on this object.
- * 
+ *
  * <p>
  * Only public methods will be used. Methods will be called in order of decreasing
  * levels of inheritance (between classes where one inherits the other). For two

@@ -16,7 +16,11 @@
 
 package com.sk89q.worldedit.util.eventbus;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;

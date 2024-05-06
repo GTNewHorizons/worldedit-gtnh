@@ -27,13 +27,13 @@ import com.sk89q.worldedit.util.command.binding.StandardBindings;
 /**
  * Used to parse user input for a command, based on available method types
  * and annotations.
- * 
+ *
  * <p>
  * A binding can be used to handle several types at once. For a binding to be
  * called, it must be registered with a {@link ParametricBuilder} with
  * {@link ParametricBuilder#addBinding(Binding, java.lang.reflect.Type...)}.
  * </p>
- * 
+ *
  * @see PrimitiveBindings an example of primitive bindings
  * @see StandardBindings standard bindings
  */
@@ -41,14 +41,14 @@ public interface Binding {
 
     /**
      * Get the types that this binding handles.
-     * 
+     *
      * @return the types
      */
     Type[] getTypes();
 
     /**
      * Get how this binding consumes from a {@link ArgumentStack}.
-     * 
+     *
      * @param parameter information about the parameter
      * @return the behavior
      */
@@ -57,12 +57,12 @@ public interface Binding {
     /**
      * Get the number of arguments that this binding will consume, if this
      * information is available.
-     * 
+     *
      * <p>
      * This method must return -1 for binding behavior types that are not
      * {@link BindingBehavior#CONSUMES}.
      * </p>
-     * 
+     *
      * @param parameter information about the parameter
      * @return the number of consumed arguments, or -1 if unknown or irrelevant
      */
@@ -71,7 +71,7 @@ public interface Binding {
     /**
      * Attempt to consume values (if required) from the given {@link ArgumentStack}
      * in order to instantiate an object for the given parameter.
-     * 
+     *
      * @param parameter   information about the parameter
      * @param scoped      the arguments the user has input
      * @param onlyConsume true to only consume arguments
@@ -84,7 +84,7 @@ public interface Binding {
 
     /**
      * Get a list of suggestions for the given parameter and user arguments.
-     * 
+     *
      * @param parameter information about the parameter
      * @param prefix    what the user has typed so far (may be an empty string)
      * @return a list of suggestions

@@ -44,7 +44,7 @@ public class HeightMap {
 
     /**
      * Constructs the HeightMap
-     * 
+     *
      * @param session an edit session
      * @param region  the region
      */
@@ -89,7 +89,7 @@ public class HeightMap {
 
     /**
      * Apply the filter 'iterations' amount times.
-     * 
+     *
      * @param filter     the filter
      * @param iterations the number of iterations
      * @return number of blocks affected
@@ -111,7 +111,7 @@ public class HeightMap {
 
     /**
      * Apply a raw heightmap to the region
-     * 
+     *
      * @param data the data
      * @return number of blocks affected
      * @throws MaxChangedBlocksException

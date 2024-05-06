@@ -37,7 +37,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Get the binding associated with this parameter.
-     * 
+     *
      * @return the binding
      */
     public Binding getBinding() {
@@ -46,7 +46,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Set the binding associated with this parameter.
-     * 
+     *
      * @param binding the binding
      */
     void setBinding(Binding binding) {
@@ -55,12 +55,12 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Set the main type of this parameter.
-     * 
+     *
      * <p>
      * The type is normally that is used to determine which binding is used
      * for a particular method's parameter.
      * </p>
-     * 
+     *
      * @return the main type
      * @see #getClassifier() which can override the type
      */
@@ -70,7 +70,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Set the main type of this parameter.
-     * 
+     *
      * @param type the main type
      */
     void setType(Type type) {
@@ -79,14 +79,14 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Get the classifier annotation.
-     * 
+     *
      * <p>
      * Normally, the type determines what binding is called, but classifiers
      * take precedence if one is found (and registered with
      * {@link ParametricBuilder#addBinding(Binding, Type...)}).
      * An example of a classifier annotation is {@link Text}.
      * </p>
-     * 
+     *
      * @return the classifier annotation, null is possible
      */
     public Annotation getClassifier() {
@@ -95,7 +95,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Set the classifier annotation.
-     * 
+     *
      * @param classifier the classifier annotation, null is possible
      */
     void setClassifier(Annotation classifier) {
@@ -104,7 +104,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Get a list of modifier annotations.
-     * 
+     *
      * <p>
      * Modifier annotations are not considered in the process of choosing a binding
      * for a method parameter, but they can be used to modify the behavior of a binding.
@@ -112,7 +112,7 @@ public class ParameterData extends SimpleParameter {
      * numeric values handled by {@link PrimitiveBindings} to be within a range. The list
      * of annotations may contain a classifier and other unrelated annotations.
      * </p>
-     * 
+     *
      * @return a list of annotations
      */
     public Annotation[] getModifiers() {
@@ -121,7 +121,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Set the list of modifiers.
-     * 
+     *
      * @param modifiers a list of annotations
      */
     void setModifiers(Annotation[] modifiers) {
@@ -130,7 +130,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Return the number of arguments this binding consumes.
-     * 
+     *
      * @return -1 if unknown or unavailable
      */
     int getConsumedCount() {
@@ -139,7 +139,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Get whether this parameter is entered by the user.
-     * 
+     *
      * @return true if this parameter is entered by the user.
      */
     boolean isUserInput() {
@@ -148,7 +148,7 @@ public class ParameterData extends SimpleParameter {
 
     /**
      * Get whether this parameter consumes non-flag arguments.
-     * 
+     *
      * @return true if this parameter consumes non-flag arguments
      */
     boolean isNonFlagConsumer() {

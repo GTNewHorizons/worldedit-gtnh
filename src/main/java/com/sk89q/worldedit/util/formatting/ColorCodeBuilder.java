@@ -29,7 +29,7 @@ public class ColorCodeBuilder {
 
     /**
      * Convert a message into color-coded text.
-     * 
+     *
      * @param message the message
      * @return a list of lines
      */
@@ -42,7 +42,7 @@ public class ColorCodeBuilder {
 
     /**
      * Build a fragment.
-     * 
+     *
      * @param builder     the string builder
      * @param message     the message
      * @param parentStyle the parent style
@@ -68,7 +68,7 @@ public class ColorCodeBuilder {
 
     /**
      * Get the formatting codes.
-     * 
+     *
      * @param style the style
      * @return the color codes
      */
@@ -91,7 +91,7 @@ public class ColorCodeBuilder {
 
     /**
      * Get the formatting and color codes.
-     * 
+     *
      * @param style the style
      * @return the color codes
      */
@@ -107,7 +107,7 @@ public class ColorCodeBuilder {
     /**
      * Get the additional color codes needed to set the given style when the current
      * style is the other given one.
-     * 
+     *
      * @param resetTo   the style to reset to
      * @param resetFrom the style to reset from
      * @return the color codes
@@ -138,11 +138,11 @@ public class ColorCodeBuilder {
 
     /**
      * Word wrap the given text and maintain color codes throughout lines.
-     * 
+     *
      * <p>
      * This is borrowed from Bukkit.
      * </p>
-     * 
+     *
      * @param rawString  the raw string
      * @param lineLength the maximum line length
      * @return a list of lines
@@ -260,7 +260,7 @@ public class ColorCodeBuilder {
 
     /**
      * Callback for transforming a word, such as a URL.
-     * 
+     *
      * @param word the word
      * @return the transformed value, or null to do nothing
      */

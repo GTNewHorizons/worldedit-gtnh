@@ -24,7 +24,7 @@ import com.sk89q.minecraft.util.commands.CommandException;
 /**
  * Called before and after a command is invoked for commands executed by a command
  * created using {@link ParametricBuilder}.
- * 
+ *
  * <p>
  * Invocation handlers are created by {@link InvokeListener}s. Multiple
  * listeners and handlers can be registered, and all be run. However, if one handler
@@ -32,14 +32,14 @@ import com.sk89q.minecraft.util.commands.CommandException;
  * not execute (if thrown in
  * {@link #preInvoke(Object, Method, ParameterData[], Object[], CommandContext)}).
  * </p>
- * 
+ *
  * @see InvokeListener the factory
  */
 public interface InvokeHandler {
 
     /**
      * Called before parameters are processed.
-     * 
+     *
      * @param object     the object
      * @param method     the method
      * @param parameters the list of parameters
@@ -52,7 +52,7 @@ public interface InvokeHandler {
 
     /**
      * Called before the parameter is invoked.
-     * 
+     *
      * @param object     the object
      * @param method     the method
      * @param parameters the list of parameters
@@ -66,7 +66,7 @@ public interface InvokeHandler {
 
     /**
      * Called after the parameter is invoked.
-     * 
+     *
      * @param object     the object
      * @param method     the method
      * @param parameters the list of parameters

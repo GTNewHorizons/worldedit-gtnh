@@ -31,7 +31,7 @@ import com.sk89q.worldedit.util.command.parametric.ParameterException;
 
 /**
  * Handles basic Java types such as {@link String}s, {@link Byte}s, etc.
- * 
+ *
  * <p>
  * Handles both the object and primitive types.
  * </p>
@@ -40,7 +40,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param text      the text annotation
      * @param modifiers a list of modifiers
@@ -61,7 +61,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param modifiers a list of modifiers
      * @return the requested type
@@ -76,7 +76,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context the context
      * @return the requested type
      * @throws ParameterException on error
@@ -120,7 +120,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param modifiers a list of modifiers
      * @return the requested type
@@ -144,7 +144,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param modifiers a list of modifiers
      * @return the requested type
@@ -165,7 +165,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param modifiers a list of modifiers
      * @return the requested type
@@ -188,7 +188,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Gets a type from a {@link ArgumentStack}.
-     * 
+     *
      * @param context   the context
      * @param modifiers a list of modifiers
      * @return the requested type
@@ -209,7 +209,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Validate a number value using relevant modifiers.
-     * 
+     *
      * @param number    the number
      * @param modifiers the list of modifiers to scan
      * @throws ParameterException on a validation error
@@ -237,7 +237,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Validate a number value using relevant modifiers.
-     * 
+     *
      * @param number    the number
      * @param modifiers the list of modifiers to scan
      * @throws ParameterException on a validation error
@@ -265,7 +265,7 @@ public final class PrimitiveBindings extends BindingHelper {
 
     /**
      * Validate a string value using relevant modifiers.
-     * 
+     *
      * @param string    the string
      * @param modifiers the list of modifiers to scan
      * @throws ParameterException on a validation error

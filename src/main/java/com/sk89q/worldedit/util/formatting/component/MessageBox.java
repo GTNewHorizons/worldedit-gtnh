@@ -61,7 +61,7 @@ public class MessageBox extends StyledFragment {
 
     /**
      * Get the internal contents.
-     * 
+     *
      * @return the contents
      */
     public StyledFragment getContents() {

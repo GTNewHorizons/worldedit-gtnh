@@ -26,7 +26,7 @@ import com.sk89q.worldedit.util.command.parametric.ArgumentStack;
 /**
  * Indicates a {@link String} parameter will call {@link ArgumentStack#remaining()} and
  * therefore consume all remaining arguments.
- * 
+ *
  * <p>
  * This should only be used at the end of a list of parameters (of parameters that
  * need to consume from the stack of arguments), otherwise following parameters will
