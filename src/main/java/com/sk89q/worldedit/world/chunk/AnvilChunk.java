@@ -52,7 +52,7 @@ public class AnvilChunk implements Chunk {
 
     /**
      * Construct the chunk with a compound tag.
-     * 
+     *
      * @param world the world to construct the chunk for
      * @param tag   the tag to read
      * @throws DataException on a data error

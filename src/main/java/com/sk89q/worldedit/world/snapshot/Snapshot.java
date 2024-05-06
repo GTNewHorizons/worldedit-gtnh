@@ -25,7 +25,13 @@ import java.util.logging.Logger;
 import java.util.zip.ZipFile;
 
 import com.sk89q.worldedit.world.DataException;
-import com.sk89q.worldedit.world.storage.*;
+import com.sk89q.worldedit.world.storage.ChunkStore;
+import com.sk89q.worldedit.world.storage.FileLegacyChunkStore;
+import com.sk89q.worldedit.world.storage.FileMcRegionChunkStore;
+import com.sk89q.worldedit.world.storage.TrueZipLegacyChunkStore;
+import com.sk89q.worldedit.world.storage.TrueZipMcRegionChunkStore;
+import com.sk89q.worldedit.world.storage.ZippedLegacyChunkStore;
+import com.sk89q.worldedit.world.storage.ZippedMcRegionChunkStore;
 
 /**
  * A snapshot is a backup.

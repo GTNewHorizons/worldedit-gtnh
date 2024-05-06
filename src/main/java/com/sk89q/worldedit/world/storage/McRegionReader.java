@@ -74,7 +74,7 @@ public class McRegionReader {
 
     /**
      * Construct the reader.
-     * 
+     *
      * @param stream the stream
      * @throws DataException
      * @throws IOException
@@ -88,7 +88,7 @@ public class McRegionReader {
 
     /**
      * Read the header.
-     * 
+     *
      * @throws DataException
      * @throws IOException
      */
@@ -103,7 +103,7 @@ public class McRegionReader {
 
     /**
      * Gets the uncompressed data input stream for a chunk.
-     * 
+     *
      * @param position chunk position
      * @return an input stream
      * @throws IOException
@@ -155,7 +155,7 @@ public class McRegionReader {
 
     /**
      * Get the offset for a chunk. May return 0 if it doesn't exist.
-     * 
+     *
      * @param x the X coordinate
      * @param z the Z coordinate
      * @return the offset

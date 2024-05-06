@@ -41,7 +41,7 @@ public class NoteBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the note block with a given data value.
-     * 
+     *
      * @param data data value
      */
     public NoteBlock(int data) {
@@ -51,7 +51,7 @@ public class NoteBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Construct the note block with a given data value and note.
-     * 
+     *
      * @param data data value
      * @param note note
      */
@@ -62,7 +62,7 @@ public class NoteBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Get the note.
-     * 
+     *
      * @return the note
      */
     public byte getNote() {
@@ -71,7 +71,7 @@ public class NoteBlock extends BaseBlock implements TileEntityBlock {
 
     /**
      * Set the note.
-     * 
+     *
      * @param note the note to set
      */
     public void setNote(byte note) {
