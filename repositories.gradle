@@ -1,8 +1,4 @@
 // Add any additional repositories for your dependencies here
 
 repositories {
-    maven {
-        name "EngineHub Repository"
-        url "https://maven.enginehub.org/repo/"
-    }
 }
