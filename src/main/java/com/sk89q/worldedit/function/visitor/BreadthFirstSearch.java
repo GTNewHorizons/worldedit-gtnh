@@ -18,7 +18,13 @@ package com.sk89q.worldedit.function.visitor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.Vector;

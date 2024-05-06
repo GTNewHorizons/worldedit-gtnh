@@ -18,7 +18,13 @@ package com.sk89q.worldedit.schematic;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.sk89q.worldedit.CuboidClipboard;
 import com.sk89q.worldedit.blocks.BaseBlock;
@@ -115,7 +121,7 @@ public abstract class SchematicFormat {
 
     /**
      * Loads a schematic from the given file into a CuboidClipboard
-     * 
+     *
      * @param file The file to load from
      * @return The CuboidClipboard containing the contents of this schematic
      * @throws IOException   If an error occurs while reading data
@@ -126,7 +132,7 @@ public abstract class SchematicFormat {
     /**
      * Saves the data from the specified CuboidClipboard to the given file, overwriting any
      * existing data in the file
-     * 
+     *
      * @param clipboard The clipboard to get data from
      * @param file      The file to save to
      * @throws IOException   If an error occurs while writing data
