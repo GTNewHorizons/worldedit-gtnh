@@ -27,6 +27,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
@@ -190,6 +191,7 @@ public class ForgeWorldEdit {
         if (!platform.isHookingEvents()) return; // We have to be told to catch these events
 
         if (event.useItem == Result.DENY || event.entity.worldObj.isRemote) return;
+        if (event.entityPlayer instanceof FakePlayer) return;
 
         WorldEdit we = WorldEdit.getInstance();
         if (event.entityPlayer instanceof EntityPlayerMP) {
