@@ -22,6 +22,7 @@ import static net.minecraftforge.event.entity.player.PlayerInteractEvent.Action;
 import java.io.File;
 import java.util.Map;
 
+import com.sk89q.worldedit.blocks.BaseBlock;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -119,6 +120,10 @@ public class ForgeWorldEdit {
         FMLCommonHandler.instance()
             .bus()
             .register(ThreadSafeCache.getInstance());
+
+        if (Loader.isModLoaded("neid")) {
+            BaseBlock.MAX_DATA = (2 << 16) - 1;
+        }
     }
 
     @EventHandler
