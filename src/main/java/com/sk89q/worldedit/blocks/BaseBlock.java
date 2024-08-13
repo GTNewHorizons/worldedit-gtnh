@@ -73,7 +73,7 @@ public class BaseBlock extends Block implements TileEntityBlock {
      * Indicates the maximum data value (inclusive) that can be used. A future
      * version of Minecraft may abolish block data values.
      */
-    public static final int MAX_DATA = 15;
+    public static int MAX_DATA = 15;
 
     // Instances of this class should be _as small as possible_ because there will
     // be millions of instances of this object.

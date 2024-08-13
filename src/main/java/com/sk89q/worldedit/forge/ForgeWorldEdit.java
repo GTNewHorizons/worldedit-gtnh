@@ -37,6 +37,7 @@ import com.google.common.base.Joiner;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
+import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
@@ -119,6 +120,10 @@ public class ForgeWorldEdit {
         FMLCommonHandler.instance()
             .bus()
             .register(ThreadSafeCache.getInstance());
+
+        if (Loader.isModLoaded("neid")) {
+            BaseBlock.MAX_DATA = (2 << 16) - 1;
+        }
     }
 
     @EventHandler
