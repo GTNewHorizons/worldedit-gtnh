@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -241,54 +242,69 @@ public class SchematicReader implements ClipboardReader {
                     BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), blockData[index]);
 
                     if (tileEntitiesMap.containsKey(pt)) {
-                        Function<CompoundTag, CompoundTag> findIds = new Function<CompoundTag, CompoundTag>() {
+                        BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
+                            //Logic below is intentional to sneak a variable assignment into a boolean return statement
+                            return ((idPtr[0] = "id")!=null && itemTag.containsKey("id")
+                                && itemTag.containsKey("Count")
+                                && itemTag.containsKey("Damage"))
+                                || ((idPtr[0] = "Item")!=null) && itemTag.containsKey("Item")
+                                && itemTag.containsKey("Count")
+                                && itemTag.containsKey("Meta");
+                        };
+                        Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>()
+                        {
 
                             @Override
-                            public CompoundTag apply(CompoundTag nbtData) {
-                                HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
-                                for (String key : nbtMap.keySet()) {
-                                    if (nbtMap.get(key) instanceof ListTag inventoryTag) {
-                                        ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
-                                        for (int i = 0; i < inventoryList.size(); i++) {
-                                            if (inventoryList.get(i) instanceof CompoundTag itemTag && itemTag.containsKey("id")
-                                                && itemTag.containsKey("Count")
-                                                && itemTag.containsKey("Damage")) {
-                                                short id = itemTag.getShort("id");
-                                                HashMap<String, Tag> itemMap = new HashMap<>(itemTag.getValue());
-                                                itemMap.put("id", new ShortTag(itemConversionMap.get(id)));
+                            public CompoundTag apply(CompoundTag nbtData)
+                            {
+                                String[] idPtr = new String[1];
+                                if (isItem.test(nbtData, idPtr))
+                                {
+                                    short id = nbtData.getShort(idPtr[0]);
+                                    HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
+                                    itemMap.put(idPtr[0], new ShortTag(itemConversionMap.get(id)));
 
-                                                if (itemTag.containsKey("tag")
-                                                    && itemMap.get("tag") instanceof CompoundTag nbt) {
-                                                    itemMap.put("tag", apply(nbt));
-                                                }
+                                    if (nbtData.containsKey("tag")
+                                        && itemMap.get("tag") instanceof CompoundTag nbt)
+                                    {
+                                        itemMap.put("tag", apply(nbt));
+                                    }
 
-                                                inventoryList.set(i, itemTag.setValue(itemMap));
-                                            }
-                                        }
-                                        nbtMap.put(key, inventoryTag.setValue(inventoryList));
-                                    } else if (nbtMap.get(key) instanceof CompoundTag itemTag && itemTag.containsKey("id")
-                                        && itemTag.containsKey("Count")
-                                        && itemTag.containsKey("Damage")) {
-                                            short id = itemTag.getShort("id");
-                                            HashMap<String, Tag> itemMap = new HashMap<>(itemTag.getValue());
-                                            itemMap.put("id", new ShortTag(itemConversionMap.get(id)));
-
-                                            if (itemTag.containsKey("tag")
-                                                && itemMap.get("tag") instanceof CompoundTag nbt) {
-                                                itemMap.put("tag", apply(nbt));
-                                            }
-
-                                            nbtMap.put(key, itemTag.setValue(itemMap));
-                                        }
+                                    return nbtData.setValue(itemMap);
                                 }
-                                return nbtData.setValue(nbtMap);
+                                else
+                                {
+                                    HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
+                                    for (String key : nbtMap.keySet())
+                                    {
+                                        {
+                                            if (nbtMap.get(key) instanceof ListTag inventoryTag)
+                                            {
+                                                ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
+                                                for (int i = 0; i < inventoryList.size(); i++)
+                                                {
+                                                    if (inventoryList.get(i) instanceof CompoundTag itemTag)
+                                                    {
+                                                        inventoryList.set(i, apply(itemTag));
+                                                    }
+                                                }
+                                                nbtMap.put(key, inventoryTag.setValue(inventoryList));
+                                            }
+                                            else if (nbtMap.get(key) instanceof CompoundTag itemTag)
+                                            {
+                                                nbtMap.put(key, apply(itemTag));
+                                            }
+                                        }
+                                    }
+                                    return nbtData.setValue(nbtMap);
+                                }
                             }
                         };
 
                         CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
                         if (!itemConversionMap.isEmpty())
                         {
-                            nbtData = findIds.apply(nbtData);
+                            nbtData = convertItems.apply(nbtData);
                         }
                         block.setNbtData(nbtData);
                     }
