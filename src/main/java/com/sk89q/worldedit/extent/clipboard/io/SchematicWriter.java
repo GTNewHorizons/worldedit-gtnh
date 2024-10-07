@@ -24,6 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
+
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
 
 import com.sk89q.jnbt.ByteArrayTag;
 import com.sk89q.jnbt.CompoundTag;
@@ -97,6 +101,8 @@ public class SchematicWriter implements ClipboardWriter {
         schematic.put("WEOffsetX", new IntTag(offset.getBlockX()));
         schematic.put("WEOffsetY", new IntTag(offset.getBlockY()));
         schematic.put("WEOffsetZ", new IntTag(offset.getBlockZ()));
+        HashMap<String, Tag> blockMapping = new HashMap<>();
+        HashMap<String, Tag> itemMapping = new HashMap<>();
 
         // ====================================================================
         // Block handling
@@ -127,6 +133,10 @@ public class SchematicWriter implements ClipboardWriter {
                         : addBlocks[index >> 1] & 0xF | ((block.getType() >> 8) & 0xF) << 4);
             }
 
+            blockMapping.put(
+                Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
+                new ShortTag((short) block.getId()));
+
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
 
@@ -146,6 +156,47 @@ public class SchematicWriter implements ClipboardWriter {
 
                 CompoundTag tileEntityTag = new CompoundTag(values);
                 tileEntities.add(tileEntityTag);
+
+                Consumer<CompoundTag> convertItems = new Consumer<CompoundTag>() {
+
+                    @Override
+                    public void accept(CompoundTag nbtData) {
+                        for (Tag tag : nbtData.getValue()
+                            .values()) {
+                            if (tag instanceof ListTag inventoryTag) {
+                                for (Tag tag2 : inventoryTag.getValue()) {
+                                    if (tag2 instanceof CompoundTag itemTag && itemTag.containsKey("id")
+                                        && itemTag.containsKey("Count")
+                                        && itemTag.containsKey("Damage")) {
+                                        short id = itemTag.getShort("id");
+                                        itemMapping.put(
+                                            Item.itemRegistry
+                                                .getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
+                                            new ShortTag(id));
+
+                                        if (itemTag.containsKey("tag") && itemTag.getValue()
+                                            .get("tag") instanceof CompoundTag nbt) {
+                                            accept(nbt);
+                                        }
+                                    }
+                                }
+                            } else if (tag instanceof CompoundTag itemTag && itemTag.containsKey("id")
+                                && itemTag.containsKey("Count")
+                                && itemTag.containsKey("Damage")) {
+                                    short id = itemTag.getShort("id");
+                                    itemMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
+                                        new ShortTag(id));
+
+                                    if (itemTag.containsKey("tag") && itemTag.getValue()
+                                        .get("tag") instanceof CompoundTag nbt) {
+                                        accept(nbt);
+                                    }
+                                }
+                        }
+                    }
+                };
+                convertItems.accept(tileEntityTag);
             }
         }
 
@@ -191,6 +242,8 @@ public class SchematicWriter implements ClipboardWriter {
 
         schematic.put("Entities", new ListTag(CompoundTag.class, entities));
 
+        schematic.put("BlockMapping", new CompoundTag(blockMapping));
+        schematic.put("ItemMapping", new CompoundTag(itemMapping));
         // ====================================================================
         // Output
         // ====================================================================

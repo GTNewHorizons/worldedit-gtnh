@@ -19,13 +19,19 @@ package com.sk89q.worldedit.extent.clipboard.io;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
 
 import com.sk89q.jnbt.ByteArrayTag;
 import com.sk89q.jnbt.CompoundTag;
@@ -129,6 +135,28 @@ public class SchematicReader implements ClipboardReader {
         // Blocks
         // ====================================================================
 
+        Map<Short, Short> blockConversionMap = new HashMap<>();
+        if (schematic.containsKey("BlockMapping")) {
+            Map<String, Tag> mapping = requireTag(schematic, "BlockMapping", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
+                Block block = Block.getBlockFromName(key);
+                blockConversionMap.put(sourceId, (short) Block.getIdFromBlock(block));
+            }
+        }
+
+        Map<Short, Short> itemConversionMap = new HashMap<>();
+        if (schematic.containsKey("ItemMapping")) {
+            Map<String, Tag> mapping = requireTag(schematic, "ItemMapping", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
+                Item item = (Item) Item.itemRegistry.getObject(key);
+                itemConversionMap.put(sourceId, (short) Item.getIdFromItem(item));
+            }
+        }
+
         // Get blocks
         byte[] blockId = requireTag(schematic, "Blocks", ByteArrayTag.class).getValue();
         byte[] blockData = requireTag(schematic, "Data", ByteArrayTag.class).getValue();
@@ -205,10 +233,64 @@ public class SchematicReader implements ClipboardReader {
                 for (int z = 0; z < length; ++z) {
                     int index = y * width * length + z * width + x;
                     BlockVector pt = new BlockVector(x, y, z);
-                    BaseBlock block = new BaseBlock(blocks[index], blockData[index]);
+
+                    if (!blockConversionMap.isEmpty()) {
+                        blocks[index] = blockConversionMap.get(blocks[index]);
+                    }
+
+                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), blockData[index]);
 
                     if (tileEntitiesMap.containsKey(pt)) {
-                        block.setNbtData(new CompoundTag(tileEntitiesMap.get(pt)));
+                        Function<CompoundTag, CompoundTag> findIds = new Function<CompoundTag, CompoundTag>() {
+
+                            @Override
+                            public CompoundTag apply(CompoundTag nbtData) {
+                                HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
+                                for (String key : nbtMap.keySet()) {
+                                    if (nbtMap.get(key) instanceof ListTag inventoryTag) {
+                                        ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
+                                        for (int i = 0; i < inventoryList.size(); i++) {
+                                            if (inventoryList.get(i) instanceof CompoundTag itemTag && itemTag.containsKey("id")
+                                                && itemTag.containsKey("Count")
+                                                && itemTag.containsKey("Damage")) {
+                                                short id = itemTag.getShort("id");
+                                                HashMap<String, Tag> itemMap = new HashMap<>(itemTag.getValue());
+                                                itemMap.put("id", new ShortTag(itemConversionMap.get(id)));
+
+                                                if (itemTag.containsKey("tag")
+                                                    && itemMap.get("tag") instanceof CompoundTag nbt) {
+                                                    itemMap.put("tag", apply(nbt));
+                                                }
+
+                                                inventoryList.set(i, itemTag.setValue(itemMap));
+                                            }
+                                        }
+                                        nbtMap.put(key, inventoryTag.setValue(inventoryList));
+                                    } else if (nbtMap.get(key) instanceof CompoundTag itemTag && itemTag.containsKey("id")
+                                        && itemTag.containsKey("Count")
+                                        && itemTag.containsKey("Damage")) {
+                                            short id = itemTag.getShort("id");
+                                            HashMap<String, Tag> itemMap = new HashMap<>(itemTag.getValue());
+                                            itemMap.put("id", new ShortTag(itemConversionMap.get(id)));
+
+                                            if (itemTag.containsKey("tag")
+                                                && itemMap.get("tag") instanceof CompoundTag nbt) {
+                                                itemMap.put("tag", apply(nbt));
+                                            }
+
+                                            nbtMap.put(key, itemTag.setValue(itemMap));
+                                        }
+                                }
+                                return nbtData.setValue(nbtMap);
+                            }
+                        };
+
+                        CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
+                        if (!itemConversionMap.isEmpty())
+                        {
+                            nbtData = findIds.apply(nbtData);
+                        }
+                        block.setNbtData(nbtData);
                     }
 
                     try {
