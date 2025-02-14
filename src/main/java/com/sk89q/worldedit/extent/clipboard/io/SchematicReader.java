@@ -161,6 +161,11 @@ public class SchematicReader implements ClipboardReader {
         // Get blocks
         byte[] blockId = requireTag(schematic, "Blocks", ByteArrayTag.class).getValue();
         byte[] blockData = requireTag(schematic, "Data", ByteArrayTag.class).getValue();
+        byte[] extraData = null;
+        if (schematic.containsKey("ExtraData")) {
+            extraData = requireTag(schematic, "ExtraData", ByteArrayTag.class).getValue();
+        }
+
         byte[] addId = new byte[0];
         short[] blocks = new short[blockId.length]; // Have to later combine IDs
 
@@ -239,7 +244,7 @@ public class SchematicReader implements ClipboardReader {
                         blocks[index] = blockConversionMap.get(blocks[index]);
                     }
 
-                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), Byte.toUnsignedInt(blockData[index]));
+                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), blockData[index] < -1 || extraData != null ? Byte.toUnsignedInt(blockData[index]) + (extraData != null ? (extraData[index] << 8) : 0) : blockData[index]);
 
                     if (tileEntitiesMap.containsKey(pt)) {
                         BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {

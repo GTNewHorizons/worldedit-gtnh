@@ -114,6 +114,7 @@ public class SchematicWriter implements ClipboardWriter {
         byte[] blocks = new byte[width * height * length];
         byte[] addBlocks = null;
         byte[] blockData = new byte[width * height * length];
+        byte[] extraBlockData = new byte[width * height * length];
         List<Tag> tileEntities = new ArrayList<Tag>();
 
         for (Vector point : region) {
@@ -142,6 +143,7 @@ public class SchematicWriter implements ClipboardWriter {
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
+            extraBlockData[index] = (byte) (block.getData() >> 8);
 
             // Store TileEntity data
             CompoundTag rawTag = block.getNbtData();
@@ -216,6 +218,7 @@ public class SchematicWriter implements ClipboardWriter {
 
         schematic.put("Blocks", new ByteArrayTag(blocks));
         schematic.put("Data", new ByteArrayTag(blockData));
+        schematic.put("ExtraData", new ByteArrayTag(extraBlockData));
         schematic.put("TileEntities", new ListTag(CompoundTag.class, tileEntities));
 
         if (addBlocks != null) {
