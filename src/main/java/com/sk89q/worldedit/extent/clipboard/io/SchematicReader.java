@@ -239,7 +239,7 @@ public class SchematicReader implements ClipboardReader {
                         blocks[index] = blockConversionMap.get(blocks[index]);
                     }
 
-                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), blockData[index]);
+                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), Byte.toUnsignedInt(blockData[index]));
 
                     if (tileEntitiesMap.containsKey(pt)) {
                         BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
