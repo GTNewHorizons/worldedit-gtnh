@@ -162,11 +162,12 @@ public class SchematicReader implements ClipboardReader {
         byte[] blockId = requireTag(schematic, "Blocks", ByteArrayTag.class).getValue();
         byte[] blockData = requireTag(schematic, "Data", ByteArrayTag.class).getValue();
         byte[] extraData = null;
-        if (schematic.containsKey("ExtraData")) {
-            extraData = requireTag(schematic, "ExtraData", ByteArrayTag.class).getValue();
+        if (schematic.containsKey("AddData")) {
+            extraData = requireTag(schematic, "AddData", ByteArrayTag.class).getValue();
         }
 
         byte[] addId = new byte[0];
+        byte[] addId2 = new byte[0];
         short[] blocks = new short[blockId.length]; // Have to later combine IDs
 
         // We support 4096 block IDs using the same method as vanilla Minecraft, where
@@ -175,6 +176,9 @@ public class SchematicReader implements ClipboardReader {
             addId = requireTag(schematic, "AddBlocks", ByteArrayTag.class).getValue();
         }
 
+        if (schematic.containsKey("AddBlocks2")) {
+            addId2 = requireTag(schematic, "AddBlocks", ByteArrayTag.class).getValue();
+        }
         // Combine the AddBlocks data with the first 8-bit block ID
         for (int index = 0; index < blockId.length; index++) {
             if ((index >> 1) >= addId.length) { // No corresponding AddBlocks index
@@ -184,6 +188,18 @@ public class SchematicReader implements ClipboardReader {
                     blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFF));
                 } else {
                     blocks[index] = (short) (((addId[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFF));
+                }
+            }
+        }
+
+        for (int index = 0; index < blockId.length; index++) {
+            if ((index >> 1) >= addId2.length) { // No corresponding AddBlocks index
+                blocks[index] = (short) (blockId[index] & 0xFF);
+            } else {
+                if ((index & 1) == 0) {
+                    blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFFF));
+                } else {
+                    blocks[index] = (short) (((addId[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFFF));
                 }
             }
         }

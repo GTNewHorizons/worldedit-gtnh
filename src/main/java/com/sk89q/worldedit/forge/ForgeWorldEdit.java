@@ -123,6 +123,7 @@ public class ForgeWorldEdit {
 
         if (Loader.isModLoaded("neid")) {
             BaseBlock.MAX_DATA = (2 << 16) - 1;
+            BaseBlock.MAX_ID = (2 << 16) - 1;
         }
     }
 

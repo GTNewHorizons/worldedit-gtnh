@@ -113,8 +113,9 @@ public class SchematicWriter implements ClipboardWriter {
 
         byte[] blocks = new byte[width * height * length];
         byte[] addBlocks = null;
+        byte[] addBlocks2 = null;
         byte[] blockData = new byte[width * height * length];
-        byte[] extraBlockData = new byte[width * height * length];
+        byte[] addData = null;
         List<Tag> tileEntities = new ArrayList<Tag>();
 
         for (Vector point : region) {
@@ -137,13 +138,28 @@ public class SchematicWriter implements ClipboardWriter {
                         : addBlocks[index >> 1] & 0xF | ((block.getType() >> 8) & 0xF) << 4);
             }
 
+            // Save neid ids in an additional section for backwards compat
+            if (block.getType() > 4095) {
+                if (addBlocks2 == null) {
+                    addBlocks2 = new byte[(blocks.length >> 1) + 1];
+                }
+                addBlocks2[index
+                    >> 1] = (byte) (((index & 1) == 0) ? addBlocks2[index >> 1] & 0xF0 | (block.getType() >> 12) & 0xF
+                    : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
+            }
             blockMapping.put(
                 Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
                 new ShortTag((short) block.getId()));
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
-            extraBlockData[index] = (byte) (block.getData() >> 8);
+            if (block.getData() > 15)
+            {
+                if (addData == null) {
+                    addData = new byte[blockData.length];
+                }
+                addData[index] = (byte) (block.getData() >> 8);
+            }
 
             // Store TileEntity data
             CompoundTag rawTag = block.getNbtData();
@@ -218,11 +234,18 @@ public class SchematicWriter implements ClipboardWriter {
 
         schematic.put("Blocks", new ByteArrayTag(blocks));
         schematic.put("Data", new ByteArrayTag(blockData));
-        schematic.put("ExtraData", new ByteArrayTag(extraBlockData));
         schematic.put("TileEntities", new ListTag(CompoundTag.class, tileEntities));
 
         if (addBlocks != null) {
             schematic.put("AddBlocks", new ByteArrayTag(addBlocks));
+        }
+
+        if (addBlocks2 != null) {
+            schematic.put("AddBlocks2", new ByteArrayTag(addBlocks2));
+        }
+
+        if (addData != null) {
+            schematic.put("AddData", new ByteArrayTag(addData));
         }
 
         // ====================================================================
