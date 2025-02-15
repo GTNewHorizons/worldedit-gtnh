@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -193,8 +192,8 @@ public class SchematicReader implements ClipboardReader {
         }
 
         for (int index = 0; index < blockId.length; index++) {
-            if ((index >> 1) >= addId2.length) { // No corresponding AddBlocks index
-                blocks[index] = (short) (blockId[index] & 0xFF);
+            if ((index >> 1) >= addId2.length) { // No corresponding AddBlocks2 index
+                blocks[index] = (short) (blockId[index] & 0xFFF);
             } else {
                 if ((index & 1) == 0) {
                     blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFFF));
@@ -260,59 +259,50 @@ public class SchematicReader implements ClipboardReader {
                         blocks[index] = blockConversionMap.get(blocks[index]);
                     }
 
-                    BaseBlock block = new BaseBlock(Short.toUnsignedInt(blocks[index]), blockData[index] < -1 || extraData != null ? Byte.toUnsignedInt(blockData[index]) + (extraData != null ? (extraData[index] << 8) : 0) : blockData[index]);
+                    BaseBlock block = new BaseBlock(
+                        Short.toUnsignedInt(blocks[index]),
+                        blockData[index] < -1 || extraData != null
+                            ? Byte.toUnsignedInt(blockData[index]) + (extraData != null ? (extraData[index] << 8) : 0)
+                            : blockData[index]);
 
                     if (tileEntitiesMap.containsKey(pt)) {
                         BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
-                            //Logic below is intentional to sneak a variable assignment into a boolean return statement
-                            return ((idPtr[0] = "id")!=null && itemTag.containsKey("id")
+                            // Logic below is intentional to sneak a variable assignment into a boolean return statement
+                            return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
                                 && itemTag.containsKey("Count")
                                 && itemTag.containsKey("Damage"))
-                                || ((idPtr[0] = "Item")!=null) && itemTag.containsKey("Item")
-                                && itemTag.containsKey("Count")
-                                && itemTag.containsKey("Meta");
+                                || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
+                                    && itemTag.containsKey("Count")
+                                    && itemTag.containsKey("Meta");
                         };
-                        Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>()
-                        {
+                        Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
 
                             @Override
-                            public CompoundTag apply(CompoundTag nbtData)
-                            {
+                            public CompoundTag apply(CompoundTag nbtData) {
                                 String[] idPtr = new String[1];
-                                if (isItem.test(nbtData, idPtr))
-                                {
+                                if (isItem.test(nbtData, idPtr)) {
                                     short id = nbtData.getShort(idPtr[0]);
                                     HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
                                     itemMap.put(idPtr[0], new ShortTag(itemConversionMap.get(id)));
 
-                                    if (nbtData.containsKey("tag")
-                                        && itemMap.get("tag") instanceof CompoundTag nbt)
-                                    {
+                                    if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
                                         itemMap.put("tag", apply(nbt));
                                     }
 
                                     return nbtData.setValue(itemMap);
-                                }
-                                else
-                                {
+                                } else {
                                     HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
-                                    for (String key : nbtMap.keySet())
-                                    {
+                                    for (String key : nbtMap.keySet()) {
                                         {
-                                            if (nbtMap.get(key) instanceof ListTag inventoryTag)
-                                            {
+                                            if (nbtMap.get(key) instanceof ListTag inventoryTag) {
                                                 ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
-                                                for (int i = 0; i < inventoryList.size(); i++)
-                                                {
-                                                    if (inventoryList.get(i) instanceof CompoundTag itemTag)
-                                                    {
+                                                for (int i = 0; i < inventoryList.size(); i++) {
+                                                    if (inventoryList.get(i) instanceof CompoundTag itemTag) {
                                                         inventoryList.set(i, apply(itemTag));
                                                     }
                                                 }
                                                 nbtMap.put(key, inventoryTag.setValue(inventoryList));
-                                            }
-                                            else if (nbtMap.get(key) instanceof CompoundTag itemTag)
-                                            {
+                                            } else if (nbtMap.get(key) instanceof CompoundTag itemTag) {
                                                 nbtMap.put(key, apply(itemTag));
                                             }
                                         }
@@ -323,8 +313,7 @@ public class SchematicReader implements ClipboardReader {
                         };
 
                         CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
-                        if (!itemConversionMap.isEmpty())
-                        {
+                        if (!itemConversionMap.isEmpty()) {
                             nbtData = convertItems.apply(nbtData);
                         }
                         block.setNbtData(nbtData);

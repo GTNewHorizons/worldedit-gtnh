@@ -25,13 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiPredicate;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 
-import com.google.common.base.Predicate;
 import com.sk89q.jnbt.ByteArrayTag;
 import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.jnbt.DoubleTag;
@@ -145,7 +143,7 @@ public class SchematicWriter implements ClipboardWriter {
                 }
                 addBlocks2[index
                     >> 1] = (byte) (((index & 1) == 0) ? addBlocks2[index >> 1] & 0xF0 | (block.getType() >> 12) & 0xF
-                    : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
+                        : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
             }
             blockMapping.put(
                 Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
@@ -153,8 +151,7 @@ public class SchematicWriter implements ClipboardWriter {
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
-            if (block.getData() > 15)
-            {
+            if (block.getData() > 15) {
                 if (addData == null) {
                     addData = new byte[blockData.length];
                 }
@@ -179,49 +176,39 @@ public class SchematicWriter implements ClipboardWriter {
                 tileEntities.add(tileEntityTag);
 
                 BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
-                    //Logic below is intentional to sneak a variable assignment into a boolean return statement
-                    return ((idPtr[0] = "id")!=null && itemTag.containsKey("id")
+                    // Logic below is intentional to sneak a variable assignment into a boolean return statement
+                    return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
                         && itemTag.containsKey("Count")
                         && itemTag.containsKey("Damage"))
-                        || ((idPtr[0] = "Item")!=null) && itemTag.containsKey("Item")
-                        && itemTag.containsKey("Count")
-                        && itemTag.containsKey("Meta");
+                        || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
+                            && itemTag.containsKey("Count")
+                            && itemTag.containsKey("Meta");
                 };
                 Consumer<CompoundTag> convertItems = new Consumer<CompoundTag>() {
 
                     @Override
-                    public void accept(CompoundTag nbtData)
-                    {
+                    public void accept(CompoundTag nbtData) {
                         String[] idPtr = new String[1];
-                        if (isItem.test(nbtData, idPtr))
-                        {
+                        if (isItem.test(nbtData, idPtr)) {
                             short id = nbtData.getShort(idPtr[0]);
                             itemMapping.put(
                                 Item.itemRegistry.getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
                                 new ShortTag(id));
 
                             if (nbtData.containsKey("tag") && nbtData.getValue()
-                                .get("tag") instanceof CompoundTag nbt)
-                            {
+                                .get("tag") instanceof CompoundTag nbt) {
                                 accept(nbt);
                             }
-                        }
-                        else
-                        {
-                            for (Tag tag : nbtData.getValue().values())
-                            {
-                                if (tag instanceof ListTag inventoryTag)
-                                {
-                                    for (Tag tag2 : inventoryTag.getValue())
-                                    {
-                                        if (tag2 instanceof CompoundTag itemTag)
-                                        {
+                        } else {
+                            for (Tag tag : nbtData.getValue()
+                                .values()) {
+                                if (tag instanceof ListTag inventoryTag) {
+                                    for (Tag tag2 : inventoryTag.getValue()) {
+                                        if (tag2 instanceof CompoundTag itemTag) {
                                             accept(itemTag);
                                         }
                                     }
-                                }
-                                else if (tag instanceof CompoundTag itemTag)
-                                {
+                                } else if (tag instanceof CompoundTag itemTag) {
                                     accept(itemTag);
                                 }
                             }
