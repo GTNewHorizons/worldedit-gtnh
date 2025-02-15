@@ -180,7 +180,7 @@ class DefaultBlockParser extends InputParser<BaseBlock> {
                     data = Integer.parseInt(typeAndData[1]);
                 }
 
-                if (data > 15) {
+                if (data > BaseBlock.MAX_DATA) {
                     throw new NoMatchException("Invalid data value '" + typeAndData[1] + "'");
                 }
 
