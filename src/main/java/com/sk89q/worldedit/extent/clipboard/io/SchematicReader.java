@@ -55,8 +55,6 @@ import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.registry.WorldData;
 import com.sk89q.worldedit.world.storage.NBTConversions;
 
-import io.netty.handler.logging.LogLevel;
-
 /**
  * Reads schematic files based that are compatible with MCEdit and other editors.
  */
@@ -260,7 +258,7 @@ public class SchematicReader implements ClipboardReader {
                     }
 
                     BaseBlock block = new BaseBlock(
-                       blocks[index] & 0xFFFF,
+                        blocks[index] & 0xFFFF,
                         (blockData[index] & 0xFF) + (addData != null ? (addData[index] & 0xFF << 8) : 0));
 
                     if (tileEntitiesMap.containsKey(pt)) {
@@ -297,9 +295,7 @@ public class SchematicReader implements ClipboardReader {
                                     if (id_data != null) {
                                         log.log(Level.WARNING, "ID" + id);
                                         log.log(Level.WARNING, "Convert" + itemConversionMap.get(id));
-                                        itemMap.put(
-                                            idPtr[0],
-                                            new IntTag(newId + (id_data & 0xFFFF0000)));
+                                        itemMap.put(idPtr[0], new IntTag(newId + (id_data & 0xFFFF0000)));
                                     } else {
                                         itemMap.put(idPtr[0], new ShortTag(newId));
                                     }
