@@ -256,14 +256,12 @@ public class SchematicReader implements ClipboardReader {
                     BlockVector pt = new BlockVector(x, y, z);
 
                     if (!blockConversionMap.isEmpty()) {
-                        blocks[index] = blockConversionMap.get(blocks[index]);
+                        blocks[index] = blockConversionMap.getOrDefault(blocks[index], blocks[index]);
                     }
 
                     BaseBlock block = new BaseBlock(
                         Short.toUnsignedInt(blocks[index]),
-                        blockData[index] < -1 || extraData != null
-                            ? Byte.toUnsignedInt(blockData[index]) + (extraData != null ? (extraData[index] << 8) : 0)
-                            : blockData[index]);
+                        Byte.toUnsignedInt(blockData[index]) + (extraData != null ? (extraData[index] << 8) : 0));
 
                     if (tileEntitiesMap.containsKey(pt)) {
                         BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
@@ -295,15 +293,15 @@ public class SchematicReader implements ClipboardReader {
                                         id = nbtData.getShort(idPtr[0]);
                                     }
                                     HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
-
+                                    short newId = itemConversionMap.getOrDefault(id, id);
                                     if (id_data != null) {
                                         log.log(Level.WARNING, "ID" + id);
                                         log.log(Level.WARNING, "Convert" + itemConversionMap.get(id));
                                         itemMap.put(
                                             idPtr[0],
-                                            new IntTag(itemConversionMap.get(id) + (id_data & 0xFFFF0000)));
+                                            new IntTag(newId + (id_data & 0xFFFF0000)));
                                     } else {
-                                        itemMap.put(idPtr[0], new ShortTag(itemConversionMap.get(id)));
+                                        itemMap.put(idPtr[0], new ShortTag(newId));
                                     }
 
                                     if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
