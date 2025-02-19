@@ -55,6 +55,8 @@ import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.registry.WorldData;
 import com.sk89q.worldedit.world.storage.NBTConversions;
 
+import io.netty.handler.logging.LogLevel;
+
 /**
  * Reads schematic files based that are compatible with MCEdit and other editors.
  */
@@ -192,13 +194,11 @@ public class SchematicReader implements ClipboardReader {
         }
 
         for (int index = 0; index < blockId.length; index++) {
-            if ((index >> 1) >= addId2.length) { // No corresponding AddBlocks2 index
-                blocks[index] = (short) (blockId[index] & 0xFFF);
-            } else {
+            if ((index >> 1) < addId2.length) { // No corresponding AddBlocks2 index
                 if ((index & 1) == 0) {
-                    blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFFF));
+                    blocks[index] = (short) (((addId2[index >> 1] & 0x0F) << 8) + (blocks[index] & 0xFFF));
                 } else {
-                    blocks[index] = (short) (((addId[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFFF));
+                    blocks[index] = (short) (((addId2[index >> 1] & 0xF0) << 4) + (blocks[index] & 0xFFF));
                 }
             }
         }
@@ -273,7 +273,10 @@ public class SchematicReader implements ClipboardReader {
                                 && itemTag.containsKey("Damage"))
                                 || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
                                     && itemTag.containsKey("Count")
-                                    && itemTag.containsKey("Meta");
+                                    && itemTag.containsKey("Meta")
+                                || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
+                                    && itemTag.getValue()
+                                        .get("id") instanceof IntTag;
                         };
                         Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
 
@@ -281,9 +284,27 @@ public class SchematicReader implements ClipboardReader {
                             public CompoundTag apply(CompoundTag nbtData) {
                                 String[] idPtr = new String[1];
                                 if (isItem.test(nbtData, idPtr)) {
-                                    short id = nbtData.getShort(idPtr[0]);
+                                    short id;
+                                    Integer id_data = null;
+                                    if (nbtData.getValue()
+                                        .get(idPtr[0]) instanceof IntTag) {
+                                        id_data = nbtData.getInt(idPtr[0]);
+                                        log.log(Level.WARNING, "Data: " + id_data);
+                                        id = id_data.shortValue();
+                                    } else {
+                                        id = nbtData.getShort(idPtr[0]);
+                                    }
                                     HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
-                                    itemMap.put(idPtr[0], new ShortTag(itemConversionMap.get(id)));
+
+                                    if (id_data != null) {
+                                        log.log(Level.WARNING, "ID" + id);
+                                        log.log(Level.WARNING, "Convert" + itemConversionMap.get(id));
+                                        itemMap.put(
+                                            idPtr[0],
+                                            new IntTag(itemConversionMap.get(id) + (id_data & 0xFFFF0000)));
+                                    } else {
+                                        itemMap.put(idPtr[0], new ShortTag(itemConversionMap.get(id)));
+                                    }
 
                                     if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
                                         itemMap.put("tag", apply(nbt));

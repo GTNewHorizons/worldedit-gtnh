@@ -182,7 +182,10 @@ public class SchematicWriter implements ClipboardWriter {
                         && itemTag.containsKey("Damage"))
                         || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
                             && itemTag.containsKey("Count")
-                            && itemTag.containsKey("Meta");
+                            && itemTag.containsKey("Meta")
+                        || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
+                            && itemTag.getValue()
+                                .get("id") instanceof IntTag;
                 };
                 Consumer<CompoundTag> convertItems = new Consumer<CompoundTag>() {
 
@@ -190,7 +193,16 @@ public class SchematicWriter implements ClipboardWriter {
                     public void accept(CompoundTag nbtData) {
                         String[] idPtr = new String[1];
                         if (isItem.test(nbtData, idPtr)) {
-                            short id = nbtData.getShort(idPtr[0]);
+                            short id;
+                            if (nbtData.getValue()
+                                .get(idPtr[0]) instanceof IntTag) {
+                                int id_data = nbtData.getInt(idPtr[0]);
+                                id = (short) id_data;
+
+                            } else {
+                                id = nbtData.getShort(idPtr[0]);
+                            }
+
                             itemMapping.put(
                                 Item.itemRegistry.getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
                                 new ShortTag(id));
