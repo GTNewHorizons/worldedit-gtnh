@@ -162,9 +162,9 @@ public class SchematicReader implements ClipboardReader {
         // Get blocks
         byte[] blockId = requireTag(schematic, "Blocks", ByteArrayTag.class).getValue();
         byte[] blockData = requireTag(schematic, "Data", ByteArrayTag.class).getValue();
-        byte[] extraData = null;
+        byte[] addData = null;
         if (schematic.containsKey("AddData")) {
-            extraData = requireTag(schematic, "AddData", ByteArrayTag.class).getValue();
+            addData = requireTag(schematic, "AddData", ByteArrayTag.class).getValue();
         }
 
         byte[] addId = new byte[0];
@@ -261,7 +261,7 @@ public class SchematicReader implements ClipboardReader {
 
                     BaseBlock block = new BaseBlock(
                        blocks[index] & 0xFFFF,
-                        (blockData[index] & 0xFF) + (extraData != null ? (extraData[index] & 0xFF << 8) : 0));
+                        (blockData[index] & 0xFF) + (addData != null ? (addData[index] & 0xFF << 8) : 0));
 
                     if (tileEntitiesMap.containsKey(pt)) {
                         BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
