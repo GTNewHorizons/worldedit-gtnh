@@ -285,7 +285,6 @@ public class SchematicReader implements ClipboardReader {
                                     if (nbtData.getValue()
                                         .get(idPtr[0]) instanceof IntTag) {
                                         id_data = nbtData.getInt(idPtr[0]);
-                                        log.log(Level.WARNING, "Data: " + id_data);
                                         id = id_data.shortValue();
                                     } else {
                                         id = nbtData.getShort(idPtr[0]);
@@ -293,8 +292,6 @@ public class SchematicReader implements ClipboardReader {
                                     HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
                                     short newId = itemConversionMap.getOrDefault(id, id);
                                     if (id_data != null) {
-                                        log.log(Level.WARNING, "ID" + id);
-                                        log.log(Level.WARNING, "Convert" + itemConversionMap.get(id));
                                         itemMap.put(idPtr[0], new IntTag(newId + (id_data & 0xFFFF0000)));
                                     } else {
                                         itemMap.put(idPtr[0], new ShortTag(newId));
@@ -302,6 +299,10 @@ public class SchematicReader implements ClipboardReader {
 
                                     if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
                                         itemMap.put("tag", apply(nbt));
+                                    }
+
+                                    if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag d) {
+                                        itemMap.put("d", apply(d));
                                     }
 
                                     return nbtData.setValue(itemMap);
