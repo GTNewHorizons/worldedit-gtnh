@@ -211,6 +211,11 @@ public class SchematicWriter implements ClipboardWriter {
                                 .get("tag") instanceof CompoundTag nbt) {
                                 accept(nbt);
                             }
+
+                            if (nbtData.containsKey("d") && nbtData.getValue()
+                                .get("d") instanceof CompoundTag d) {
+                                accept(d);
+                            }
                         } else {
                             for (Tag tag : nbtData.getValue()
                                 .values()) {
