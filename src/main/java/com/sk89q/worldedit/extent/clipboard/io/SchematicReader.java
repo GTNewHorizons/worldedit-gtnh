@@ -304,9 +304,43 @@ public class SchematicReader implements ClipboardReader {
                                     if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag d) {
                                         itemMap.put("d", apply(d));
                                     }
-
                                     return nbtData.setValue(itemMap);
                                 } else {
+                                    if (nbtData.containsKey("id") && nbtData.getValue()
+                                        .get("id") instanceof StringTag str
+                                        && "customDoorTileEntity".equals(str.getValue())) {
+
+                                        if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
+                                            .get("bottomMaterial") instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                        }
+
+                                        if (nbtData.containsKey("topMaterial") && nbtData.getValue()
+                                            .get("topMaterial") instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                        }
+
+                                        if (nbtData.containsKey("frame") && nbtData.getValue()
+                                            .get("frame") instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                        }
+
+                                        if (nbtData.containsKey("block") && nbtData.getValue()
+                                            .get("block") instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            blockConversionMap.getOrDefault((short) _id, (short) _id);
+                                        }
+
+                                        if (nbtData.containsKey("item") && nbtData.getValue()
+                                            .get("item") instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                        }
+                                    }
+
                                     HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
                                     for (String key : nbtMap.keySet()) {
                                         {

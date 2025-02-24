@@ -217,6 +217,49 @@ public class SchematicWriter implements ClipboardWriter {
                                 accept(d);
                             }
                         } else {
+                            if (nbtData.containsKey("id") && nbtData.getValue()
+                                .get("id") instanceof StringTag str && "customDoorTileEntity".equals(str.getValue())) {
+                                if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
+                                    .get("bottomMaterial") instanceof IntTag itag) {
+                                    int _id = itag.getValue();
+                                    itemMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        new ShortTag((short) _id));
+                                }
+
+                                if (nbtData.containsKey("topMaterial") && nbtData.getValue()
+                                    .get("topMaterial") instanceof IntTag itag) {
+                                    int _id = itag.getValue();
+                                    itemMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        new ShortTag((short) _id));
+                                }
+
+                                if (nbtData.containsKey("frame") && nbtData.getValue()
+                                    .get("frame") instanceof IntTag itag) {
+                                    int _id = itag.getValue();
+                                    itemMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        new ShortTag((short) _id));
+                                }
+
+                                if (nbtData.containsKey("block") && nbtData.getValue()
+                                    .get("block") instanceof IntTag itag) {
+                                    int _id = itag.getValue();
+                                    blockMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        new ShortTag((short) _id));
+                                }
+
+                                if (nbtData.containsKey("item") && nbtData.getValue()
+                                    .get("item") instanceof IntTag itag) {
+                                    int _id = itag.getValue();
+                                    itemMapping.put(
+                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        new ShortTag((short) _id));
+                                }
+                            }
+
                             for (Tag tag : nbtData.getValue()
                                 .values()) {
                                 if (tag instanceof ListTag inventoryTag) {
