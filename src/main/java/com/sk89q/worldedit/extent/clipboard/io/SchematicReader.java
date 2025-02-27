@@ -306,42 +306,54 @@ public class SchematicReader implements ClipboardReader {
                                     }
                                     return nbtData.setValue(itemMap);
                                 } else {
+
+                                    HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
                                     if (nbtData.containsKey("id") && nbtData.getValue()
                                         .get("id") instanceof StringTag str
                                         && "customDoorTileEntity".equals(str.getValue())) {
 
-                                        if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
-                                            .get("bottomMaterial") instanceof IntTag itag) {
+                                        String key;
+                                        if (nbtData.containsKey(key = "bottomMaterial") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
                                         }
 
-                                        if (nbtData.containsKey("topMaterial") && nbtData.getValue()
-                                            .get("topMaterial") instanceof IntTag itag) {
+                                        if (nbtData.containsKey(key = "topMaterial") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
                                         }
 
-                                        if (nbtData.containsKey("frame") && nbtData.getValue()
-                                            .get("frame") instanceof IntTag itag) {
+                                        if (nbtData.containsKey(key = "frame") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
                                         }
 
-                                        if (nbtData.containsKey("block") && nbtData.getValue()
-                                            .get("block") instanceof IntTag itag) {
+                                        if (nbtData.containsKey(key = "block") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            blockConversionMap.getOrDefault((short) _id, (short) _id);
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(blockConversionMap.getOrDefault((short) _id, (short) _id)));
                                         }
 
-                                        if (nbtData.containsKey("item") && nbtData.getValue()
-                                            .get("item") instanceof IntTag itag) {
+                                        if (nbtData.containsKey(key = "item") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            itemConversionMap.getOrDefault((short) _id, (short) _id);
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
                                         }
                                     }
 
-                                    HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
                                     for (String key : nbtMap.keySet()) {
                                         {
                                             if (nbtMap.get(key) instanceof ListTag inventoryTag) {
