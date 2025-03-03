@@ -176,7 +176,7 @@ public class SchematicReader implements ClipboardReader {
         }
 
         if (schematic.containsKey("AddBlocks2")) {
-            addId2 = requireTag(schematic, "AddBlocks", ByteArrayTag.class).getValue();
+            addId2 = requireTag(schematic, "AddBlocks2", ByteArrayTag.class).getValue();
         }
         // Combine the AddBlocks data with the first 8-bit block ID
         for (int index = 0; index < blockId.length; index++) {
