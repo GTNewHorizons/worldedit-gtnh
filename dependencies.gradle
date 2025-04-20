@@ -45,11 +45,11 @@ dependencies {
     shadowImplementation 'com.thoughtworks.paranamer:paranamer:2.6'
     shadowImplementation 'com.sk89q.lib:jlibnoise:1.0.0'
 
-    devOnlyNonPublishable 'com.github.GTNewHorizons:ArchitectureCraft:1.9.5'
-    devOnlyNonPublishable 'com.github.GTNewHorizons:ForgeMultipart:1.4.8'
-    devOnlyNonPublishable 'com.github.GTNewHorizons:CarpentersBlocks:3.5.3-GTNH'
+    devOnlyNonPublishable 'com.github.GTNewHorizons:ArchitectureCraft:1.10.2'
+    devOnlyNonPublishable 'com.github.GTNewHorizons:ForgeMultipart:1.6.2'
+    devOnlyNonPublishable 'com.github.GTNewHorizons:CarpentersBlocks:3.7.0-GTNH'
 
-    runtimeOnlyNonPublishable 'com.github.GTNewHorizons:NotEnoughItems:2.6.0-GTNH:dev'
+    runtimeOnlyNonPublishable 'com.github.GTNewHorizons:NotEnoughItems:2.7.38-GTNH:dev'
     
     testImplementation 'org.mockito:mockito-core:5.4.0'
 }

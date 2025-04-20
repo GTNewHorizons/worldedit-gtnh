@@ -1,6 +1,6 @@
 [{
-    "modid": "WorldEdit",
-    "name": "WorldEdit",
+    "modid": "${modId}",
+    "name": "${modName}",
     "description": "WorldEdit is an easy-to-use in-game world editor for Minecraft, supporting both single player and multiplayer.",
     "version": "${modVersion}",
     "mcversion": "${minecraftVersion}",

@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Joiner;
 import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.WETags;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseBlock;
@@ -69,7 +70,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 @Mod(
     modid = ForgeWorldEdit.MOD_ID,
     name = "WorldEdit",
-    version = "%VERSION%",
+    version = WETags.VERSION,
     acceptableRemoteVersions = "*",
     dependencies = "after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
 public class ForgeWorldEdit {
