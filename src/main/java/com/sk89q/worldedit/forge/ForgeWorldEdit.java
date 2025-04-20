@@ -122,7 +122,7 @@ public class ForgeWorldEdit {
             .register(ThreadSafeCache.getInstance());
 
         if (Loader.isModLoaded("neid")) {
-            BaseBlock.MAX_DATA = (2 << 16) - 1;
+            BaseBlock.MAX_DATA = (1 << 16) - 1;
         }
     }
 

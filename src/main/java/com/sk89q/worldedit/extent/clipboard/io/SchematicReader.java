@@ -19,13 +19,19 @@ package com.sk89q.worldedit.extent.clipboard.io;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
+
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
 
 import com.sk89q.jnbt.ByteArrayTag;
 import com.sk89q.jnbt.CompoundTag;
@@ -129,10 +135,38 @@ public class SchematicReader implements ClipboardReader {
         // Blocks
         // ====================================================================
 
+        Map<Short, Short> blockConversionMap = new HashMap<>();
+        if (schematic.containsKey("BlockMapping")) {
+            Map<String, Tag> mapping = requireTag(schematic, "BlockMapping", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
+                Block block = Block.getBlockFromName(key);
+                blockConversionMap.put(sourceId, (short) Block.getIdFromBlock(block));
+            }
+        }
+
+        Map<Short, Short> itemConversionMap = new HashMap<>();
+        if (schematic.containsKey("ItemMapping")) {
+            Map<String, Tag> mapping = requireTag(schematic, "ItemMapping", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
+                Item item = (Item) Item.itemRegistry.getObject(key);
+                itemConversionMap.put(sourceId, (short) Item.getIdFromItem(item));
+            }
+        }
+
         // Get blocks
         byte[] blockId = requireTag(schematic, "Blocks", ByteArrayTag.class).getValue();
         byte[] blockData = requireTag(schematic, "Data", ByteArrayTag.class).getValue();
+        byte[] addData = null;
+        if (schematic.containsKey("AddData")) {
+            addData = requireTag(schematic, "AddData", ByteArrayTag.class).getValue();
+        }
+
         byte[] addId = new byte[0];
+        byte[] addId2 = new byte[0];
         short[] blocks = new short[blockId.length]; // Have to later combine IDs
 
         // We support 4096 block IDs using the same method as vanilla Minecraft, where
@@ -141,6 +175,9 @@ public class SchematicReader implements ClipboardReader {
             addId = requireTag(schematic, "AddBlocks", ByteArrayTag.class).getValue();
         }
 
+        if (schematic.containsKey("AddBlocks2")) {
+            addId2 = requireTag(schematic, "AddBlocks2", ByteArrayTag.class).getValue();
+        }
         // Combine the AddBlocks data with the first 8-bit block ID
         for (int index = 0; index < blockId.length; index++) {
             if ((index >> 1) >= addId.length) { // No corresponding AddBlocks index
@@ -150,6 +187,16 @@ public class SchematicReader implements ClipboardReader {
                     blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFF));
                 } else {
                     blocks[index] = (short) (((addId[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFF));
+                }
+            }
+        }
+
+        for (int index = 0; index < blockId.length; index++) {
+            if ((index >> 1) < addId2.length) { // No corresponding AddBlocks2 index
+                if ((index & 1) == 0) {
+                    blocks[index] = (short) (((addId2[index >> 1] & 0x0F) << 8) + (blocks[index] & 0xFFF));
+                } else {
+                    blocks[index] = (short) (((addId2[index >> 1] & 0xF0) << 4) + (blocks[index] & 0xFFF));
                 }
             }
         }
@@ -205,10 +252,133 @@ public class SchematicReader implements ClipboardReader {
                 for (int z = 0; z < length; ++z) {
                     int index = y * width * length + z * width + x;
                     BlockVector pt = new BlockVector(x, y, z);
-                    BaseBlock block = new BaseBlock(blocks[index], blockData[index]);
+
+                    if (!blockConversionMap.isEmpty()) {
+                        blocks[index] = blockConversionMap.getOrDefault(blocks[index], blocks[index]);
+                    }
+
+                    BaseBlock block = new BaseBlock(
+                        blocks[index] & 0xFFFF,
+                        (blockData[index] & 0xFF) + (addData != null ? (addData[index] & 0xFF << 8) : 0));
 
                     if (tileEntitiesMap.containsKey(pt)) {
-                        block.setNbtData(new CompoundTag(tileEntitiesMap.get(pt)));
+                        BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
+                            // Logic below is intentional to sneak a variable assignment into a boolean return statement
+                            return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
+                                && itemTag.containsKey("Count")
+                                && itemTag.containsKey("Damage"))
+                                || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
+                                    && itemTag.containsKey("Count")
+                                    && itemTag.containsKey("Meta")
+                                || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
+                                    && itemTag.getValue()
+                                        .get("id") instanceof IntTag;
+                        };
+                        Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
+
+                            @Override
+                            public CompoundTag apply(CompoundTag nbtData) {
+                                String[] idPtr = new String[1];
+                                if (isItem.test(nbtData, idPtr)) {
+                                    short id;
+                                    Integer id_data = null;
+                                    if (nbtData.getValue()
+                                        .get(idPtr[0]) instanceof IntTag) {
+                                        id_data = nbtData.getInt(idPtr[0]);
+                                        id = id_data.shortValue();
+                                    } else {
+                                        id = nbtData.getShort(idPtr[0]);
+                                    }
+                                    HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
+                                    short newId = itemConversionMap.getOrDefault(id, id);
+                                    if (id_data != null) {
+                                        itemMap.put(idPtr[0], new IntTag(newId + (id_data & 0xFFFF0000)));
+                                    } else {
+                                        itemMap.put(idPtr[0], new ShortTag(newId));
+                                    }
+
+                                    if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
+                                        itemMap.put("tag", apply(nbt));
+                                    }
+
+                                    if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag d) {
+                                        itemMap.put("d", apply(d));
+                                    }
+                                    return nbtData.setValue(itemMap);
+                                } else {
+
+                                    HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
+                                    if (nbtData.containsKey("id") && nbtData.getValue()
+                                        .get("id") instanceof StringTag str
+                                        && "customDoorTileEntity".equals(str.getValue())) {
+
+                                        String key;
+                                        if (nbtData.containsKey(key = "bottomMaterial") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                        }
+
+                                        if (nbtData.containsKey(key = "topMaterial") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                        }
+
+                                        if (nbtData.containsKey(key = "frame") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                        }
+
+                                        if (nbtData.containsKey(key = "block") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(blockConversionMap.getOrDefault((short) _id, (short) _id)));
+                                        }
+
+                                        if (nbtData.containsKey(key = "item") && nbtData.getValue()
+                                            .get(key) instanceof IntTag itag) {
+                                            int _id = itag.getValue();
+                                            nbtMap.put(
+                                                key,
+                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                        }
+                                    }
+
+                                    for (String key : nbtMap.keySet()) {
+                                        {
+                                            if (nbtMap.get(key) instanceof ListTag inventoryTag) {
+                                                ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
+                                                for (int i = 0; i < inventoryList.size(); i++) {
+                                                    if (inventoryList.get(i) instanceof CompoundTag itemTag) {
+                                                        inventoryList.set(i, apply(itemTag));
+                                                    }
+                                                }
+                                                nbtMap.put(key, inventoryTag.setValue(inventoryList));
+                                            } else if (nbtMap.get(key) instanceof CompoundTag itemTag) {
+                                                nbtMap.put(key, apply(itemTag));
+                                            }
+                                        }
+                                    }
+                                    return nbtData.setValue(nbtMap);
+                                }
+                            }
+                        };
+
+                        CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
+                        if (!itemConversionMap.isEmpty()) {
+                            nbtData = convertItems.apply(nbtData);
+                        }
+                        block.setNbtData(nbtData);
                     }
 
                     try {
