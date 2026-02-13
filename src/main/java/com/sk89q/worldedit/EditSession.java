@@ -60,6 +60,7 @@ import com.sk89q.worldedit.function.GroundFunction;
 import com.sk89q.worldedit.function.RegionMaskingFilter;
 import com.sk89q.worldedit.function.block.BlockReplace;
 import com.sk89q.worldedit.function.block.Counter;
+import com.sk89q.worldedit.function.block.MaterialReplace;
 import com.sk89q.worldedit.function.block.Naturalizer;
 import com.sk89q.worldedit.function.generator.GardenPatchGenerator;
 import com.sk89q.worldedit.function.mask.BlockMask;
@@ -987,6 +988,26 @@ public class EditSession implements Extent {
         BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
         RegionMaskingFilter filter = new RegionMaskingFilter(mask, replace);
         RegionVisitor visitor = new RegionVisitor(region, filter);
+        Operations.completeLegacy(visitor);
+        return visitor.getAffected();
+    }
+
+    /**
+     * Replaces all the material in specific blocks matching a given mask, within a given region, to a block
+     * returned by a given pattern.
+     *
+     * @param region  the region to replace the blocks within
+     * @param pattern the pattern that provides the new blocks
+     * @return number of blocks affected
+     * @throws MaxChangedBlocksException thrown if too many blocks are changed
+     */
+    @SuppressWarnings("deprecation")
+    public int replaceMaterial(Region region, Pattern pattern) throws MaxChangedBlocksException {
+        checkNotNull(region);
+        checkNotNull(pattern);
+
+        MaterialReplace replace = new MaterialReplace(this, Patterns.wrap(pattern));
+        RegionVisitor visitor = new RegionVisitor(region, replace);
         Operations.completeLegacy(visitor);
         return visitor.getAffected();
     }

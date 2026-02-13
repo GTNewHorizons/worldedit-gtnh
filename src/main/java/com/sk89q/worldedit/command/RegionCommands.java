@@ -156,6 +156,24 @@ public class RegionCommands {
     }
 
     @Command(
+        aliases = { "/material", "/ma", "/mat" },
+        usage = "[from-block] <to-block>",
+        desc = "Replace all blocks in the selection with another",
+        flags = "f",
+        min = 1,
+        max = 2)
+    @CommandPermissions("worldedit.region.replace")
+    @Logging(REGION)
+    public void material(Player player, EditSession editSession, @Selection Region region, @Optional Mask from,
+                        Pattern to) throws WorldEditException {
+        if (from == null) {
+            from = new ExistingBlockMask(editSession);
+        }
+        int affected = editSession.replaceMaterial(region, Patterns.wrap(to));
+        player.print(affected + " block(s) have been replaced.");
+    }
+
+    @Command(
         aliases = { "/overlay" },
         usage = "<block>",
         desc = "Set a block on top of blocks in the region",

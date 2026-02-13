@@ -23,7 +23,7 @@ import com.sk89q.worldedit.world.registry.LegacyWorldData;
 /**
  * World data for the Forge platform.
  */
-class ForgeWorldData extends LegacyWorldData {
+public class ForgeWorldData extends LegacyWorldData {
 
     private static final ForgeWorldData INSTANCE = new ForgeWorldData();
     private final ItemRegistry itemRegistry = new ForgeItemRegistry();

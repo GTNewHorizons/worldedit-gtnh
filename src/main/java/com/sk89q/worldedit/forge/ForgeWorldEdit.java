@@ -22,6 +22,7 @@ import static net.minecraftforge.event.entity.player.PlayerInteractEvent.Action;
 import java.io.File;
 import java.util.Map;
 
+import com.sk89q.worldedit.forge.compat.*;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -42,11 +43,6 @@ import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
-import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
-import com.sk89q.worldedit.forge.compat.CarpentersBlocksBlockTransformHook;
-import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
-import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
-import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
 import com.sk89q.worldedit.internal.LocalWorldAdapter;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -92,7 +88,8 @@ public class ForgeWorldEdit {
     private ForgePlatform platform;
     private ForgeConfiguration config;
     private File workingDir;
-    private ForgeMultipartCompat compat = new NoForgeMultipartCompat();
+    private ForgeMultipartCompat fmpCompat = new NoForgeMultipartCompat();
+    private LittleTilesCompat ltCompat = new NoLittleTilesCompat();
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -105,18 +102,28 @@ public class ForgeWorldEdit {
         config.load();
 
         if (Loader.isModLoaded("ForgeMultipart")) {
-            compat = new ForgeMultipartExistsCompat();
+            fmpCompat = new ForgeMultipartExistsCompat();
             ForgeWorldData.getInstance()
-                .addBlockTransformHook((ForgeMultipartExistsCompat) compat);
+                .addBlockTransformHook((ForgeMultipartExistsCompat) fmpCompat);
+            ForgeWorldData.getInstance()
+                .addMaterialTransformHook(new ForgeMultipartBlockMaterialTransformHook());
         }
         if (Loader.isModLoaded("ArchitectureCraft")) {
             ForgeWorldData.getInstance()
                 .addBlockTransformHook(new ArchitectureCraftBlockTransformHook());
+            ForgeWorldData.getInstance()
+                .addMaterialTransformHook(new ArchitectureCraftBlockMaterialTransformHook());
         }
         if (Loader.isModLoaded("CarpentersBlocks")) {
             ForgeWorldData.getInstance()
                 .addBlockTransformHook(new CarpentersBlocksBlockTransformHook());
         }
+        if (Loader.isModLoaded("littletiles")) {
+            ltCompat = new LittleTilesExistsCompat();
+            ForgeWorldData.getInstance()
+                .addMaterialTransformHook(new LittleTilesBlockMaterialTransformHook());
+        }
+
 
         FMLCommonHandler.instance()
             .bus()
@@ -319,7 +326,11 @@ public class ForgeWorldEdit {
     }
 
     public ForgeMultipartCompat getFMPCompat() {
-        return compat;
+        return fmpCompat;
+    }
+
+    public LittleTilesCompat getLtCompat() {
+        return ltCompat;
     }
 
     /**

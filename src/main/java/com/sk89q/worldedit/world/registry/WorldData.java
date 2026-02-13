@@ -17,6 +17,7 @@
 package com.sk89q.worldedit.world.registry;
 
 import com.sk89q.worldedit.extent.transform.BlockTransformHook;
+import com.sk89q.worldedit.extent.transform.MaterialTransformHook;
 
 /**
  * Describes the necessary data for blocks, entities, and other objects
@@ -53,4 +54,6 @@ public interface WorldData {
     BiomeRegistry getBiomeRegistry();
 
     BlockTransformHook getBlockTransformHook();
+
+    MaterialTransformHook getMaterialTransformHook();
 }

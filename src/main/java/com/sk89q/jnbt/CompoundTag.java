@@ -341,6 +341,25 @@ public final class CompoundTag extends Tag {
     }
 
     /**
+     * Get a CompoundTag named with the given key.
+     *
+     * <p>
+     * If the key does not exist or its value is not a CompoundTag,
+     * then {@code null} will be returned.
+     * </p>
+     *
+     * @param key the key
+     * @return a CompoundTag
+     */
+    public CompoundTag getCompoundtag(String key) {
+        Tag tag = value.get(key);
+        if (tag instanceof CompoundTag compoundTag) {
+           return compoundTag;
+        }
+        return null;
+    }
+
+    /**
      * Get a long named with the given key.
      *
      * <p>

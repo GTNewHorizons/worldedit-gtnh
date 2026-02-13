@@ -75,5 +75,7 @@ final class TileEntityUtils {
         world.setTileEntity(position.getBlockX(), position.getBlockY(), position.getBlockZ(), tileEntity);
         ForgeWorldEdit.inst.getFMPCompat()
             .sendDescPacket(world, tileEntity);
+        ForgeWorldEdit.inst.getLtCompat()
+            .sendDescPacket(world, tileEntity);
     }
 }
