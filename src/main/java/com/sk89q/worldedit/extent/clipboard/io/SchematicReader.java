@@ -135,25 +135,45 @@ public class SchematicReader implements ClipboardReader {
         // Blocks
         // ====================================================================
 
-        Map<Short, Short> blockConversionMap = new HashMap<>();
+        Map<Integer, Integer> blockConversionMap = new HashMap<>();
         if (schematic.containsKey("BlockMapping")) {
             Map<String, Tag> mapping = requireTag(schematic, "BlockMapping", CompoundTag.class).getValue();
 
             for (String key : mapping.keySet()) {
                 short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
                 Block block = Block.getBlockFromName(key);
-                blockConversionMap.put(sourceId, (short) Block.getIdFromBlock(block));
+                blockConversionMap.put(Short.toUnsignedInt(sourceId), Block.getIdFromBlock(block));
             }
         }
 
-        Map<Short, Short> itemConversionMap = new HashMap<>();
+        if (schematic.containsKey("BlockMappingE")) {
+            Map<String, Tag> mapping = requireTag(schematic, "BlockMappingE", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                int sourceId = requireTag(mapping, key, IntTag.class).getValue();
+                Block block = Block.getBlockFromName(key);
+                blockConversionMap.put(sourceId, Block.getIdFromBlock(block));
+            }
+        }
+
+        Map<Integer, Integer> itemConversionMap = new HashMap<>();
         if (schematic.containsKey("ItemMapping")) {
             Map<String, Tag> mapping = requireTag(schematic, "ItemMapping", CompoundTag.class).getValue();
 
             for (String key : mapping.keySet()) {
                 short sourceId = requireTag(mapping, key, ShortTag.class).getValue();
                 Item item = (Item) Item.itemRegistry.getObject(key);
-                itemConversionMap.put(sourceId, (short) Item.getIdFromItem(item));
+                itemConversionMap.put(Short.toUnsignedInt(sourceId), Item.getIdFromItem(item));
+            }
+        }
+
+        if (schematic.containsKey("ItemMappingE")) {
+            Map<String, Tag> mapping = requireTag(schematic, "ItemMappingE", CompoundTag.class).getValue();
+
+            for (String key : mapping.keySet()) {
+                int sourceId = requireTag(mapping, key, IntTag.class).getValue();
+                Item item = (Item) Item.itemRegistry.getObject(key);
+                itemConversionMap.put(sourceId, Item.getIdFromItem(item));
             }
         }
 
@@ -167,7 +187,8 @@ public class SchematicReader implements ClipboardReader {
 
         byte[] addId = new byte[0];
         byte[] addId2 = new byte[0];
-        short[] blocks = new short[blockId.length]; // Have to later combine IDs
+        byte[] addId3 = new byte[0];
+        int[] blocks = new int[blockId.length]; // Have to later combine IDs
 
         // We support 4096 block IDs using the same method as vanilla Minecraft, where
         // the highest 4 bits are stored in a separate byte array.
@@ -177,6 +198,10 @@ public class SchematicReader implements ClipboardReader {
 
         if (schematic.containsKey("AddBlocks2")) {
             addId2 = requireTag(schematic, "AddBlocks2", ByteArrayTag.class).getValue();
+        }
+
+        if (schematic.containsKey("AddBlocks3")) {
+            addId3 = requireTag(schematic, "AddBlocks3", ByteArrayTag.class).getValue();
         }
         // Combine the AddBlocks data with the first 8-bit block ID
         for (int index = 0; index < blockId.length; index++) {
@@ -198,6 +223,12 @@ public class SchematicReader implements ClipboardReader {
                 } else {
                     blocks[index] = (short) (((addId2[index >> 1] & 0xF0) << 8) + (blocks[index] & 0xFFF));
                 }
+            }
+        }
+
+        if (addId3.length == blockId.length) {
+            for (int index = 0; index < blockId.length; index++) {
+                blocks[index] = (addId3[index] << 16) + (blocks[index] & 0xFFFF);
             }
         }
 
@@ -280,21 +311,27 @@ public class SchematicReader implements ClipboardReader {
                             public CompoundTag apply(CompoundTag nbtData) {
                                 String[] idPtr = new String[1];
                                 if (isItem.test(nbtData, idPtr)) {
-                                    short id;
+                                    int id;
                                     Integer id_data = null;
                                     if (nbtData.getValue()
                                         .get(idPtr[0]) instanceof IntTag) {
                                         id_data = nbtData.getInt(idPtr[0]);
-                                        id = id_data.shortValue();
+                                        id = id_data;
+                                        if ((id_data & 0xff000000) != 0) {
+                                            id = id & 0x0000ffff;
+                                        }
                                     } else {
-                                        id = nbtData.getShort(idPtr[0]);
+                                        id = Short.toUnsignedInt(nbtData.getShort(idPtr[0]));
                                     }
                                     HashMap<String, Tag> itemMap = new HashMap<>(nbtData.getValue());
-                                    short newId = itemConversionMap.getOrDefault(id, id);
+                                    int newId = itemConversionMap.getOrDefault(id, id);
                                     if (id_data != null) {
-                                        itemMap.put(idPtr[0], new IntTag(newId + (id_data & 0xFFFF0000)));
+                                        itemMap.put(
+                                            idPtr[0],
+                                            new IntTag(
+                                                newId + ((id_data & 0xff000000) != 0 ? (id_data & 0xFFFF0000) : 0)));
                                     } else {
-                                        itemMap.put(idPtr[0], new ShortTag(newId));
+                                        itemMap.put(idPtr[0], new ShortTag((short) newId));
                                     }
 
                                     if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
@@ -316,41 +353,31 @@ public class SchematicReader implements ClipboardReader {
                                         if (nbtData.containsKey(key = "bottomMaterial") && nbtData.getValue()
                                             .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            nbtMap.put(
-                                                key,
-                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "topMaterial") && nbtData.getValue()
                                             .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            nbtMap.put(
-                                                key,
-                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "frame") && nbtData.getValue()
                                             .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            nbtMap.put(
-                                                key,
-                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "block") && nbtData.getValue()
                                             .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            nbtMap.put(
-                                                key,
-                                                new IntTag(blockConversionMap.getOrDefault((short) _id, (short) _id)));
+                                            nbtMap.put(key, new IntTag(blockConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "item") && nbtData.getValue()
                                             .get(key) instanceof IntTag itag) {
                                             int _id = itag.getValue();
-                                            nbtMap.put(
-                                                key,
-                                                new IntTag(itemConversionMap.getOrDefault((short) _id, (short) _id)));
+                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
                                     }
 
