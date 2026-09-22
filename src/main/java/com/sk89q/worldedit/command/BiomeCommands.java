@@ -46,6 +46,7 @@ import com.sk89q.worldedit.regions.FlatRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.Regions;
 import com.sk89q.worldedit.util.command.binding.Switch;
+import com.sk89q.worldedit.util.command.parametric.Optional;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.biome.BaseBiome;
 import com.sk89q.worldedit.world.biome.BiomeData;
@@ -200,6 +201,57 @@ public class BiomeCommands {
 
         player.print(
             "Biomes were changed in " + visitor.getAffected()
+                + " columns. You may have to rejoin your game (or close and reopen your world) to see a change.");
+    }
+
+    @Command(
+        aliases = { "/setchunkbiome", "/chunkbiome", "/biomechunks" },
+        usage = "<biome> [chunk-radius]",
+        desc = "Sets the biome in chunks around the player",
+        help = "Sets every column in a square of chunks around the player to the selected biome.\n"
+            + "The radius is measured in chunks and defaults to 3.",
+        min = 1,
+        max = 2)
+    @Logging(REGION)
+    @CommandPermissions("worldedit.biome.set")
+    public void setChunkBiome(Player player, EditSession editSession, BaseBiome target, @Optional("3") int radius)
+        throws WorldEditException {
+        if (radius < 0) {
+            player.printError("Chunk radius must be zero or greater.");
+            return;
+        }
+
+        Vector position = player.getPosition();
+        int centerChunkX = position.getBlockX() >> 4;
+        int centerChunkZ = position.getBlockZ() >> 4;
+        int changedChunks = 0;
+        int changedColumns = 0;
+
+        for (int chunkX = centerChunkX - radius; chunkX <= centerChunkX + radius; chunkX++) {
+            for (int chunkZ = centerChunkZ - radius; chunkZ <= centerChunkZ + radius; chunkZ++) {
+                boolean changedChunk = false;
+                int minimumX = chunkX << 4;
+                int minimumZ = chunkZ << 4;
+
+                for (int offsetX = 0; offsetX < 16; offsetX++) {
+                    for (int offsetZ = 0; offsetZ < 16; offsetZ++) {
+                        if (editSession.setBiome(new Vector2D(minimumX + offsetX, minimumZ + offsetZ), target)) {
+                            changedColumns++;
+                            changedChunk = true;
+                        }
+                    }
+                }
+
+                if (changedChunk) {
+                    changedChunks++;
+                }
+            }
+        }
+
+        player.print(
+            "Biome changed in " + changedChunks
+                + " chunk(s) and "
+                + changedColumns
                 + " columns. You may have to rejoin your game (or close and reopen your world) to see a change.");
     }
 
