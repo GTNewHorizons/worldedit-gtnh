@@ -73,6 +73,7 @@ import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.mask.NoiseFilter2D;
 import com.sk89q.worldedit.function.mask.RegionMask;
 import com.sk89q.worldedit.function.operation.ChangeSetExecutor;
+import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.OperationQueue;
@@ -1222,6 +1223,22 @@ public class EditSession implements Extent {
      */
     @SuppressWarnings("deprecation")
     public int overlayCuboidBlocks(Region region, Pattern pattern) throws MaxChangedBlocksException {
+        CountedOperation operation = overlayCuboidBlocksOperation(region, pattern);
+        Operations.completeLegacy(operation);
+        return operation.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #overlayCuboidBlocks(Region, Pattern)} runs, without running
+     * it. The count is kept by the ground function rather than by the visitor, so the two are
+     * paired up in a {@link CountedOperation}.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    @SuppressWarnings("deprecation")
+    public CountedOperation overlayCuboidBlocksOperation(Region region, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(pattern);
 
@@ -1233,8 +1250,7 @@ public class EditSession implements Extent {
             minimumBlockY(region),
             maximumBlockY(region),
             ground);
-        Operations.completeLegacy(visitor);
-        return ground.getAffected();
+        return new CountedOperation(visitor, ground);
     }
 
     /**
@@ -1271,6 +1287,26 @@ public class EditSession implements Extent {
         checkNotNull(dir);
         checkArgument(count >= 1, "count >= 1 required");
 
+        ForwardExtentCopy copy = stackCuboidRegionOperation(region, dir, count, copyAir);
+        Operations.completeLegacy(copy);
+        return copy.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #stackCuboidRegion(Region, Vector, int, boolean)} runs,
+     * without running it.
+     *
+     * @param region  the region to stack
+     * @param dir     the direction to stack
+     * @param count   the number of times to stack
+     * @param copyAir true to copy air blocks
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public ForwardExtentCopy stackCuboidRegionOperation(Region region, Vector dir, int count, boolean copyAir) {
+        checkNotNull(region);
+        checkNotNull(dir);
+        checkArgument(count >= 1, "count >= 1 required");
+
         Vector size = region.getMaximumPoint()
             .subtract(region.getMinimumPoint())
             .add(1, 1, 1);
@@ -1281,8 +1317,7 @@ public class EditSession implements Extent {
         if (!copyAir) {
             copy.setSourceMask(new ExistingBlockMask(this));
         }
-        Operations.completeLegacy(copy);
-        return copy.getAffected();
+        return copy;
     }
 
     /**
@@ -1302,6 +1337,33 @@ public class EditSession implements Extent {
         checkNotNull(dir);
         checkArgument(distance >= 1, "distance >= 1 required");
 
+        CountedOperation operation = moveRegionOperation(region, dir, distance, copyAir, replacement);
+        Operations.completeLegacy(operation);
+        return operation.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #moveRegion(Region, Vector, int, boolean, BaseBlock)} runs,
+     * without running it.
+     *
+     * <p>
+     * The operation holds on to the given region, so a caller that shifts the selection afterwards
+     * has to wait until the operation has finished before doing so.
+     * </p>
+     *
+     * @param region      the region to move
+     * @param dir         the direction
+     * @param distance    the distance to move
+     * @param copyAir     true to copy air blocks
+     * @param replacement the replacement block to fill in after moving, or null to use air
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public CountedOperation moveRegionOperation(Region region, Vector dir, int distance, boolean copyAir,
+        BaseBlock replacement) {
+        checkNotNull(region);
+        checkNotNull(dir);
+        checkArgument(distance >= 1, "distance >= 1 required");
+
         Vector to = region.getMinimumPoint();
 
         // Remove the original blocks
@@ -1309,7 +1371,7 @@ public class EditSession implements Extent {
             : new BlockPattern(new BaseBlock(BlockID.AIR));
         BlockReplace remove = new BlockReplace(this, pattern);
 
-        // Copy to a buffer so we don't destroy our original before we can copy all the blocks from it
+        // Copy to a buffer so the original is not destroyed before every block is copied from it
         ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(region));
         ForwardExtentCopy copy = new ForwardExtentCopy(this, region, buffer, to);
         copy.setTransform(new AffineTransform().translate(dir.multiply(distance)));
@@ -1323,10 +1385,7 @@ public class EditSession implements Extent {
         BlockReplace replace = new BlockReplace(this, buffer);
         RegionVisitor visitor = new RegionVisitor(buffer.asRegion(), replace);
 
-        OperationQueue operation = new OperationQueue(copy, visitor);
-        Operations.completeLegacy(operation);
-
-        return copy.getAffected();
+        return new CountedOperation(new OperationQueue(copy, visitor), copy);
     }
 
     /**

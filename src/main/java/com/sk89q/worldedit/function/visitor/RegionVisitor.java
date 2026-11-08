@@ -22,6 +22,7 @@ import java.util.List;
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.function.RegionFunction;
+import com.sk89q.worldedit.function.operation.AffectedCounter;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.regions.Region;
@@ -29,7 +30,7 @@ import com.sk89q.worldedit.regions.Region;
 /**
  * Utility class to apply region functions to {@link com.sk89q.worldedit.regions.Region}.
  */
-public class RegionVisitor implements Operation {
+public class RegionVisitor implements Operation, AffectedCounter {
 
     private final Region region;
     private final RegionFunction function;
@@ -46,6 +47,7 @@ public class RegionVisitor implements Operation {
      *
      * @return the number of affected
      */
+    @Override
     public int getAffected() {
         return affected;
     }

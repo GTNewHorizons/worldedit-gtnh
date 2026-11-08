@@ -47,7 +47,7 @@ import com.sk89q.worldedit.regions.Region;
  * source. Therefore, interpolation will not occur to fill in the gaps.
  * </p>
  */
-public class ForwardExtentCopy implements Operation {
+public class ForwardExtentCopy implements Operation, AffectedCounter {
 
     private final Extent source;
     private final Extent destination;
@@ -209,6 +209,7 @@ public class ForwardExtentCopy implements Operation {
      *
      * @return the number of affected
      */
+    @Override
     public int getAffected() {
         return affected;
     }

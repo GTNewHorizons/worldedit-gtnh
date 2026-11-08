@@ -47,6 +47,10 @@ import com.sk89q.worldedit.function.generator.ForestGenerator;
 import com.sk89q.worldedit.function.mask.ExistingBlockMask;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.function.mask.NoiseFilter2D;
+import com.sk89q.worldedit.function.operation.AffectedCounter;
+import com.sk89q.worldedit.function.operation.CountedOperation;
+import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.function.pattern.Patterns;
@@ -100,23 +104,42 @@ public class RegionCommands {
      * @param player      the player to report to
      * @param suffix      appended to the affected count to form the completion message
      */
-    private static void schedule(EditSession editSession, final RegionVisitor visitor, final Player player,
-        final String suffix) {
+    private static void schedule(EditSession editSession, RegionVisitor visitor, Player player, String suffix) {
+        schedule(editSession, visitor, visitor, player, "", suffix);
+    }
+
+    /**
+     * Hand an operation to the {@link OperationScheduler}, which may spread it over several server
+     * ticks, and report the affected count once it has actually finished.
+     *
+     * @param editSession the edit session the operation writes to
+     * @param operation   the operation
+     * @param counter     the object that knows how much the operation affected
+     * @param player      the player to report to
+     * @param prefix      prepended to the completion message
+     * @param suffix      appended to the affected count to form the completion message
+     */
+    private static void schedule(EditSession editSession, Operation operation, final AffectedCounter counter,
+        final Player player, final String prefix, final String suffix) {
         WorldEdit.getInstance()
             .getOperationScheduler()
-            .submit(editSession, visitor, new OperationCompletion() {
+            .submit(editSession, operation, new OperationCompletion() {
 
                 @Override
                 public void onSuccess() {
-                    player.print(visitor.getAffected() + suffix);
+                    player.print(prefix + counter.getAffected() + suffix);
                 }
 
                 @Override
                 public void onFailure(WorldEditException e) {
-                    String message = e.getMessage();
-                    player.printError(message != null ? message : "The operation could not be completed.");
+                    reportFailure(player, e);
                 }
             });
+    }
+
+    private static void reportFailure(Player player, WorldEditException e) {
+        String message = e.getMessage();
+        player.printError(message != null ? message : "The operation could not be completed.");
     }
 
     @Command(
@@ -205,8 +228,8 @@ public class RegionCommands {
     @Logging(REGION)
     public void overlay(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
         throws WorldEditException {
-        int affected = editSession.overlayCuboidBlocks(region, Patterns.wrap(pattern));
-        player.print(affected + " block(s) have been overlaid.");
+        CountedOperation operation = editSession.overlayCuboidBlocksOperation(region, Patterns.wrap(pattern));
+        schedule(editSession, operation, operation, player, "", " block(s) have been overlaid.");
     }
 
     @Command(aliases = { "/center", "/middle" }, usage = "<block>", desc = "Set the center block(s)", min = 1, max = 1)
@@ -280,9 +303,8 @@ public class RegionCommands {
         @Switch('n') boolean affectNatural) throws WorldEditException {
         HeightMap heightMap = new HeightMap(editSession, region, affectNatural);
         HeightMapFilter filter = new HeightMapFilter(new GaussianKernel(5, 1.0));
-        int affected = heightMap.applyFilter(filter, iterations);
-        player.print("Terrain's height map smoothed. " + affected + " block(s) changed.");
-
+        HeightMap.Applier applier = heightMap.applyFilterOperation(filter, iterations);
+        schedule(editSession, applier, applier, player, "Terrain's height map smoothed. ", " block(s) changed.");
     }
 
     @Command(
@@ -300,22 +322,36 @@ public class RegionCommands {
         @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
         @Optional("air") BaseBlock replace, @Switch('s') boolean moveSelection) throws WorldEditException {
 
-        int affected = editSession.moveRegion(region, direction, count, true, replace);
+        final CountedOperation operation = editSession.moveRegionOperation(region, direction, count, true, replace);
 
-        if (moveSelection) {
-            try {
-                region.shift(direction.multiply(count));
+        // The operation reads from the region, so the selection cannot be shifted until it is done.
+        WorldEdit.getInstance()
+            .getOperationScheduler()
+            .submit(editSession, operation, new OperationCompletion() {
 
-                session.getRegionSelector(player.getWorld())
-                    .learnChanges();
-                session.getRegionSelector(player.getWorld())
-                    .explainRegionAdjust(player, session);
-            } catch (RegionOperationException e) {
-                player.printError(e.getMessage());
-            }
-        }
+                @Override
+                public void onSuccess() {
+                    if (moveSelection) {
+                        try {
+                            region.shift(direction.multiply(count));
 
-        player.print(affected + " blocks moved.");
+                            session.getRegionSelector(player.getWorld())
+                                .learnChanges();
+                            session.getRegionSelector(player.getWorld())
+                                .explainRegionAdjust(player, session);
+                        } catch (RegionOperationException e) {
+                            player.printError(e.getMessage());
+                        }
+                    }
+
+                    player.print(operation.getAffected() + " blocks moved.");
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    reportFailure(player, e);
+                }
+            });
     }
 
     @Command(
@@ -333,26 +369,41 @@ public class RegionCommands {
     public void stack(Player player, EditSession editSession, LocalSession session, @Selection Region region,
         @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
         @Switch('s') boolean moveSelection, @Switch('a') boolean ignoreAirBlocks) throws WorldEditException {
-        int affected = editSession.stackCuboidRegion(region, direction, count, !ignoreAirBlocks);
+        final ForwardExtentCopy operation = editSession
+            .stackCuboidRegionOperation(region, direction, count, !ignoreAirBlocks);
 
-        if (moveSelection) {
-            try {
-                final Vector size = region.getMaximumPoint()
-                    .subtract(region.getMinimumPoint());
+        // The operation reads from the region, so the selection cannot be shifted until it is done.
+        WorldEdit.getInstance()
+            .getOperationScheduler()
+            .submit(editSession, operation, new OperationCompletion() {
 
-                final Vector shiftVector = direction.multiply(count * (Math.abs(direction.dot(size)) + 1));
-                region.shift(shiftVector);
+                @Override
+                public void onSuccess() {
+                    if (moveSelection) {
+                        try {
+                            final Vector size = region.getMaximumPoint()
+                                .subtract(region.getMinimumPoint());
 
-                session.getRegionSelector(player.getWorld())
-                    .learnChanges();
-                session.getRegionSelector(player.getWorld())
-                    .explainRegionAdjust(player, session);
-            } catch (RegionOperationException e) {
-                player.printError(e.getMessage());
-            }
-        }
+                            final Vector shiftVector = direction.multiply(count * (Math.abs(direction.dot(size)) + 1));
+                            region.shift(shiftVector);
 
-        player.print(affected + " blocks changed. Undo with //undo");
+                            session.getRegionSelector(player.getWorld())
+                                .learnChanges();
+                            session.getRegionSelector(player.getWorld())
+                                .explainRegionAdjust(player, session);
+                        } catch (RegionOperationException e) {
+                            player.printError(e.getMessage());
+                        }
+                    }
+
+                    player.print(operation.getAffected() + " blocks changed. Undo with //undo");
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    reportFailure(player, e);
+                }
+            });
     }
 
     @Command(
