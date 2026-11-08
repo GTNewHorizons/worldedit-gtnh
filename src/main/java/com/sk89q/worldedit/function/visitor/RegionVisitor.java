@@ -16,9 +16,10 @@
 
 package com.sk89q.worldedit.function.visitor;
 
+import java.util.Iterator;
 import java.util.List;
 
-import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.function.RegionFunction;
 import com.sk89q.worldedit.function.operation.Operation;
@@ -32,6 +33,7 @@ public class RegionVisitor implements Operation {
 
     private final Region region;
     private final RegionFunction function;
+    private Iterator<BlockVector> iterator;
     private int affected = 0;
 
     public RegionVisitor(Region region, RegionFunction function) {
@@ -50,9 +52,17 @@ public class RegionVisitor implements Operation {
 
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
-        for (Vector pt : region) {
-            if (function.apply(pt)) {
+        if (iterator == null) {
+            iterator = region.iterator();
+        }
+
+        while (iterator.hasNext()) {
+            if (function.apply(iterator.next())) {
                 affected++;
+            }
+
+            if (!run.shouldContinue()) {
+                return this;
             }
         }
 

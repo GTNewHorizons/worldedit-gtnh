@@ -19,6 +19,7 @@ package com.sk89q.worldedit.function.visitor;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Iterator;
 import java.util.List;
 
 import com.sk89q.worldedit.Vector;
@@ -45,6 +46,7 @@ public class LayerVisitor implements Operation {
 
     private final FlatRegion flatRegion;
     private final LayerFunction function;
+    private Iterator<Vector2D> columns;
     private Mask2D mask = Masks.alwaysTrue2D();
     private int minY;
     private int maxY;
@@ -91,7 +93,14 @@ public class LayerVisitor implements Operation {
 
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
-        for (Vector2D column : flatRegion.asFlatRegion()) {
+        if (columns == null) {
+            columns = flatRegion.asFlatRegion()
+                .iterator();
+        }
+
+        while (columns.hasNext()) {
+            Vector2D column = columns.next();
+
             if (!mask.test(column)) {
                 continue;
             }
@@ -117,6 +126,10 @@ public class LayerVisitor implements Operation {
                         break;
                     }
                 }
+            }
+
+            if (!run.shouldContinue()) {
+                return this;
             }
         }
 
