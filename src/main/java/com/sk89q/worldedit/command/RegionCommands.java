@@ -443,14 +443,20 @@ public class RegionCommands {
     public void regenerateChunk(Player player, LocalSession session, EditSession editSession, @Selection Region region)
         throws WorldEditException {
         Mask mask = session.getMask();
+        boolean success;
         try {
             session.setMask((Mask) null);
-            player.getWorld()
+            success = player.getWorld()
                 .regenerate(region, editSession);
         } finally {
             session.setMask(mask);
         }
-        player.print("Region regenerated.");
+
+        if (success) {
+            player.print("Region regenerated.");
+        } else {
+            player.printError("Some of the region could not be regenerated. See the server log.");
+        }
     }
 
     @Command(
