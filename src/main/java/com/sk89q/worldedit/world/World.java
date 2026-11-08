@@ -29,6 +29,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.function.mask.Mask;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.Direction;
 import com.sk89q.worldedit.util.TreeGenerator;
@@ -236,13 +237,15 @@ public interface World extends Extent {
     void simulateBlockMine(Vector position);
 
     /**
-     * Regenerate an area.
+     * Build the operation that regenerates an area, which may run across several server ticks. Changes
+     * to the region after this returns don't affect it.
      *
      * @param region      the region
      * @param editSession the {@link EditSession}
-     * @return true if re-generation was successful
+     * @return the operation, or null if this world can't regenerate
      */
-    boolean regenerate(Region region, EditSession editSession);
+    @Nullable
+    Operation regenerate(Region region, EditSession editSession);
 
     /**
      * Generate a tree at the given position.

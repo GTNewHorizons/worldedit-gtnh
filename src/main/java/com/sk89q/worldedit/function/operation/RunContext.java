@@ -34,4 +34,14 @@ public class RunContext {
         return true;
     }
 
+    /**
+     * Same as {@link #shouldContinue()}, for an operation that has just finished a large piece of work
+     * such as generating a chunk, where an implementation must not put off checking its budget.
+     *
+     * @return true if the operation should continue running
+     */
+    public boolean shouldContinueAfterLargeStep() {
+        return shouldContinue();
+    }
+
 }

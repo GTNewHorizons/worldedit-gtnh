@@ -31,6 +31,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
@@ -82,8 +83,8 @@ public class NullWorld extends AbstractWorld {
     public void dropItem(Vector position, BaseItemStack item) {}
 
     @Override
-    public boolean regenerate(Region region, EditSession editSession) {
-        return false;
+    public Operation regenerate(Region region, EditSession editSession) {
+        return null;
     }
 
     @Override

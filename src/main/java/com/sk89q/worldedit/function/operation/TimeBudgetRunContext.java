@@ -60,6 +60,15 @@ public class TimeBudgetRunContext extends RunContext {
         }
 
         countdown = CHECK_INTERVAL;
+        return checkClock();
+    }
+
+    @Override
+    public boolean shouldContinueAfterLargeStep() {
+        return !expired && checkClock();
+    }
+
+    private boolean checkClock() {
         if (System.nanoTime() >= deadline) {
             expired = true;
             return false;

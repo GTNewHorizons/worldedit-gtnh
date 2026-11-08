@@ -20,17 +20,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
@@ -38,7 +29,6 @@ import javax.annotation.Nullable;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -48,8 +38,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S21PacketChunkData;
 import net.minecraft.server.management.PlayerManager;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.ChunkCoordIntPair;
-import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
@@ -84,7 +72,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.LazyBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
-import com.sk89q.worldedit.history.change.BlockChange;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.internal.Constants;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.Direction;
@@ -318,233 +306,21 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
-    public boolean regenerate(Region region, EditSession editSession) {
+    public Operation regenerate(Region region, EditSession editSession) {
         World world = getWorld();
         IChunkProvider provider = world.getChunkProvider();
         if (!(provider instanceof ChunkProviderServer)) {
-            return false;
+            return null;
         }
 
-        ChunkProviderServer chunkServer = (ChunkProviderServer) provider;
-
-        Set<Vector2D> selected = region.getChunks();
-        Map<Long, RegenColumn> columns = snapshotColumns(selected, chunkServer, editSession);
-
-        List<Vector2D> replaced = new ArrayList<Vector2D>();
-        boolean success = true;
-
-        // All terrain is replaced before anything is decorated, so features can cross between
-        // selected chunks without being wiped by the next chunk's replacement.
-        for (Vector2D chunk : selected) {
-            try {
-                replaceChunk(chunkServer, chunk.getBlockX(), chunk.getBlockZ());
-                replaced.add(chunk);
-            } catch (Throwable t) {
-                logger.log(Level.WARNING, "Failed to regenerate chunk " + chunk, t);
-                success = false;
-                break;
-            }
-        }
-
-        success &= decorate(replaced, columns, chunkServer);
-
-        for (RegenColumn column : columns.values()) {
-            if (column.selected) {
-                restoreSelectedColumn(column, region, editSession);
-            } else {
-                restoreNeighbourColumn(column, world, editSession);
-            }
-        }
-
-        // Write the restored blocks first, so the chunks sent to clients are the final result.
-        editSession.flushQueue();
-        resendChunks(world, replaced);
-
-        return success;
-    }
-
-    /**
-     * Record the selected chunks and the chunks around them, which decoration can spill into.
-     */
-    private Map<Long, RegenColumn> snapshotColumns(Set<Vector2D> selected, ChunkProviderServer chunkServer,
-        EditSession editSession) {
-        Set<Long> selectedKeys = new HashSet<Long>();
-        Set<Long> neighbourKeys = new LinkedHashSet<Long>();
-        for (Vector2D chunk : selected) {
-            selectedKeys.add(ChunkCoordIntPair.chunkXZ2Int(chunk.getBlockX(), chunk.getBlockZ()));
-        }
-
-        // Load everything first, because loading a chunk can populate the ones next to it.
-        List<Chunk> neighbours = new ArrayList<Chunk>();
-        for (Vector2D chunk : selected) {
-            chunkServer.loadChunk(chunk.getBlockX(), chunk.getBlockZ());
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    int x = chunk.getBlockX() + dx;
-                    int z = chunk.getBlockZ() + dz;
-                    long key = ChunkCoordIntPair.chunkXZ2Int(x, z);
-                    if (!selectedKeys.contains(key) && neighbourKeys.add(key)) {
-                        neighbours.add(chunkServer.loadChunk(x, z));
-                    }
-                }
-            }
-        }
-
-        int maxY = getMaxY();
-        int size = 256 * (maxY + 1);
-        BlockCache cache = new BlockCache();
-        Map<Long, RegenColumn> columns = new LinkedHashMap<Long, RegenColumn>();
-
-        for (Vector2D chunk : selected) {
-            RegenColumn column = new RegenColumn(chunk.getBlockX(), chunk.getBlockZ(), true, size);
-            int baseX = column.chunkX << 4;
-            int baseZ = column.chunkZ << 4;
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y <= maxY; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        BaseBlock block = editSession.getBlock(new Vector(baseX + x, y, baseZ + z));
-                        column.blocks[columnIndex(x, y, z)] = block.getNbtData() == null
-                            ? cache.get(block.getType(), block.getData())
-                            : block;
-                    }
-                }
-            }
-            columns.put(ChunkCoordIntPair.chunkXZ2Int(column.chunkX, column.chunkZ), column);
-        }
-
-        for (Chunk chunk : neighbours) {
-            RegenColumn column = new RegenColumn(chunk.xPosition, chunk.zPosition, false, size);
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y <= maxY; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        column.blocks[columnIndex(x, y, z)] = cache
-                            .get(Block.getIdFromBlock(chunk.getBlock(x, y, z)), chunk.getBlockMetadata(x, y, z));
-                    }
-                }
-            }
-            for (Object entry : chunk.chunkTileEntityMap.entrySet()) {
-                Map.Entry<?, ?> tile = (Map.Entry<?, ?>) entry;
-                ChunkPosition position = (ChunkPosition) tile.getKey();
-                column.tiles.put(
-                    columnIndex(position.chunkPosX, position.chunkPosY, position.chunkPosZ),
-                    (TileEntity) tile.getValue());
-            }
-            for (List<?> entities : chunk.entityLists) {
-                column.entities.addAll(entities);
-            }
-            columns.put(ChunkCoordIntPair.chunkXZ2Int(column.chunkX, column.chunkZ), column);
-        }
-
-        return columns;
-    }
-
-    /**
-     * Decorate the new chunks. A chunk only gets half its features from its own pass, the rest
-     * coming from the chunks at -x and -z, so those run too. Their output outside the selection is
-     * undone afterwards, and mod generators only run for selected chunks.
-     */
-    private static boolean decorate(List<Vector2D> replaced, Map<Long, RegenColumn> columns,
-        ChunkProviderServer chunkServer) {
-        boolean success = true;
-        Set<Long> neighboursDone = new HashSet<Long>();
-
-        for (Vector2D chunk : replaced) {
-            for (int[] offset : new int[][] { { 0, 0 }, { -1, 0 }, { 0, -1 }, { -1, -1 } }) {
-                int x = chunk.getBlockX() + offset[0];
-                int z = chunk.getBlockZ() + offset[1];
-                long key = ChunkCoordIntPair.chunkXZ2Int(x, z);
-                RegenColumn column = columns.get(key);
-                boolean isSelected = column != null && column.selected;
-
-                try {
-                    if (isSelected) {
-                        // Runs mod generators and marks the chunk populated. It skips chunks a
-                        // neighbour's pass has already populated, or that failed to be replaced.
-                        chunkServer.populate(chunkServer, x, z);
-                    } else if (neighboursDone.add(key)) {
-                        // Mod generators and the populated flag are left alone here.
-                        chunkServer.currentChunkProvider.populate(chunkServer, x, z);
-                    }
-                } catch (Throwable t) {
-                    logger.log(Level.WARNING, "Failed to decorate chunk " + x + ", " + z, t);
-                    success = false;
-                }
-            }
-        }
-
-        return success;
-    }
-
-    private void restoreSelectedColumn(RegenColumn column, Region region, EditSession editSession) {
-        int maxY = getMaxY();
-        int baseX = column.chunkX << 4;
-        int baseZ = column.chunkZ << 4;
-
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y <= maxY; y++) {
-                for (int z = 0; z < 16; z++) {
-                    Vector pt = new Vector(baseX + x, y, baseZ + z);
-                    BaseBlock previous = column.blocks[columnIndex(x, y, z)];
-                    BaseBlock current = editSession.getBlock(pt);
-
-                    if (unchanged(previous, current)) {
-                        continue;
-                    }
-
-                    if (region.contains(pt)) {
-                        editSession.getChangeSet()
-                            .add(new BlockChange(pt.toBlockVector(), previous, current));
-                    } else {
-                        editSession.smartSetBlock(pt, previous);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Undo what decoration did to a chunk outside the selection. Only changed blocks are touched, so
-     * machines in these chunks are left running.
-     */
-    private void restoreNeighbourColumn(RegenColumn column, World world, EditSession editSession) {
-        Chunk chunk = world.getChunkFromChunkCoords(column.chunkX, column.chunkZ);
-        int maxY = getMaxY();
-        int baseX = column.chunkX << 4;
-        int baseZ = column.chunkZ << 4;
-
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y <= maxY; y++) {
-                for (int z = 0; z < 16; z++) {
-                    int index = columnIndex(x, y, z);
-                    BaseBlock previous = column.blocks[index];
-                    if (previous.getType() == Block.getIdFromBlock(chunk.getBlock(x, y, z))
-                        && previous.getData() == chunk.getBlockMetadata(x, y, z)) {
-                        continue;
-                    }
-
-                    TileEntity tile = column.tiles.get(index);
-                    editSession.smartSetBlock(
-                        new Vector(baseX + x, y, baseZ + z),
-                        tile != null ? new TileEntityBaseBlock(previous.getType(), previous.getData(), tile)
-                            : previous);
-                }
-            }
-        }
-
-        for (List<?> entities : chunk.entityLists) {
-            for (Object entity : new ArrayList<Object>(entities)) {
-                if (!column.entities.contains(entity) && !(entity instanceof EntityPlayer)) {
-                    world.removeEntity((net.minecraft.entity.Entity) entity);
-                }
-            }
-        }
+        return new ForgeRegeneration(world, (ChunkProviderServer) provider, region.clone(), editSession, getMaxY());
     }
 
     /**
      * Send regenerated chunks to the players watching them. A new chunk object reaches clients
      * through nothing else, so without this they keep showing the old terrain.
      */
-    private static void resendChunks(World world, List<Vector2D> chunks) {
+    static void resendChunks(World world, List<Vector2D> chunks) {
         if (!(world instanceof WorldServer)) {
             return;
         }
@@ -588,114 +364,6 @@ public class ForgeWorld extends AbstractWorld {
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * Take the players out of a chunk that is about to be discarded. Unloading a chunk removes its
-     * entities from the world, which for a player would stop them being ticked and tracked.
-     */
-    private static List<EntityPlayer> detachPlayers(Chunk chunk) {
-        List<EntityPlayer> players = new ArrayList<EntityPlayer>();
-        for (List<?> entities : chunk.entityLists) {
-            for (Object entity : entities) {
-                if (entity instanceof EntityPlayer) {
-                    players.add((EntityPlayer) entity);
-                }
-            }
-        }
-
-        for (EntityPlayer player : players) {
-            chunk.removeEntity(player);
-        }
-        return players;
-    }
-
-    private static int columnIndex(int x, int y, int z) {
-        return (y << 8) | (z << 4) | x;
-    }
-
-    /**
-     * Cheap "nothing to do here" test. Any block carrying NBT on either side counts as changed, so
-     * tile entities are always restored or recorded rather than compared.
-     */
-    private static boolean unchanged(BaseBlock previous, BaseBlock current) {
-        return previous.getType() == current.getType() && previous.getData() == current.getData()
-            && previous.getNbtData() == null
-            && current.getNbtData() == null;
-    }
-
-    /**
-     * A chunk as it was before regenerating. Blocks without NBT are shared through a
-     * {@link BlockCache}, which keeps this to roughly a reference per block.
-     */
-    private static final class RegenColumn {
-
-        private final int chunkX;
-        private final int chunkZ;
-        private final boolean selected;
-        private final BaseBlock[] blocks;
-        private final Map<Integer, TileEntity> tiles = new HashMap<Integer, TileEntity>();
-        private final Set<Object> entities = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
-
-        private RegenColumn(int chunkX, int chunkZ, boolean selected, int size) {
-            this.chunkX = chunkX;
-            this.chunkZ = chunkZ;
-            this.selected = selected;
-            this.blocks = new BaseBlock[size];
-        }
-    }
-
-    private static final class BlockCache {
-
-        private final Map<Long, BaseBlock> blocks = new HashMap<Long, BaseBlock>();
-        private long lastKey = -1;
-        private BaseBlock last;
-
-        private BaseBlock get(int id, int data) {
-            long key = ((long) id << 16) | (data & 0xFFFF);
-            if (key != lastKey) {
-                BaseBlock block = blocks.get(key);
-                if (block == null) {
-                    block = new BaseBlock(id, data);
-                    blocks.put(key, block);
-                }
-                lastKey = key;
-                last = block;
-            }
-            return last;
-        }
-    }
-
-    /**
-     * Swap a loaded chunk for freshly generated terrain. The snapshot taken before this loaded the
-     * chunk, which also took it off the unload queue.
-     */
-    @SuppressWarnings("unchecked")
-    private static void replaceChunk(ChunkProviderServer server, int chunkX, int chunkZ) {
-        long pos = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
-        List<EntityPlayer> players = new ArrayList<EntityPlayer>();
-
-        Chunk existing = server.loadChunk(chunkX, chunkZ);
-        if (existing != null) {
-            players = detachPlayers(existing);
-            existing.onChunkUnload();
-            // Otherwise ChunkProviderServer keeps ticking, saving and unloading the old chunk.
-            server.loadedChunks.remove(existing);
-        }
-
-        server.loadedChunkHashMap.remove(pos);
-
-        Chunk regenerated = server.currentChunkProvider.provideChunk(chunkX, chunkZ);
-        if (regenerated == null) {
-            return;
-        }
-
-        server.loadedChunkHashMap.add(pos, regenerated);
-        server.loadedChunks.add(regenerated);
-        regenerated.onChunkLoad();
-        for (EntityPlayer player : players) {
-            regenerated.addEntity(player);
         }
     }
 
