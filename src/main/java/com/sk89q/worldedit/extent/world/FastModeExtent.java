@@ -39,6 +39,9 @@ public class FastModeExtent extends AbstractDelegateExtent {
     private final World world;
     private final Set<BlockVector2D> dirtyChunks = new HashSet<BlockVector2D>();
     private boolean enabled = true;
+    private boolean hasLastChunk;
+    private int lastChunkX;
+    private int lastChunkZ;
 
     /**
      * Create a new instance with fast mode enabled.
@@ -83,7 +86,14 @@ public class FastModeExtent extends AbstractDelegateExtent {
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
         if (enabled) {
-            dirtyChunks.add(new BlockVector2D(location.getBlockX() >> 4, location.getBlockZ() >> 4));
+            int chunkX = location.getBlockX() >> 4;
+            int chunkZ = location.getBlockZ() >> 4;
+            if (!hasLastChunk || chunkX != lastChunkX || chunkZ != lastChunkZ) {
+                dirtyChunks.add(new BlockVector2D(chunkX, chunkZ));
+                hasLastChunk = true;
+                lastChunkX = chunkX;
+                lastChunkZ = chunkZ;
+            }
             return world.setBlock(location, block, false);
         } else {
             return world.setBlock(location, block, true);

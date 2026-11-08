@@ -101,31 +101,9 @@ public class LayerVisitor implements Operation {
         while (columns.hasNext()) {
             Vector2D column = columns.next();
 
-            if (!mask.test(column)) {
-                continue;
-            }
-
-            // Abort if we are underground
-            if (function.isGround(column.toVector(maxY + 1))) {
-                return null;
-            }
-
-            boolean found = false;
-            int groundY = 0;
-            for (int y = maxY; y >= minY; --y) {
-                Vector test = column.toVector(y);
-                if (!found) {
-                    if (function.isGround(test)) {
-                        found = true;
-                        groundY = y;
-                    }
-                }
-
-                if (found) {
-                    if (!function.apply(test, groundY - y)) {
-                        break;
-                    }
-                }
+            // A column covered above the region is underground, so it has no layers to visit.
+            if (mask.test(column) && !function.isGround(column.toVector(maxY + 1))) {
+                visitColumn(column);
             }
 
             if (!run.shouldContinue()) {
@@ -134,6 +112,26 @@ public class LayerVisitor implements Operation {
         }
 
         return null;
+    }
+
+    private void visitColumn(Vector2D column) throws WorldEditException {
+        boolean found = false;
+        int groundY = 0;
+        for (int y = maxY; y >= minY; --y) {
+            Vector test = column.toVector(y);
+            if (!found) {
+                if (function.isGround(test)) {
+                    found = true;
+                    groundY = y;
+                }
+            }
+
+            if (found) {
+                if (!function.apply(test, groundY - y)) {
+                    break;
+                }
+            }
+        }
     }
 
     @Override

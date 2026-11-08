@@ -37,12 +37,12 @@ dependencies {
     implementation 'de.schlichtherle:truezip:6.8.3'
     implementation 'rhino:js:1.7R2'
     implementation 'org.yaml:snakeyaml:1.9'
-    implementation 'com.google.guava:guava:17.0'
-    implementation 'com.google.code.findbugs:jsr305:1.3.9'
-    implementation 'com.google.code.gson:gson:2.2.4'
+    compileOnly 'com.google.guava:guava:17.0'
+    compileOnly 'com.google.code.findbugs:jsr305:1.3.9'
+    compileOnly 'com.google.code.gson:gson:2.2.4'
 	implementation("com.github.GTNewHorizons:CodeChickenCore:1.5.0:dev")
 
-    shadowImplementation 'com.sk89q:jchronic:0.2.4a'
+    shadowImplementation('com.sk89q:jchronic:0.2.4a') { exclude group: 'junit' }
     shadowImplementation 'com.thoughtworks.paranamer:paranamer:2.6'
     shadowImplementation 'com.sk89q.lib:jlibnoise:1.0.0'
 
@@ -52,5 +52,6 @@ dependencies {
 
     runtimeOnlyNonPublishable 'com.github.GTNewHorizons:NotEnoughItems:2.9.2-GTNH:dev'
 
+    testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.4.0'
 }

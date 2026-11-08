@@ -434,8 +434,8 @@ public class RegionCommands {
         usage = "",
         desc = "Regenerates the contents of the selection",
         help = "Regenerates the contents of the current selection.\n"
-            + "This command might affect things outside the selection,\n"
-            + "if they are within the same chunk.",
+            + "Blocks outside the selection are kept, but mobs and other\n"
+            + "entities in the affected chunks are removed.",
         min = 0,
         max = 0)
     @CommandPermissions("worldedit.regen")

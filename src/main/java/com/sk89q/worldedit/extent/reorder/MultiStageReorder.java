@@ -90,11 +90,11 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        BaseBlock lazyBlock = getLazyBlock(location);
-
         if (!enabled) {
             return super.setBlock(location, block);
         }
+
+        BaseBlock lazyBlock = getLazyBlock(location);
 
         if (BlockType.shouldPlaceLast(block.getType())) {
             // Place torches, etc. last

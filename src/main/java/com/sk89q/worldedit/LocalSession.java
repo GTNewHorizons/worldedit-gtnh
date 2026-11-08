@@ -880,6 +880,10 @@ public class LocalSession {
         editSession.setFastMode(fastMode);
         Request.request()
             .setEditSession(editSession);
+        Request.request()
+            .setSession(this);
+        Request.request()
+            .setWorld(player.isPlayer() ? player.getWorld() : null);
         editSession.setMask(mask);
 
         return editSession;

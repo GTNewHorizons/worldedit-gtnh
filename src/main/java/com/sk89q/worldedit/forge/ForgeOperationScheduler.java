@@ -28,14 +28,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
+import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.operation.DirectOperationScheduler;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
+import com.sk89q.worldedit.world.World;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -197,12 +200,34 @@ public class ForgeOperationScheduler implements OperationScheduler {
 
         RunContext run = new TimeBudgetRunContext(BUDGET_NANOS);
         do {
-            if (advance(job, run)) {
+            if (advanceInRequest(job, run)) {
                 current = null;
                 finish(job);
                 return;
             }
         } while (run.shouldContinue());
+    }
+
+    /**
+     * Run a step with the request state of the command that submitted the job, because masks can
+     * read it while blocks are being tested. Later commands will have replaced it by now.
+     */
+    private boolean advanceInRequest(Job job, RunContext run) {
+        Request request = Request.request();
+        World world = request.getWorld();
+        LocalSession session = request.getSession();
+        EditSession editSession = request.getEditSession();
+
+        request.setWorld(job.requestWorld);
+        request.setSession(job.requestSession);
+        request.setEditSession(job.editSession);
+        try {
+            return advance(job, run);
+        } finally {
+            request.setWorld(world);
+            request.setSession(session);
+            request.setEditSession(editSession);
+        }
     }
 
     /**
@@ -259,7 +284,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
 
     private void drain(Job job) {
         RunContext run = new RunContext();
-        while (!advance(job, run)) {
+        while (!advanceInRequest(job, run)) {
             // RunContext never asks to stop, so this converges.
         }
         finish(job);
@@ -313,6 +338,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
         private final UUID owner;
         private final EditSession editSession;
         private final OperationCompletion completion;
+        private final World requestWorld = Request.request()
+            .getWorld();
+        private final LocalSession requestSession = Request.request()
+            .getSession();
         private Operation operation;
         private boolean committing;
         private WorldEditException failure;

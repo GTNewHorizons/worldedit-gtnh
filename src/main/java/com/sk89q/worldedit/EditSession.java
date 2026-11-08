@@ -319,7 +319,7 @@ public class EditSession implements Extent {
         if (isQueueEnabled()) {
             flushQueue();
         }
-        reorderExtent.setEnabled(true);
+        reorderExtent.setEnabled(false);
     }
 
     /**

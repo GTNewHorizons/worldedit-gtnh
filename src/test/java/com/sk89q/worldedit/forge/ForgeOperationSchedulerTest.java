@@ -18,11 +18,14 @@ import java.util.UUID;
 import org.junit.Test;
 
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
+import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.world.World;
 
 import cpw.mods.fml.common.gameevent.TickEvent;
 
@@ -150,6 +153,54 @@ public class ForgeOperationSchedulerTest {
         tick();
 
         assertEquals(Arrays.asList("failure a", "finalize a"), events);
+    }
+
+    @Test
+    public void workSeesTheRequestOfTheCommandThatSubmittedIt() {
+        final LocalSession commandSession = mock(LocalSession.class);
+        final World commandWorld = mock(World.class);
+        final LocalSession laterSession = mock(LocalSession.class);
+        final EditSession session = mock(EditSession.class);
+        final List<Object> seen = new ArrayList<Object>();
+
+        Request.request()
+            .setSession(commandSession);
+        Request.request()
+            .setWorld(commandWorld);
+        submit(owner, session, new Operation() {
+
+            @Override
+            public Operation resume(RunContext run) {
+                seen.add(
+                    Request.request()
+                        .getSession());
+                seen.add(
+                    Request.request()
+                        .getWorld());
+                seen.add(
+                    Request.request()
+                        .getEditSession());
+                return null;
+            }
+
+            @Override
+            public void cancel() {}
+
+            @Override
+            public void addStatusMessages(List<String> messages) {}
+        }, "a");
+
+        Request.reset();
+        Request.request()
+            .setSession(laterSession);
+        tick();
+
+        assertEquals(Arrays.asList(commandSession, commandWorld, session), seen);
+        assertEquals(
+            laterSession,
+            Request.request()
+                .getSession());
+        Request.reset();
     }
 
     private void submit(Actor actor, EditSession session, Operation operation, final String name) {

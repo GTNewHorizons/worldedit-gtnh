@@ -400,9 +400,7 @@ public class BaseBlock extends Block implements TileEntityBlock {
 
     @Override
     public int hashCode() {
-        int ret = getId() << 3;
-        if (getData() != (byte) -1) ret |= getData();
-        return ret;
+        return 31 * getId() + getData();
     }
 
     @Override

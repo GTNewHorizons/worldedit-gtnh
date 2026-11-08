@@ -19,7 +19,6 @@ package com.sk89q.worldedit.forge;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,7 +48,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S21PacketChunkData;
 import net.minecraft.server.management.PlayerManager;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.LongHashMap;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.EnumSkyBlock;
@@ -312,13 +310,6 @@ public class ForgeWorld extends AbstractWorld {
         }
 
         ChunkProviderServer chunkServer = (ChunkProviderServer) provider;
-        ChunkProviderHandles handles;
-        try {
-            handles = ChunkProviderHandles.resolve(chunkServer);
-        } catch (Throwable t) {
-            logger.log(Level.WARNING, "Failed to access the chunk provider; cannot regenerate", t);
-            return false;
-        }
 
         Set<Vector2D> selected = region.getChunks();
         Map<Long, RegenColumn> columns = snapshotColumns(selected, chunkServer, editSession);
@@ -330,7 +321,7 @@ public class ForgeWorld extends AbstractWorld {
         // selected chunks without being wiped by the next chunk's replacement.
         for (Vector2D chunk : selected) {
             try {
-                handles.replaceChunk(chunkServer, chunk.getBlockX(), chunk.getBlockZ());
+                replaceChunk(chunkServer, chunk.getBlockX(), chunk.getBlockZ());
                 replaced.add(chunk);
             } catch (Throwable t) {
                 logger.log(Level.WARNING, "Failed to regenerate chunk " + chunk, t);
@@ -339,7 +330,7 @@ public class ForgeWorld extends AbstractWorld {
             }
         }
 
-        success &= decorate(replaced, columns, handles, chunkServer);
+        success &= decorate(replaced, columns, chunkServer);
 
         for (RegenColumn column : columns.values()) {
             if (column.selected) {
@@ -437,7 +428,7 @@ public class ForgeWorld extends AbstractWorld {
      * undone afterwards, and mod generators only run for selected chunks.
      */
     private static boolean decorate(List<Vector2D> replaced, Map<Long, RegenColumn> columns,
-        ChunkProviderHandles handles, ChunkProviderServer chunkServer) {
+        ChunkProviderServer chunkServer) {
         boolean success = true;
         Set<Long> neighboursDone = new HashSet<Long>();
 
@@ -455,7 +446,8 @@ public class ForgeWorld extends AbstractWorld {
                         // neighbour's pass has already populated, or that failed to be replaced.
                         chunkServer.populate(chunkServer, x, z);
                     } else if (neighboursDone.add(key)) {
-                        handles.decorateOnly(chunkServer, x, z);
+                        // Mod generators and the populated flag are left alone here.
+                        chunkServer.currentChunkProvider.populate(chunkServer, x, z);
                     }
                 } catch (Throwable t) {
                     logger.log(Level.WARNING, "Failed to decorate chunk " + x + ", " + z, t);
@@ -659,102 +651,34 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     /**
-     * Reflective access to the {@link ChunkProviderServer} internals that regenerating a chunk has
-     * to touch. The {@link Field} lookups are done once per JVM rather than once per chunk.
+     * Swap a loaded chunk for freshly generated terrain. The snapshot taken before this loaded the
+     * chunk, which also took it off the unload queue.
      */
-    private static final class ChunkProviderHandles {
+    @SuppressWarnings("unchecked")
+    private static void replaceChunk(ChunkProviderServer server, int chunkX, int chunkZ) {
+        long pos = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
+        List<EntityPlayer> players = new ArrayList<EntityPlayer>();
 
-        private static Field chunksToUnloadField;
-        private static Field loadedChunkMapField;
-        private static Field loadedChunksField;
-        private static Field currentProviderField;
-        private static Throwable failure;
-
-        static {
-            try {
-                chunksToUnloadField = findField("field_73248_b", "chunksToUnload");
-                loadedChunkMapField = findField("field_73244_f", "loadedChunkHashMap");
-                loadedChunksField = findField("field_73245_g", "loadedChunks");
-                currentProviderField = findField("field_73246_d", "currentChunkProvider");
-            } catch (Throwable t) {
-                failure = t;
-            }
+        Chunk existing = server.loadChunk(chunkX, chunkZ);
+        if (existing != null) {
+            players = detachPlayers(existing);
+            existing.onChunkUnload();
+            // Otherwise ChunkProviderServer keeps ticking, saving and unloading the old chunk.
+            server.loadedChunks.remove(existing);
         }
 
-        private final Set<?> unloadQueue;
-        private final LongHashMap loadedChunkMap;
-        private final List<Chunk> loadedChunks;
-        private final IChunkProvider generator;
+        server.loadedChunkHashMap.remove(pos);
 
-        private ChunkProviderHandles(Set<?> unloadQueue, LongHashMap loadedChunkMap, List<Chunk> loadedChunks,
-            IChunkProvider generator) {
-            this.unloadQueue = unloadQueue;
-            this.loadedChunkMap = loadedChunkMap;
-            this.loadedChunks = loadedChunks;
-            this.generator = generator;
+        Chunk regenerated = server.currentChunkProvider.provideChunk(chunkX, chunkZ);
+        if (regenerated == null) {
+            return;
         }
 
-        private static Field findField(String obfName, String name) throws NoSuchFieldException {
-            Field field;
-            try {
-                field = ChunkProviderServer.class.getDeclaredField(obfName);
-            } catch (NoSuchFieldException e) {
-                field = ChunkProviderServer.class.getDeclaredField(name);
-            }
-            field.setAccessible(true);
-            return field;
-        }
-
-        @SuppressWarnings("unchecked")
-        private static ChunkProviderHandles resolve(ChunkProviderServer server) throws Throwable {
-            if (failure != null) {
-                throw failure;
-            }
-
-            return new ChunkProviderHandles(
-                (Set<?>) chunksToUnloadField.get(server),
-                (LongHashMap) loadedChunkMapField.get(server),
-                (List<Chunk>) loadedChunksField.get(server),
-                (IChunkProvider) currentProviderField.get(server));
-        }
-
-        private void replaceChunk(ChunkProviderServer server, int chunkX, int chunkZ) {
-            long pos = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
-            List<EntityPlayer> players = new ArrayList<EntityPlayer>();
-
-            if (server.chunkExists(chunkX, chunkZ)) {
-                Chunk existing = server.loadChunk(chunkX, chunkZ);
-                if (existing != null) {
-                    players = detachPlayers(existing);
-                    existing.onChunkUnload();
-                    // The stale chunk has to leave loadedChunks as well, or ChunkProviderServer
-                    // keeps ticking, saving and unloading a copy of every regenerated chunk.
-                    loadedChunks.remove(existing);
-                }
-            }
-
-            unloadQueue.remove(pos);
-            loadedChunkMap.remove(pos);
-
-            Chunk regenerated = generator.provideChunk(chunkX, chunkZ);
-            if (regenerated == null) {
-                return;
-            }
-
-            loadedChunkMap.add(pos, regenerated);
-            loadedChunks.add(regenerated);
-            regenerated.onChunkLoad();
-            for (EntityPlayer player : players) {
-                regenerated.addEntity(player);
-            }
-        }
-
-        /**
-         * Run the world generator's decoration without touching the chunk's populated flag or
-         * running mod generators.
-         */
-        private void decorateOnly(ChunkProviderServer server, int chunkX, int chunkZ) {
-            generator.populate(server, chunkX, chunkZ);
+        server.loadedChunkHashMap.add(pos, regenerated);
+        server.loadedChunks.add(regenerated);
+        regenerated.onChunkLoad();
+        for (EntityPlayer player : players) {
+            regenerated.addEntity(player);
         }
     }
 
