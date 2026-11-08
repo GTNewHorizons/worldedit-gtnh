@@ -586,10 +586,21 @@ public class EditSession implements Extent {
      * @param editSession a new {@link EditSession} to perform the undo in
      */
     public void undo(EditSession editSession) {
+        Operations.completeBlindly(undoOperation(editSession));
+        editSession.flushQueue();
+    }
+
+    /**
+     * Build the operation that {@link #undo(EditSession)} runs, without running it or flushing the
+     * edit session it writes to.
+     *
+     * @param editSession a new {@link EditSession} to perform the undo in
+     * @return the operation
+     */
+    public Operation undoOperation(EditSession editSession) {
         UndoContext context = new UndoContext();
         context.setExtent(editSession.bypassHistory);
-        Operations.completeBlindly(ChangeSetExecutor.createUndo(changeSet, context));
-        editSession.flushQueue();
+        return ChangeSetExecutor.createUndo(changeSet, context);
     }
 
     /**
@@ -598,10 +609,21 @@ public class EditSession implements Extent {
      * @param editSession a new {@link EditSession} to perform the redo in
      */
     public void redo(EditSession editSession) {
+        Operations.completeBlindly(redoOperation(editSession));
+        editSession.flushQueue();
+    }
+
+    /**
+     * Build the operation that {@link #redo(EditSession)} runs, without running it or flushing the
+     * edit session it writes to.
+     *
+     * @param editSession a new {@link EditSession} to perform the redo in
+     * @return the operation
+     */
+    public Operation redoOperation(EditSession editSession) {
         UndoContext context = new UndoContext();
         context.setExtent(editSession.bypassHistory);
-        Operations.completeBlindly(ChangeSetExecutor.createRedo(changeSet, context));
-        editSession.flushQueue();
+        return ChangeSetExecutor.createRedo(changeSet, context);
     }
 
     /**

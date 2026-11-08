@@ -18,6 +18,8 @@ package com.sk89q.worldedit.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import javax.annotation.Nullable;
+
 import com.sk89q.minecraft.util.commands.Command;
 import com.sk89q.minecraft.util.commands.CommandContext;
 import com.sk89q.minecraft.util.commands.CommandPermissions;
@@ -26,6 +28,9 @@ import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.entity.Player;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 /**
  * Commands to undo, redo, and clear history.
@@ -42,6 +47,44 @@ public class HistoryCommands {
     public HistoryCommands(WorldEdit worldEdit) {
         checkNotNull(worldEdit);
         this.worldEdit = worldEdit;
+    }
+
+    @Nullable
+    private LocalSession findOther(Player player, CommandContext args, String action) throws WorldEditException {
+        player.checkPermission("worldedit.history." + action + ".other");
+        LocalSession other = worldEdit.getSessionManager()
+            .findByName(args.getString(1));
+        if (other == null) {
+            player.printError("Unable to find session for " + args.getString(1));
+        }
+        return other;
+    }
+
+    /**
+     * Hand a history step to the scheduler, which may spread it over several server ticks.
+     */
+    private void schedule(final Player player, final EditSession writer, Operation operation, final String message) {
+        OperationScheduler scheduler = worldEdit.getOperationScheduler();
+        scheduler.submit(player, writer, operation, new OperationCompletion() {
+
+            @Override
+            public void onSuccess() {
+                player.print(message);
+            }
+
+            @Override
+            public void onFailure(WorldEditException e) {
+                String error = e.getMessage();
+                player.printError(error != null ? error : "The operation could not be completed.");
+            }
+        });
+        scheduler.whenFinished(writer, new Runnable() {
+
+            @Override
+            public void run() {
+                worldEdit.flushBlockBag(player, writer);
+            }
+        });
     }
 
     /**
@@ -72,26 +115,19 @@ public class HistoryCommands {
 
         int times = Math.max(1, args.getInteger(0, 1));
         for (int i = 0; i < times; ++i) {
-            EditSession undone;
-            if (args.argsLength() < 2) {
-                undone = session.undo(session.getBlockBag(player), player);
-            } else {
-                player.checkPermission("worldedit.history.undo.other");
-                LocalSession sess = worldEdit.getSessionManager()
-                    .findByName(args.getString(1));
-                if (sess == null) {
-                    player.printError("Unable to find session for " + args.getString(1));
-                    break;
-                }
-                undone = sess.undo(session.getBlockBag(player), player);
+            LocalSession target = args.argsLength() < 2 ? session : findOther(player, args, "undo");
+            if (target == null) {
+                break;
             }
-            if (undone != null) {
-                player.print("Undo successful.");
-                worldEdit.flushBlockBag(player, undone);
-            } else {
+
+            EditSession undone = target.stepBack();
+            if (undone == null) {
                 player.printError("Nothing left to undo.");
                 break;
             }
+
+            EditSession writer = target.createHistorySession(undone, session.getBlockBag(player), player);
+            schedule(player, writer, undone.undoOperation(writer), "Undo successful.");
         }
     }
 
@@ -109,27 +145,20 @@ public class HistoryCommands {
         }
 
         int times = Math.max(1, args.getInteger(0, 1));
-
         for (int i = 0; i < times; ++i) {
-            EditSession redone;
-            if (args.argsLength() < 2) {
-                redone = session.redo(session.getBlockBag(player), player);
-            } else {
-                player.checkPermission("worldedit.history.redo.other");
-                LocalSession sess = worldEdit.getSessionManager()
-                    .findByName(args.getString(1));
-                if (sess == null) {
-                    player.printError("Unable to find session for " + args.getString(1));
-                    break;
-                }
-                redone = sess.redo(session.getBlockBag(player), player);
+            LocalSession target = args.argsLength() < 2 ? session : findOther(player, args, "redo");
+            if (target == null) {
+                break;
             }
-            if (redone != null) {
-                player.print("Redo successful.");
-                worldEdit.flushBlockBag(player, redone);
-            } else {
+
+            EditSession redone = target.stepForward();
+            if (redone == null) {
                 player.printError("Nothing left to redo.");
+                break;
             }
+
+            EditSession writer = target.createHistorySession(redone, session.getBlockBag(player), player);
+            schedule(player, writer, redone.redoOperation(writer), "Redo successful.");
         }
     }
 

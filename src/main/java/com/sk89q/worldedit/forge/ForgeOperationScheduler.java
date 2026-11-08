@@ -62,8 +62,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private static final long BUDGET_NANOS = 20L * 1000L * 1000L;
 
     /**
-     * Once this many jobs are queued, further submissions run synchronously instead, so a player
-     * spamming commands cannot grow the backlog without bound.
+     * Once this many jobs are queued, the backlog is finished on the spot and further submissions run
+     * synchronously, so a player spamming commands cannot grow it without bound.
      */
     private static final int MAX_QUEUED = 8;
 
@@ -82,6 +82,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
         checkNotNull(completion);
 
         if (queue.size() >= MAX_QUEUED) {
+            // Edits must not overtake each other: the steps of an //undo 20 only work in order.
+            finishEverything();
             return fallback.submit(owner, editSession, operation, completion);
         }
 
@@ -155,6 +157,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
         unregister();
 
         // Run whatever is left to completion rather than leaving edits half applied.
+        finishEverything();
+    }
+
+    private void finishEverything() {
         Job job = current;
         current = null;
         if (job != null) {

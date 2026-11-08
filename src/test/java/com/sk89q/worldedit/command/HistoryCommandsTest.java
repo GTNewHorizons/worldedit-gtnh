@@ -2,6 +2,7 @@ package com.sk89q.worldedit.command;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -17,6 +18,7 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.entity.Player;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 public class HistoryCommandsTest {
@@ -41,7 +43,7 @@ public class HistoryCommandsTest {
 
         commands.undo(player, session, editSession, new CommandContext("/undo"));
 
-        verify(session, never()).undo(any(), any(Player.class));
+        verify(session, never()).stepBack();
         verify(player).printError(anyString());
     }
 
@@ -51,21 +53,46 @@ public class HistoryCommandsTest {
 
         commands.redo(player, session, editSession, new CommandContext("/redo"));
 
-        verify(session, never()).redo(any(), any(Player.class));
+        verify(session, never()).stepForward();
         verify(player).printError(anyString());
     }
 
     @Test
-    public void undoRunsWhenNothingIsRunning() throws Exception {
+    public void undoIsHandedToTheScheduler() throws Exception {
+        EditSession undone = mock(EditSession.class);
+        EditSession writer = mock(EditSession.class);
+        Operation operation = mock(Operation.class);
+        when(session.stepBack()).thenReturn(undone);
+        when(session.createHistorySession(eq(undone), any(), eq(player))).thenReturn(writer);
+        when(undone.undoOperation(writer)).thenReturn(operation);
+
         commands.undo(player, session, editSession, new CommandContext("/undo"));
 
-        verify(session).undo(any(), any(Player.class));
+        verify(scheduler).submit(eq(player), eq(writer), eq(operation), any());
+        verify(scheduler).whenFinished(eq(writer), any());
+        verify(player, never()).print(anyString());
     }
 
     @Test
-    public void redoRunsWhenNothingIsRunning() throws Exception {
+    public void redoIsHandedToTheScheduler() throws Exception {
+        EditSession redone = mock(EditSession.class);
+        EditSession writer = mock(EditSession.class);
+        Operation operation = mock(Operation.class);
+        when(session.stepForward()).thenReturn(redone);
+        when(session.createHistorySession(eq(redone), any(), eq(player))).thenReturn(writer);
+        when(redone.redoOperation(writer)).thenReturn(operation);
+
         commands.redo(player, session, editSession, new CommandContext("/redo"));
 
-        verify(session).redo(any(), any(Player.class));
+        verify(scheduler).submit(eq(player), eq(writer), eq(operation), any());
+        verify(player, never()).print(anyString());
+    }
+
+    @Test
+    public void reportsWhenThereIsNothingToUndo() throws Exception {
+        commands.undo(player, session, editSession, new CommandContext("/undo"));
+
+        verify(player).printError("Nothing left to undo.");
+        verify(scheduler, never()).submit(any(), any(), any(), any());
     }
 }

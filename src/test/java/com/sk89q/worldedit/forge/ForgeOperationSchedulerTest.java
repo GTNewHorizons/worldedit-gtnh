@@ -145,6 +145,40 @@ public class ForgeOperationSchedulerTest {
     }
 
     @Test
+    public void aFullQueueNeverLetsWorkOvertakeWhatIsQueued() {
+        final List<Integer> order = new ArrayList<Integer>();
+        for (int i = 0; i < 12; i++) {
+            final int number = i;
+            scheduler.submit(owner, mock(EditSession.class), new Operation() {
+
+                @Override
+                public Operation resume(RunContext run) {
+                    order.add(number);
+                    return null;
+                }
+
+                @Override
+                public void cancel() {}
+
+                @Override
+                public void addStatusMessages(List<String> messages) {}
+            }, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {}
+
+                @Override
+                public void onFailure(WorldEditException e) {}
+            });
+        }
+        for (int i = 0; i < 12; i++) {
+            tick();
+        }
+
+        assertEquals(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), order);
+    }
+
+    @Test
     public void cancelWithNothingRunningReturnsNothing() {
         assertTrue(
             scheduler.cancel(ownerId)

@@ -47,6 +47,8 @@ import com.sk89q.worldedit.regions.selector.CuboidRegionSelector;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.util.command.binding.Switch;
 import com.sk89q.worldedit.util.command.parametric.Optional;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.world.World;
 
 /**
  * Clipboard commands.
@@ -158,19 +160,33 @@ public class ClipboardCommands {
             .to(to)
             .ignoreAirBlocks(ignoreAirBlocks)
             .build();
-        Operations.completeLegacy(operation);
+        final World world = player.getWorld();
 
-        if (selectPasted) {
-            Vector max = to.add(
-                region.getMaximumPoint()
-                    .subtract(region.getMinimumPoint()));
-            RegionSelector selector = new CuboidRegionSelector(player.getWorld(), to, max);
-            session.setRegionSelector(player.getWorld(), selector);
-            selector.learnChanges();
-            selector.explainRegionAdjust(player, session);
-        }
+        // The selection and the message have to wait until the paste has actually happened.
+        worldEdit.getOperationScheduler()
+            .submit(player, editSession, operation, new OperationCompletion() {
 
-        player.print("The clipboard has been pasted at " + to);
+                @Override
+                public void onSuccess() {
+                    if (selectPasted) {
+                        Vector max = to.add(
+                            region.getMaximumPoint()
+                                .subtract(region.getMinimumPoint()));
+                        RegionSelector selector = new CuboidRegionSelector(world, to, max);
+                        session.setRegionSelector(world, selector);
+                        selector.learnChanges();
+                        selector.explainRegionAdjust(player, session);
+                    }
+
+                    player.print("The clipboard has been pasted at " + to);
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    String message = e.getMessage();
+                    player.printError(message != null ? message : "The operation could not be completed.");
+                }
+            });
     }
 
     @Command(

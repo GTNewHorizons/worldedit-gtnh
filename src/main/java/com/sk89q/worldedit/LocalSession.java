@@ -201,52 +201,52 @@ public class LocalSession {
     }
 
     /**
-     * Performs an undo.
+     * Step back through the history. The caller has to run the undo itself, using an edit session from
+     * {@link #createHistorySession(EditSession, BlockBag, Player)}.
      *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was undone
+     * @return the edit session to undo, or null if there is nothing left to undo
      */
-    public EditSession undo(@Nullable BlockBag newBlockBag, Player player) {
-        checkNotNull(player);
+    @Nullable
+    public EditSession stepBack() {
         --historyPointer;
         if (historyPointer >= 0) {
-            EditSession editSession = history.get(historyPointer);
-            EditSession newEditSession = WorldEdit.getInstance()
-                .getEditSessionFactory()
-                .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
-            newEditSession.enableQueue();
-            newEditSession.setFastMode(fastMode);
-            editSession.undo(newEditSession);
-            return editSession;
-        } else {
-            historyPointer = 0;
-            return null;
+            return history.get(historyPointer);
         }
+        historyPointer = 0;
+        return null;
     }
 
     /**
-     * Performs a redo
+     * Step forward through the history. The caller has to run the redo itself, using an edit session
+     * from {@link #createHistorySession(EditSession, BlockBag, Player)}.
      *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was redone
+     * @return the edit session to redo, or null if there is nothing left to redo
      */
-    public EditSession redo(@Nullable BlockBag newBlockBag, Player player) {
-        checkNotNull(player);
+    @Nullable
+    public EditSession stepForward() {
         if (historyPointer < history.size()) {
-            EditSession editSession = history.get(historyPointer);
-            EditSession newEditSession = WorldEdit.getInstance()
-                .getEditSessionFactory()
-                .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
-            newEditSession.enableQueue();
-            newEditSession.setFastMode(fastMode);
-            editSession.redo(newEditSession);
-            ++historyPointer;
-            return editSession;
+            return history.get(historyPointer++);
         }
-
         return null;
+    }
+
+    /**
+     * Create the edit session that an undo or redo of the given edit session writes to.
+     *
+     * @param source   the edit session being undone or redone
+     * @param blockBag the block bag to use, or null to use none
+     * @param player   the player
+     * @return the new edit session
+     */
+    public EditSession createHistorySession(EditSession source, @Nullable BlockBag blockBag, Player player) {
+        checkNotNull(source);
+        checkNotNull(player);
+        EditSession editSession = WorldEdit.getInstance()
+            .getEditSessionFactory()
+            .getEditSession(source.getWorld(), -1, blockBag, player);
+        editSession.enableQueue();
+        editSession.setFastMode(fastMode);
+        return editSession;
     }
 
     /**
