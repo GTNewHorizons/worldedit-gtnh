@@ -29,16 +29,17 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.Contextual;
 import com.sk89q.worldedit.function.EditContext;
 import com.sk89q.worldedit.function.operation.Operation;
-import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.command.argument.CommandArgs;
 import com.sk89q.worldedit.util.command.composition.CommandExecutor;
 import com.sk89q.worldedit.util.command.composition.SimpleCommand;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
 
 public class SelectionCommand extends SimpleCommand<Operation> {
 
@@ -79,18 +80,35 @@ public class SelectionCommand extends SimpleCommand<Operation> {
                 editContext.setDestination(locals.get(EditSession.class));
                 editContext.setRegion(selection);
 
-                Operation operation = operationFactory.createFromContext(editContext);
-                Operations.completeBlindly(operation);
+                final Operation operation = operationFactory.createFromContext(editContext);
+                final Actor completionActor = actor;
 
-                List<String> messages = Lists.newArrayList();
-                operation.addStatusMessages(messages);
-                if (messages.isEmpty()) {
-                    actor.print("Operation completed.");
-                } else {
-                    actor.print(
-                        "Operation completed (" + Joiner.on(", ")
-                            .join(messages) + ").");
-                }
+                // Hand the work to the scheduler, which may spread it over several ticks. The
+                // status message has to wait until it is actually done.
+                WorldEdit.getInstance()
+                    .getOperationScheduler()
+                    .submit(editSession, operation, new OperationCompletion() {
+
+                        @Override
+                        public void onSuccess() {
+                            List<String> messages = Lists.newArrayList();
+                            operation.addStatusMessages(messages);
+                            if (messages.isEmpty()) {
+                                completionActor.print("Operation completed.");
+                            } else {
+                                completionActor.print(
+                                    "Operation completed (" + Joiner.on(", ")
+                                        .join(messages) + ").");
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(WorldEditException e) {
+                            String message = e.getMessage();
+                            completionActor
+                                .printError(message != null ? message : "The operation could not be completed.");
+                        }
+                    });
 
                 return operation;
             } catch (IncompleteRegionException e) {

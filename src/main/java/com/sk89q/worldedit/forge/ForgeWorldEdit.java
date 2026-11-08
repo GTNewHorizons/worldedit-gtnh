@@ -51,6 +51,7 @@ import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.rotation.RotationMappings;
 import com.sk89q.worldedit.internal.LocalWorldAdapter;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
@@ -98,6 +99,8 @@ public class ForgeWorldEdit {
     private ForgeMultipartCompat compat = new NoForgeMultipartCompat();
     private ModRotationBlockTransformHook modRotationHook;
     private ForgeLightingScheduler lightingScheduler;
+    private ForgeOperationScheduler operationScheduler;
+    private OperationScheduler previousOperationScheduler;
     private LightingScheduler previousLightingScheduler;
 
     @EventHandler
@@ -173,6 +176,12 @@ public class ForgeWorldEdit {
         lightingScheduler = new ForgeLightingScheduler();
         WorldEdit.getInstance()
             .setLightingScheduler(lightingScheduler);
+
+        previousOperationScheduler = WorldEdit.getInstance()
+            .getOperationScheduler();
+        operationScheduler = new ForgeOperationScheduler();
+        WorldEdit.getInstance()
+            .setOperationScheduler(operationScheduler);
     }
 
     @EventHandler
@@ -186,6 +195,17 @@ public class ForgeWorldEdit {
             WorldEdit.getInstance()
                 .setLightingScheduler(previousLightingScheduler);
             previousLightingScheduler = null;
+        }
+
+        if (operationScheduler != null) {
+            operationScheduler.shutdown();
+            operationScheduler = null;
+        }
+
+        if (previousOperationScheduler != null) {
+            WorldEdit.getInstance()
+                .setOperationScheduler(previousOperationScheduler);
+            previousOperationScheduler = null;
         }
 
         WorldEdit.getInstance()

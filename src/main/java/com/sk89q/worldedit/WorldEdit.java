@@ -69,6 +69,8 @@ import com.sk89q.worldedit.util.io.file.InvalidFilenameException;
 import com.sk89q.worldedit.util.lighting.DirectLightingScheduler;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
 import com.sk89q.worldedit.util.logging.WorldEditPrefixHandler;
+import com.sk89q.worldedit.util.operation.DirectOperationScheduler;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.registry.BundledBlockData;
 
 /**
@@ -100,6 +102,7 @@ public class WorldEdit {
     private final EditSessionFactory editSessionFactory = new EditSessionFactory.EditSessionFactoryImpl(eventBus);
     private final SessionManager sessions = new SessionManager(this);
     private LightingScheduler lightingScheduler = new DirectLightingScheduler();
+    private OperationScheduler operationScheduler = new DirectOperationScheduler();
 
     private final BlockFactory blockFactory = new BlockFactory(this);
     private final ItemFactory itemFactory = new ItemFactory(this);
@@ -218,6 +221,24 @@ public class WorldEdit {
      */
     public void setLightingScheduler(LightingScheduler lightingScheduler) {
         this.lightingScheduler = checkNotNull(lightingScheduler);
+    }
+
+    /**
+     * Get the operation scheduler.
+     *
+     * @return the operation scheduler
+     */
+    public OperationScheduler getOperationScheduler() {
+        return operationScheduler;
+    }
+
+    /**
+     * Set the operation scheduler.
+     *
+     * @param operationScheduler the scheduler to use
+     */
+    public void setOperationScheduler(OperationScheduler operationScheduler) {
+        this.operationScheduler = checkNotNull(operationScheduler);
     }
 
     /**

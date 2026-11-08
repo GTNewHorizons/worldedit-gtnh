@@ -83,6 +83,7 @@ import com.sk89q.worldedit.util.formatting.ColorCodeBuilder;
 import com.sk89q.worldedit.util.formatting.component.CommandUsageBox;
 import com.sk89q.worldedit.util.logging.DynamicStreamHandler;
 import com.sk89q.worldedit.util.logging.LogFormat;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 /**
  * Handles the registration and invocation of commands.
@@ -341,30 +342,65 @@ public final class CommandManager {
             EditSession editSession = locals.get(EditSession.class);
 
             if (editSession != null) {
-                session.remember(editSession);
-                editSession.flushQueue();
-
-                if (config.profile) {
-                    long time = System.currentTimeMillis() - start;
-                    int changed = editSession.getBlockChangeCount();
-                    if (time > 0) {
-                        double throughput = changed / (time / 1000.0);
-                        actor.printDebug(
-                            (time / 1000.0) + "s elapsed (history: "
-                                + changed
-                                + " changed; "
-                                + Math.round(throughput)
-                                + " blocks/sec).");
-                    } else {
-                        actor.printDebug((time / 1000.0) + "s elapsed.");
-                    }
-                }
-
-                worldEdit.flushBlockBag(actor, editSession);
+                // The scheduler flushes and then runs this, either now or once the work it has
+                // queued for this session finishes.
+                worldEdit.getOperationScheduler()
+                    .whenFinished(editSession, new SessionFinalizer(actor, session, editSession, config, start));
             }
         }
 
         event.setCancelled(true);
+    }
+
+    /**
+     * Wraps up an edit session once its work is done: records it for undo, reports timings and
+     * returns anything left in the block bag.
+     *
+     * <p>
+     * This does not flush the session. The {@link OperationScheduler} is responsible for that,
+     * because the reorder stages are not cleared on commit and flushing twice would write every
+     * buffered block a second time.
+     * </p>
+     */
+    private final class SessionFinalizer implements Runnable {
+
+        private final Actor actor;
+        private final LocalSession session;
+        private final EditSession editSession;
+        private final LocalConfiguration config;
+        private final long start;
+
+        private SessionFinalizer(Actor actor, LocalSession session, EditSession editSession, LocalConfiguration config,
+            long start) {
+            this.actor = actor;
+            this.session = session;
+            this.editSession = editSession;
+            this.config = config;
+            this.start = start;
+        }
+
+        @Override
+        public void run() {
+            session.remember(editSession);
+
+            if (config.profile) {
+                long time = System.currentTimeMillis() - start;
+                int changed = editSession.getBlockChangeCount();
+                if (time > 0) {
+                    double throughput = changed / (time / 1000.0);
+                    actor.printDebug(
+                        (time / 1000.0) + "s elapsed (history: "
+                            + changed
+                            + " changed; "
+                            + Math.round(throughput)
+                            + " blocks/sec).");
+                } else {
+                    actor.printDebug((time / 1000.0) + "s elapsed.");
+                }
+            }
+
+            worldEdit.flushBlockBag(actor, editSession);
+        }
     }
 
     @Subscribe
