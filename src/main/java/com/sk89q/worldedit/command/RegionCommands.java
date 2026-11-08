@@ -51,6 +51,7 @@ import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.function.pattern.Patterns;
 import com.sk89q.worldedit.function.visitor.LayerVisitor;
+import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.internal.annotation.Direction;
 import com.sk89q.worldedit.internal.annotation.Selection;
 import com.sk89q.worldedit.internal.expression.ExpressionException;
@@ -69,6 +70,8 @@ import com.sk89q.worldedit.util.command.binding.Switch;
 import com.sk89q.worldedit.util.command.binding.Text;
 import com.sk89q.worldedit.util.command.parametric.Optional;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -86,6 +89,34 @@ public class RegionCommands {
     public RegionCommands(WorldEdit worldEdit) {
         checkNotNull(worldEdit);
         this.worldEdit = worldEdit;
+    }
+
+    /**
+     * Hand a region operation to the {@link OperationScheduler}, which may spread it over several
+     * server ticks, and report the affected count once it has actually finished.
+     *
+     * @param editSession the edit session the operation writes to
+     * @param visitor     the operation
+     * @param player      the player to report to
+     * @param suffix      appended to the affected count to form the completion message
+     */
+    private static void schedule(EditSession editSession, final RegionVisitor visitor, final Player player,
+        final String suffix) {
+        WorldEdit.getInstance()
+            .getOperationScheduler()
+            .submit(editSession, visitor, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {
+                    player.print(visitor.getAffected() + suffix);
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    String message = e.getMessage();
+                    player.printError(message != null ? message : "The operation could not be completed.");
+                }
+            });
     }
 
     @Command(
@@ -157,8 +188,11 @@ public class RegionCommands {
         if (from == null) {
             from = new ExistingBlockMask(editSession);
         }
-        int affected = editSession.replaceBlocks(region, from, Patterns.wrap(to));
-        player.print(affected + " block(s) have been replaced.");
+        schedule(
+            editSession,
+            editSession.replaceBlocksOperation(region, from, Patterns.wrap(to)),
+            player,
+            " block(s) have been replaced.");
     }
 
     @Command(
@@ -207,8 +241,11 @@ public class RegionCommands {
     @Logging(REGION)
     public void walls(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
         throws WorldEditException {
-        int affected = editSession.makeCuboidWalls(region, Patterns.wrap(pattern));
-        player.print(affected + " block(s) have been changed.");
+        schedule(
+            editSession,
+            editSession.makeCuboidWallsOperation(region, Patterns.wrap(pattern)),
+            player,
+            " block(s) have been changed.");
     }
 
     @Command(
@@ -221,8 +258,11 @@ public class RegionCommands {
     @Logging(REGION)
     public void faces(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
         throws WorldEditException {
-        int affected = editSession.makeCuboidFaces(region, Patterns.wrap(pattern));
-        player.print(affected + " block(s) have been changed.");
+        schedule(
+            editSession,
+            editSession.makeCuboidFacesOperation(region, Patterns.wrap(pattern)),
+            player,
+            " block(s) have been changed.");
     }
 
     @Command(

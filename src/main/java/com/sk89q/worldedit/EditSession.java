@@ -926,13 +926,27 @@ public class EditSession implements Extent {
      */
     @SuppressWarnings("deprecation")
     public int setBlocks(Region region, Pattern pattern) throws MaxChangedBlocksException {
+        RegionVisitor visitor = setBlocksOperation(region, pattern);
+        Operations.completeLegacy(visitor);
+        return visitor.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #setBlocks(Region, Pattern)} runs, without running it, so a
+     * caller can hand it to an
+     * {@link com.sk89q.worldedit.util.operation.OperationScheduler OperationScheduler} instead.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    @SuppressWarnings("deprecation")
+    public RegionVisitor setBlocksOperation(Region region, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(pattern);
 
         BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
-        RegionVisitor visitor = new RegionVisitor(region, replace);
-        Operations.completeLegacy(visitor);
-        return visitor.getAffected();
+        return new RegionVisitor(region, replace);
     }
 
     /**
@@ -980,15 +994,29 @@ public class EditSession implements Extent {
      */
     @SuppressWarnings("deprecation")
     public int replaceBlocks(Region region, Mask mask, Pattern pattern) throws MaxChangedBlocksException {
+        RegionVisitor visitor = replaceBlocksOperation(region, mask, pattern);
+        Operations.completeLegacy(visitor);
+        return visitor.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #replaceBlocks(Region, Mask, Pattern)} runs, without running
+     * it.
+     *
+     * @param region  the region
+     * @param mask    the mask that blocks must match to be replaced
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    @SuppressWarnings("deprecation")
+    public RegionVisitor replaceBlocksOperation(Region region, Mask mask, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(mask);
         checkNotNull(pattern);
 
         BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
         RegionMaskingFilter filter = new RegionMaskingFilter(mask, replace);
-        RegionVisitor visitor = new RegionVisitor(region, filter);
-        Operations.completeLegacy(visitor);
-        return visitor.getAffected();
+        return new RegionVisitor(region, filter);
     }
 
     /**
@@ -1040,9 +1068,21 @@ public class EditSession implements Extent {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        CuboidRegion cuboid = CuboidRegion.makeCuboid(region);
-        Region faces = cuboid.getFaces();
-        return setBlocks(faces, pattern);
+        return setBlocks(cuboid(region).getFaces(), pattern);
+    }
+
+    /**
+     * Build the operation that {@link #makeCuboidFaces(Region, Pattern)} runs, without running it.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor makeCuboidFacesOperation(Region region, Pattern pattern) {
+        checkNotNull(region);
+        checkNotNull(pattern);
+
+        return setBlocksOperation(cuboid(region).getFaces(), pattern);
     }
 
     /**
@@ -1095,9 +1135,25 @@ public class EditSession implements Extent {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        CuboidRegion cuboid = CuboidRegion.makeCuboid(region);
-        Region faces = cuboid.getWalls();
-        return setBlocks(faces, pattern);
+        return setBlocks(cuboid(region).getWalls(), pattern);
+    }
+
+    /**
+     * Build the operation that {@link #makeCuboidWalls(Region, Pattern)} runs, without running it.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor makeCuboidWallsOperation(Region region, Pattern pattern) {
+        checkNotNull(region);
+        checkNotNull(pattern);
+
+        return setBlocksOperation(cuboid(region).getWalls(), pattern);
+    }
+
+    private static CuboidRegion cuboid(Region region) {
+        return CuboidRegion.makeCuboid(region);
     }
 
     /**
