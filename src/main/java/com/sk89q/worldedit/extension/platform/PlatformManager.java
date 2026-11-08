@@ -32,7 +32,6 @@ import javax.annotation.Nullable;
 
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.ServerInterface;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
@@ -49,7 +48,6 @@ import com.sk89q.worldedit.event.platform.PlatformInitializeEvent;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.event.platform.PlayerInputEvent;
 import com.sk89q.worldedit.extension.platform.permission.ActorSelectorLimits;
-import com.sk89q.worldedit.internal.ServerInterfaceAdapter;
 import com.sk89q.worldedit.regions.RegionSelector;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.eventbus.Subscribe;
@@ -302,17 +300,6 @@ public class PlatformManager {
      */
     public LocalConfiguration getConfiguration() {
         return queryCapability(Capability.CONFIGURATION).getConfiguration();
-    }
-
-    /**
-     * Return a legacy {@link ServerInterface}.
-     *
-     * @return a {@link ServerInterface}
-     * @throws IllegalStateException if no platform has been registered
-     */
-    @SuppressWarnings("deprecation")
-    public ServerInterface getServerInterface() throws IllegalStateException {
-        return ServerInterfaceAdapter.adapt(queryCapability(Capability.USER_COMMANDS));
     }
 
     @Subscribe

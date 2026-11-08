@@ -34,8 +34,9 @@ import com.sk89q.worldedit.command.tool.FloodFillTool;
 import com.sk89q.worldedit.command.tool.LongRangeBuildTool;
 import com.sk89q.worldedit.command.tool.QueryTool;
 import com.sk89q.worldedit.command.tool.TreePlanter;
+import com.sk89q.worldedit.command.util.CommandInput;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.patterns.Pattern;
+import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.util.TreeGenerator;
 
 public class ToolCommands {
@@ -86,7 +87,7 @@ public class ToolCommands {
     public void repl(Player player, LocalSession session, EditSession editSession, CommandContext args)
         throws WorldEditException {
 
-        BaseBlock targetBlock = we.getBlock(player, args.getString(0));
+        BaseBlock targetBlock = CommandInput.block(player, args.getString(0), false, false);
         session.setTool(player.getItemInHand(), new BlockReplacer(targetBlock));
         player.print("Block replacer tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
     }
@@ -118,7 +119,7 @@ public class ToolCommands {
             return;
         }
 
-        Pattern pattern = we.getBlockPattern(player, args.getString(0));
+        Pattern pattern = CommandInput.pattern(player, args.getString(0));
         session.setTool(player.getItemInHand(), new FloodFillTool(range, pattern));
         player.print("Block flood fill tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
     }
@@ -151,8 +152,8 @@ public class ToolCommands {
     public void longrangebuildtool(Player player, LocalSession session, EditSession editSession, CommandContext args)
         throws WorldEditException {
 
-        BaseBlock secondary = we.getBlock(player, args.getString(0));
-        BaseBlock primary = we.getBlock(player, args.getString(1));
+        BaseBlock secondary = CommandInput.block(player, args.getString(0), false, false);
+        BaseBlock primary = CommandInput.block(player, args.getString(1), false, false);
         session.setTool(player.getItemInHand(), new LongRangeBuildTool(primary, secondary));
         player.print("Long-range building tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
         player.print(

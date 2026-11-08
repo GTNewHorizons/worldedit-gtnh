@@ -17,14 +17,12 @@
 package com.sk89q.worldedit.util;
 
 import com.sk89q.worldedit.BlockWorldVector;
-import com.sk89q.worldedit.LocalPlayer;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldVectorFace;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.internal.LocalWorldAdapter;
+import com.sk89q.worldedit.world.World;
 
 /**
  * This class uses an inefficient method to figure out what block a player
@@ -37,7 +35,7 @@ import com.sk89q.worldedit.internal.LocalWorldAdapter;
  */
 public class TargetBlock {
 
-    private LocalWorld world;
+    private World world;
     private int maxDistance;
     private double checkDistance, curDistance;
     private Vector targetPos = new Vector();
@@ -46,35 +44,14 @@ public class TargetBlock {
     private Vector offset = new Vector();
 
     /**
-     * Constructor requiring a player, uses default values
-     *
-     * @param player player to work with
-     */
-    public TargetBlock(LocalPlayer player) {
-        this.world = LocalWorldAdapter.adapt(player.getWorld());
-        this.setValues(player.getPosition(), player.getYaw(), player.getPitch(), 300, 1.65, 0.2);
-    }
-
-    /**
      * Constructor requiring a player, max distance and a checking distance
      *
-     * @param player        LocalPlayer to work with
-     * @param maxDistance   how far it checks for blocks
-     * @param checkDistance how often to check for blocks, the smaller the more precise
-     */
-    public TargetBlock(LocalPlayer player, int maxDistance, double checkDistance) {
-        this((Player) player, maxDistance, checkDistance);
-    }
-
-    /**
-     * Constructor requiring a player, max distance and a checking distance
-     *
-     * @param player        LocalPlayer to work with
+     * @param player        player to work with
      * @param maxDistance   how far it checks for blocks
      * @param checkDistance how often to check for blocks, the smaller the more precise
      */
     public TargetBlock(Player player, int maxDistance, double checkDistance) {
-        this.world = LocalWorldAdapter.adapt(player.getWorld());
+        this.world = player.getWorld();
         this.setValues(player.getPosition(), player.getYaw(), player.getPitch(), maxDistance, 1.65, checkDistance);
     }
 

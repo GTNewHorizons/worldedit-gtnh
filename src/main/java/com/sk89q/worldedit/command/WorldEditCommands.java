@@ -68,7 +68,8 @@ public class WorldEditCommands {
     @Command(aliases = { "reload" }, usage = "", desc = "Reload configuration", min = 0, max = 0)
     @CommandPermissions("worldedit.reload")
     public void reload(Actor actor) throws WorldEditException {
-        we.getServer()
+        we.getPlatformManager()
+            .queryCapability(Capability.USER_COMMANDS)
             .reload();
         we.getEventBus()
             .post(

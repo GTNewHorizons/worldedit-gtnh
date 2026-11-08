@@ -46,7 +46,7 @@ public class QueryTool implements BlockTool {
 
         World world = (World) clicked.getExtent();
         EditSession editSession = session.createEditSession(player);
-        BaseBlock block = (editSession).rawGetBlock(clicked.toVector());
+        BaseBlock block = editSession.getBlock(clicked.toVector());
         BlockType type = BlockType.fromID(block.getType());
 
         player.print(

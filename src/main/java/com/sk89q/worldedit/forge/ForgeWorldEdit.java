@@ -49,7 +49,6 @@ import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
 import com.sk89q.worldedit.forge.compat.ModRotationBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.rotation.RotationMappings;
-import com.sk89q.worldedit.internal.LocalWorldAdapter;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
 
@@ -258,7 +257,7 @@ public class ForgeWorldEdit {
             Action action = event.action;
             switch (action) {
                 case LEFT_CLICK_BLOCK: {
-                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
+                    WorldVector pos = new WorldVector(world, event.x, event.y, event.z);
 
                     if (we.handleBlockLeftClick(player, pos)) {
                         event.setCanceled(true);
@@ -271,7 +270,7 @@ public class ForgeWorldEdit {
                     break;
                 }
                 case RIGHT_CLICK_BLOCK: {
-                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
+                    WorldVector pos = new WorldVector(world, event.x, event.y, event.z);
 
                     if (we.handleBlockRightClick(player, pos)) {
                         event.setCanceled(true);

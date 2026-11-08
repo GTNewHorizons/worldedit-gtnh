@@ -17,8 +17,8 @@ import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
-import com.sk89q.worldedit.patterns.SingleBlockPattern;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 
@@ -30,7 +30,7 @@ public class EditSessionOperationTest {
 
     private static final int BLOCKS = 8;
 
-    private final SingleBlockPattern pattern = new SingleBlockPattern(new BaseBlock(1));
+    private final BlockPattern pattern = new BlockPattern(new BaseBlock(1));
     private final CuboidRegion selection = new CuboidRegion(new Vector(0, 0, 0), new Vector(1, 1, 1));
     private EditSession session;
 

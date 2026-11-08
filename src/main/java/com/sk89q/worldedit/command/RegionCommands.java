@@ -53,7 +53,6 @@ import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.function.pattern.Pattern;
-import com.sk89q.worldedit.function.pattern.Patterns;
 import com.sk89q.worldedit.function.visitor.LayerVisitor;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.internal.annotation.Direction;
@@ -204,7 +203,7 @@ public class RegionCommands {
         CuboidRegion cuboidregion = (CuboidRegion) region;
         Vector pos1 = cuboidregion.getPos1();
         Vector pos2 = cuboidregion.getPos2();
-        int blocksChanged = editSession.drawLine(Patterns.wrap(pattern), pos1, pos2, thickness, !shell);
+        int blocksChanged = editSession.drawLine(pattern, pos1, pos2, thickness, !shell);
 
         player.print(blocksChanged + " block(s) have been changed.");
     }
@@ -231,7 +230,7 @@ public class RegionCommands {
         ConvexPolyhedralRegion cpregion = (ConvexPolyhedralRegion) region;
         List<Vector> vectors = new ArrayList<Vector>(cpregion.getVertices());
 
-        int blocksChanged = editSession.drawSpline(Patterns.wrap(pattern), vectors, 0, 0, 0, 10, thickness, !shell);
+        int blocksChanged = editSession.drawSpline(pattern, vectors, 0, 0, 0, 10, thickness, !shell);
 
         player.print(blocksChanged + " block(s) have been changed.");
     }
@@ -252,7 +251,7 @@ public class RegionCommands {
         }
         schedule(
             editSession,
-            editSession.replaceBlocksOperation(region, from, Patterns.wrap(to)),
+            editSession.replaceBlocksOperation(region, from, to),
             player,
             " block(s) have been replaced.");
     }
@@ -267,7 +266,7 @@ public class RegionCommands {
     @Logging(REGION)
     public void overlay(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
         throws WorldEditException {
-        CountedOperation operation = editSession.overlayCuboidBlocksOperation(region, Patterns.wrap(pattern));
+        CountedOperation operation = editSession.overlayCuboidBlocksOperation(region, pattern);
         schedule(editSession, operation, operation, player, "", " block(s) have been overlaid.");
     }
 
@@ -276,7 +275,7 @@ public class RegionCommands {
     @CommandPermissions("worldedit.region.center")
     public void center(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
         throws WorldEditException {
-        int affected = editSession.center(region, Patterns.wrap(pattern));
+        int affected = editSession.center(region, pattern);
         player.print("Center set (" + affected + " blocks changed)");
     }
 
@@ -305,7 +304,7 @@ public class RegionCommands {
         throws WorldEditException {
         schedule(
             editSession,
-            editSession.makeCuboidWallsOperation(region, Patterns.wrap(pattern)),
+            editSession.makeCuboidWallsOperation(region, pattern),
             player,
             " block(s) have been changed.");
     }
@@ -322,7 +321,7 @@ public class RegionCommands {
         throws WorldEditException {
         schedule(
             editSession,
-            editSession.makeCuboidFacesOperation(region, Patterns.wrap(pattern)),
+            editSession.makeCuboidFacesOperation(region, pattern),
             player,
             " block(s) have been changed.");
     }
@@ -520,7 +519,7 @@ public class RegionCommands {
     public void hollow(Player player, EditSession editSession, @Selection Region region,
         @Optional("0") @Range(min = 0) int thickness, @Optional("air") Pattern pattern) throws WorldEditException {
 
-        int affected = editSession.hollowOutRegion(region, thickness, Patterns.wrap(pattern));
+        int affected = editSession.hollowOutRegion(region, thickness, pattern);
         player.print(affected + " block(s) have been changed.");
     }
 

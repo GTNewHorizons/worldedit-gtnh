@@ -32,7 +32,6 @@ import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.extension.platform.AbstractPlayerActor;
 import com.sk89q.worldedit.extent.inventory.BlockBag;
-import com.sk89q.worldedit.internal.LocalWorldAdapter;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.Location;
@@ -84,7 +83,7 @@ public class ForgePlayer extends AbstractPlayerActor {
     @Override
     public WorldVector getPosition() {
         return new WorldVector(
-            LocalWorldAdapter.adapt(ForgeWorldEdit.inst.getWorld(this.player.worldObj)),
+            ForgeWorldEdit.inst.getWorld(this.player.worldObj),
             this.player.posX,
             this.player.posY,
             this.player.posZ);

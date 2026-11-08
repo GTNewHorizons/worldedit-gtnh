@@ -14,13 +14,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sk89q.worldedit.regions;
-
-import com.sk89q.worldedit.internal.cui.CUIRegion;
+package com.sk89q.worldedit;
 
 /**
- * @deprecated This class only exists as to not break binary compatibility
+ * An enum of possible flip directions.
  */
-@Deprecated
-public abstract class CylinderRegionSelector extends AbstractLegacyRegionSelector implements CUIRegion {
+public enum FlipDirection {
+    NORTH_SOUTH,
+    WEST_EAST,
+    UP_DOWN
 }

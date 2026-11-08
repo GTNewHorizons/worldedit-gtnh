@@ -16,6 +16,8 @@
 
 package com.sk89q.worldedit;
 
+import com.sk89q.worldedit.world.World;
+
 /**
  * @deprecated Use {@link com.sk89q.worldedit.util.Location} wherever possible
  */
@@ -25,27 +27,27 @@ public class WorldVectorFace extends WorldVector {
 
     private VectorFace face;
 
-    public WorldVectorFace(LocalWorld world, double x, double y, double z, VectorFace face) {
+    public WorldVectorFace(World world, double x, double y, double z, VectorFace face) {
         super(world, x, y, z);
         this.face = face;
     }
 
-    public WorldVectorFace(LocalWorld world, int x, int y, int z, VectorFace face) {
+    public WorldVectorFace(World world, int x, int y, int z, VectorFace face) {
         super(world, x, y, z);
         this.face = face;
     }
 
-    public WorldVectorFace(LocalWorld world, float x, float y, float z, VectorFace face) {
+    public WorldVectorFace(World world, float x, float y, float z, VectorFace face) {
         super(world, x, y, z);
         this.face = face;
     }
 
-    public WorldVectorFace(LocalWorld world, Vector pt, VectorFace face) {
+    public WorldVectorFace(World world, Vector pt, VectorFace face) {
         super(world, pt);
         this.face = face;
     }
 
-    public WorldVectorFace(LocalWorld world, VectorFace face) {
+    public WorldVectorFace(World world, VectorFace face) {
         super(world);
         this.face = face;
     }
@@ -81,7 +83,7 @@ public class WorldVectorFace extends WorldVector {
      * @param face   the direction in which the face should lie
      * @return a face
      */
-    public static WorldVectorFace getWorldVectorFace(LocalWorld world, Vector vector, Vector face) {
+    public static WorldVectorFace getWorldVectorFace(World world, Vector vector, Vector face) {
         if (vector == null || face == null) return null;
         // check which direction the face is from the vector
         final int x1 = vector.getBlockX();

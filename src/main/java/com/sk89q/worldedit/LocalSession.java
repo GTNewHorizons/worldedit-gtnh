@@ -40,7 +40,6 @@ import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.function.mask.Mask;
-import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.internal.cui.CUIRegion;
 import com.sk89q.worldedit.internal.cui.SelectionShapeEvent;
@@ -208,17 +207,6 @@ public class LocalSession {
      * @param player      the player
      * @return whether anything was undone
      */
-    public EditSession undo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
-        return undo(newBlockBag, (Player) player);
-    }
-
-    /**
-     * Performs an undo.
-     *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was undone
-     */
     public EditSession undo(@Nullable BlockBag newBlockBag, Player player) {
         checkNotNull(player);
         --historyPointer;
@@ -235,17 +223,6 @@ public class LocalSession {
             historyPointer = 0;
             return null;
         }
-    }
-
-    /**
-     * Performs a redo
-     *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was redone
-     */
-    public EditSession redo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
-        return redo(newBlockBag, (Player) player);
     }
 
     /**
@@ -293,14 +270,6 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated Use {@link #getRegionSelector(World)}
-     */
-    @Deprecated
-    public RegionSelector getRegionSelector(LocalWorld world) {
-        return getRegionSelector((World) world);
-    }
-
-    /**
      * Get the region selector for defining the selection. If the selection
      * was defined for a different world, the old selection will be discarded.
      *
@@ -318,22 +287,6 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated use {@link #getRegionSelector(World)}
-     */
-    @Deprecated
-    public RegionSelector getRegionSelector() {
-        return selector;
-    }
-
-    /**
-     * @deprecated use {@link #setRegionSelector(World, RegionSelector)}
-     */
-    @Deprecated
-    public void setRegionSelector(LocalWorld world, RegionSelector selector) {
-        setRegionSelector((World) world, selector);
-    }
-
-    /**
      * Set the region selector.
      *
      * @param world    the world
@@ -344,24 +297,6 @@ public class LocalSession {
         checkNotNull(selector);
         selector.setWorld(world);
         this.selector = selector;
-    }
-
-    /**
-     * Returns true if the region is fully defined.
-     *
-     * @return true if a region selection is defined
-     */
-    @Deprecated
-    public boolean isRegionDefined() {
-        return selector.isDefined();
-    }
-
-    /**
-     * @deprecated use {@link #isSelectionDefined(World)}
-     */
-    @Deprecated
-    public boolean isSelectionDefined(LocalWorld world) {
-        return isSelectionDefined((World) world);
     }
 
     /**
@@ -380,22 +315,6 @@ public class LocalSession {
             return false;
         }
         return selector.isDefined();
-    }
-
-    /**
-     * @deprecated use {@link #getSelection(World)}
-     */
-    @Deprecated
-    public Region getRegion() throws IncompleteRegionException {
-        return selector.getRegion();
-    }
-
-    /**
-     * @deprecated use {@link #getSelection(World)}
-     */
-    @Deprecated
-    public Region getSelection(LocalWorld world) throws IncompleteRegionException {
-        return getSelection((World) world);
     }
 
     /**
@@ -839,14 +758,6 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated use {@link #createEditSession(Player)}
-     */
-    @Deprecated
-    public EditSession createEditSession(LocalPlayer player) {
-        return createEditSession((Player) player);
-    }
-
-    /**
      * Construct a new edit session.
      *
      * @param player the player
@@ -908,16 +819,6 @@ public class LocalSession {
      */
     public void setMask(Mask mask) {
         this.mask = mask;
-    }
-
-    /**
-     * Set a mask.
-     *
-     * @param mask mask or null
-     */
-    @SuppressWarnings("deprecation")
-    public void setMask(com.sk89q.worldedit.masks.Mask mask) {
-        setMask(mask != null ? Masks.wrap(mask) : null);
     }
 
 }

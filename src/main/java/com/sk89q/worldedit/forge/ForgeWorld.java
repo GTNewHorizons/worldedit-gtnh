@@ -83,6 +83,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.LazyBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
+import com.sk89q.worldedit.history.change.BlockChange;
 import com.sk89q.worldedit.internal.Constants;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.Direction;
@@ -488,7 +489,8 @@ public class ForgeWorld extends AbstractWorld {
                     }
 
                     if (region.contains(pt)) {
-                        editSession.rememberChange(pt, previous, current);
+                        editSession.getChangeSet()
+                            .add(new BlockChange(pt.toBlockVector(), previous, current));
                     } else {
                         editSession.smartSetBlock(pt, previous);
                     }

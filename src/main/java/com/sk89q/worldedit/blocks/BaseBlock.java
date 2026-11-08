@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.jnbt.StringTag;
 import com.sk89q.jnbt.Tag;
-import com.sk89q.worldedit.CuboidClipboard.FlipDirection;
+import com.sk89q.worldedit.FlipDirection;
 import com.sk89q.worldedit.foundation.Block;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.world.registry.WorldData;

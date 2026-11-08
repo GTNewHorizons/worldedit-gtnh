@@ -35,6 +35,7 @@ import com.sk89q.worldedit.extension.input.InputParseException;
 import com.sk89q.worldedit.extension.input.NoMatchException;
 import com.sk89q.worldedit.extension.input.ParserContext;
 import com.sk89q.worldedit.extension.platform.Actor;
+import com.sk89q.worldedit.extension.platform.Capability;
 import com.sk89q.worldedit.internal.registry.InputParser;
 import com.sk89q.worldedit.world.World;
 
@@ -125,13 +126,15 @@ class DefaultBlockParser extends InputParser<BaseBlock> {
             } catch (NumberFormatException e) {
                 blockType = BlockType.lookup(testId);
                 if (blockType == null) {
-                    int t = worldEdit.getServer()
+                    int t = worldEdit.getPlatformManager()
+                        .queryCapability(Capability.USER_COMMANDS)
                         .resolveItem(testId);
                     if (t > 0) {
                         blockType = BlockType.fromID(t); // Could be null
                         blockId = t;
                     } else if (blockLocator.length == 2) { // Block IDs in MC 1.7 and above use mod:name
-                        t = worldEdit.getServer()
+                        t = worldEdit.getPlatformManager()
+                            .queryCapability(Capability.USER_COMMANDS)
                             .resolveItem(blockAndExtraData[0]);
                         if (t > 0) {
                             blockType = BlockType.fromID(t); // Could be null
@@ -284,7 +287,8 @@ class DefaultBlockParser extends InputParser<BaseBlock> {
                             break;
                         }
                     }
-                    if (!worldEdit.getServer()
+                    if (!worldEdit.getPlatformManager()
+                        .queryCapability(Capability.USER_COMMANDS)
                         .isValidMobType(mobName)) {
                         throw new NoMatchException("Unknown mob type '" + mobName + "'");
                     }
