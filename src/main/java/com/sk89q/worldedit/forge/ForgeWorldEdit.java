@@ -131,7 +131,9 @@ public class ForgeWorldEdit {
             .bus()
             .register(ThreadSafeCache.getInstance());
 
-        if (Loader.isModLoaded("neid")) {
+        // EndlessIDs (and NEID Unofficial before it) widens block metadata to 16 bits and mixes
+        // into BaseBlock to match. Without this the block parser rejects any metadata above 15.
+        if (Loader.isModLoaded("endlessids") || Loader.isModLoaded("neid")) {
             BaseBlock.MAX_DATA = (1 << 16) - 1;
         }
     }
