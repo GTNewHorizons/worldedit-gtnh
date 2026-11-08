@@ -21,7 +21,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.regex.Pattern;
 
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.World;
@@ -42,35 +41,13 @@ public class FileMcRegionChunkStore extends McRegionChunkStore {
 
     @Override
     protected InputStream getInputStream(String name, World world) throws IOException, DataException {
-        Pattern ext = Pattern.compile(".*\\.mc[ra]$"); // allow either file extension, both work the same
         String dimension = world.getDimensionFolder();
         File regionFolder = new File(dimension == null ? path : new File(path, dimension), "region");
-        File file = null;
-        File[] files = regionFolder.listFiles();
-        if (files == null) {
-            throw new MissingChunkException();
-        }
-        for (File f : files) {
-            String tempName = f.getName()
-                .replaceFirst("mcr$", "mca"); // matcher only does one at a time
-            if (ext.matcher(f.getName())
-                .matches() && name.equalsIgnoreCase(tempName)) {
-                file = f;
-                break;
-            }
-        }
         try {
-            if (file == null) throw new FileNotFoundException();
-            return new FileInputStream(file);
+            return new FileInputStream(new File(regionFolder, name));
         } catch (FileNotFoundException e) {
             throw new MissingChunkException();
         }
-    }
-
-    @Override
-    public boolean isValid() {
-        return new File(path, "region").isDirectory()
-            || new File(path, "DIM-1" + File.separator + "region").isDirectory();
     }
 
 }

@@ -28,9 +28,7 @@ import java.util.zip.ZipFile;
 
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.storage.ChunkStore;
-import com.sk89q.worldedit.world.storage.FileLegacyChunkStore;
 import com.sk89q.worldedit.world.storage.FileMcRegionChunkStore;
-import com.sk89q.worldedit.world.storage.ZippedLegacyChunkStore;
 import com.sk89q.worldedit.world.storage.ZippedMcRegionChunkStore;
 
 /**
@@ -80,16 +78,13 @@ public class Snapshot implements Comparable<Snapshot> {
      * @throws DataException
      */
     private ChunkStore internalGetChunkStore() throws IOException, DataException {
-        ChunkStore chunkStore;
         if (file.getName()
             .toLowerCase()
             .endsWith(".zip")) {
-            chunkStore = new ZippedMcRegionChunkStore(file);
-            return chunkStore.isValid() ? chunkStore : new ZippedLegacyChunkStore(file);
+            return new ZippedMcRegionChunkStore(file);
         }
 
-        chunkStore = new FileMcRegionChunkStore(file);
-        return chunkStore.isValid() ? chunkStore : new FileLegacyChunkStore(file);
+        return new FileMcRegionChunkStore(file);
     }
 
     /**

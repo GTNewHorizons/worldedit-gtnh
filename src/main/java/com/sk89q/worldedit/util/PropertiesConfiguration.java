@@ -84,7 +84,6 @@ public class PropertiesConfiguration extends LocalConfiguration {
         maxPolygonalPoints = getInt("max-polygon-points", maxPolygonalPoints);
         defaultMaxPolyhedronPoints = getInt("default-max-polyhedron-points", defaultMaxPolyhedronPoints);
         maxPolyhedronPoints = getInt("max-polyhedron-points", maxPolyhedronPoints);
-        shellSaveType = getString("shell-save-type", shellSaveType);
         maxRadius = getInt("max-radius", maxRadius);
         maxSuperPickaxeSize = getInt("max-super-pickaxe-size", maxSuperPickaxeSize);
         maxBrushRadius = getInt("max-brush-radius", maxBrushRadius);

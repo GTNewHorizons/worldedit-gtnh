@@ -101,7 +101,7 @@ public class ZippedMcRegionChunkStore extends McRegionChunkStore {
                 .getName()
                 .replace('\\', '/');
             int slash = entry.lastIndexOf('/');
-            if (slash < 0 || !(entry.endsWith(".mca") || entry.endsWith(".mcr"))) {
+            if (slash < 0 || !entry.endsWith(".mca")) {
                 continue;
             }
 
@@ -137,20 +137,4 @@ public class ZippedMcRegionChunkStore extends McRegionChunkStore {
         zip.close();
     }
 
-    @Override
-    public boolean isValid() {
-        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
-
-            ZipEntry testEntry = e.nextElement();
-
-            if (testEntry.getName()
-                .matches(".*\\.mcr$")
-                || testEntry.getName()
-                    .matches(".*\\.mca$")) { // TODO: does this need a separate class?
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
