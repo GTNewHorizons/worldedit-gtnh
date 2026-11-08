@@ -70,6 +70,7 @@ public class ForgeOperationSchedulerTest {
         assertTrue(operation.cancelled);
         verify(session, never()).commit();
         verify(session).discardQueue();
+        verify(session).flushQueue();
         assertEquals(Collections.singletonList("finalize a"), events);
         assertFalse(scheduler.isPending(session));
     }
@@ -124,6 +125,23 @@ public class ForgeOperationSchedulerTest {
         assertEquals(2, theirOperation.resumes);
         assertEquals(0, myOperation.resumes);
         assertTrue(scheduler.isPending(theirs));
+    }
+
+    @Test
+    public void pendingWorkIsTrackedPerOwner() {
+        EditSession session = mock(EditSession.class);
+        UUID other = UUID.randomUUID();
+        assertFalse(scheduler.hasPendingWork(ownerId));
+
+        submit(owner, session, new FakeOperation(2), "queued");
+        assertTrue(scheduler.hasPendingWork(ownerId));
+        assertFalse(scheduler.hasPendingWork(other));
+
+        tick();
+        assertTrue(scheduler.hasPendingWork(ownerId));
+
+        tick();
+        assertFalse(scheduler.hasPendingWork(ownerId));
     }
 
     @Test

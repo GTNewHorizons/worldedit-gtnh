@@ -63,5 +63,10 @@ public class DirectOperationScheduler implements OperationScheduler {
     }
 
     @Override
+    public boolean hasPendingWork(UUID owner) {
+        return false;
+    }
+
+    @Override
     public void shutdown() {}
 }

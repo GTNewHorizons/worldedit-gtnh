@@ -22,6 +22,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.entity.Player;
@@ -37,6 +39,7 @@ import cpw.mods.fml.common.gameevent.TickEvent;
  */
 public class ForgeLightingScheduler implements LightingScheduler {
 
+    private static final Logger logger = Logger.getLogger(ForgeLightingScheduler.class.getCanonicalName());
     private static final int CHUNKS_PER_SECOND = 8;
     private static final double TICKS_PER_SECOND = 20.0;
 
@@ -45,10 +48,6 @@ public class ForgeLightingScheduler implements LightingScheduler {
     private LightingTask currentTask;
     private boolean registered;
     private double availableChunkBudget;
-
-    public ForgeLightingScheduler() {
-        register();
-    }
 
     @Override
     public boolean schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion) {
@@ -64,10 +63,6 @@ public class ForgeLightingScheduler implements LightingScheduler {
         }
 
         synchronized (lock) {
-            if (currentTask != null || !queue.isEmpty()) {
-                return false;
-            }
-
             queue.offer(task);
         }
 
@@ -83,7 +78,10 @@ public class ForgeLightingScheduler implements LightingScheduler {
         }
     }
 
-    private void register() {
+    /**
+     * Start receiving server ticks. Until this is called, scheduled work stays queued.
+     */
+    public void register() {
         if (!registered) {
             FMLCommonHandler.instance()
                 .bus()
@@ -129,8 +127,14 @@ public class ForgeLightingScheduler implements LightingScheduler {
 
         List<BlockVector2D> batch = task.pollBatch(allowed);
         if (!batch.isEmpty()) {
-            task.getWorld()
-                .fixLighting(batch);
+            try {
+                task.getWorld()
+                    .fixLighting(batch);
+            } catch (RuntimeException e) {
+                // For example the world was unloaded. Exceptions here would take the server down.
+                logger.log(Level.WARNING, "Failed to fix lighting; giving up on the remaining chunks", e);
+                task.abandon();
+            }
             availableChunkBudget -= batch.size();
         }
 
@@ -140,7 +144,11 @@ public class ForgeLightingScheduler implements LightingScheduler {
                 currentTask = null;
             }
             if (completion != null) {
-                completion.run();
+                try {
+                    completion.run();
+                } catch (RuntimeException e) {
+                    logger.log(Level.WARNING, "A lighting fix completion handler failed", e);
+                }
             }
         }
     }
@@ -169,6 +177,10 @@ public class ForgeLightingScheduler implements LightingScheduler {
 
         private boolean isEmpty() {
             return remaining.isEmpty();
+        }
+
+        private void abandon() {
+            remaining.clear();
         }
 
         private List<BlockVector2D> pollBatch(int maxSize) {

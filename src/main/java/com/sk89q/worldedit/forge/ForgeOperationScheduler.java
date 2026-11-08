@@ -136,6 +136,21 @@ public class ForgeOperationScheduler implements OperationScheduler {
     }
 
     @Override
+    public boolean hasPendingWork(UUID owner) {
+        checkNotNull(owner);
+
+        if (current != null && owner.equals(current.owner)) {
+            return true;
+        }
+        for (Job job : queue) {
+            if (owner.equals(job.owner)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public void shutdown() {
         unregister();
 
@@ -311,6 +326,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
             }
             // History keeps the edit session alive, which must not keep its queue alive too.
             job.editSession.discardQueue();
+            // With nothing left to write, this only runs the follow-up work such as fast mode's.
+            job.editSession.flushQueue();
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Failed to cancel an operation", e);
         } finally {

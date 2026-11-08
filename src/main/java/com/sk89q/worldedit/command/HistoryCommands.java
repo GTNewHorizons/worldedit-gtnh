@@ -44,6 +44,19 @@ public class HistoryCommands {
         this.worldEdit = worldEdit;
     }
 
+    /**
+     * Undoing during an edit would revert the edit before it, because the running one isn't in the
+     * history until it finishes.
+     */
+    private boolean editStillRunning(Player player) {
+        if (worldEdit.getOperationScheduler()
+            .hasPendingWork(player.getUniqueId())) {
+            player.printError("You have an edit still running. Wait for it to finish, or use //cancel.");
+            return true;
+        }
+        return false;
+    }
+
     @Command(
         aliases = { "/undo", "undo" },
         usage = "[times] [player]",
@@ -53,6 +66,10 @@ public class HistoryCommands {
     @CommandPermissions("worldedit.history.undo")
     public void undo(Player player, LocalSession session, EditSession editSession, CommandContext args)
         throws WorldEditException {
+        if (editStillRunning(player)) {
+            return;
+        }
+
         int times = Math.max(1, args.getInteger(0, 1));
         for (int i = 0; i < times; ++i) {
             EditSession undone;
@@ -87,6 +104,9 @@ public class HistoryCommands {
     @CommandPermissions("worldedit.history.redo")
     public void redo(Player player, LocalSession session, EditSession editSession, CommandContext args)
         throws WorldEditException {
+        if (editStillRunning(player)) {
+            return;
+        }
 
         int times = Math.max(1, args.getInteger(0, 1));
 

@@ -80,7 +80,7 @@ public interface OperationScheduler {
      * Stop all work submitted by the given owner, running or queued.
      *
      * <p>
-     * A cancelled edit is not flushed, so blocks still waiting in its reorder queue are dropped and
+     * A cancelled edit's reorder queue is discarded, so blocks still waiting in it are dropped and
      * blocks already written stay written. The task given to {@link #whenFinished} still runs before
      * this method returns, which records the edit for undo. Its history can cover more than reached
      * the world, which is harmless: undoing a block that was never changed writes what is already
@@ -91,6 +91,14 @@ public interface OperationScheduler {
      * @return the edit sessions that were cancelled, oldest first
      */
     List<EditSession> cancel(UUID owner);
+
+    /**
+     * Whether an owner has work that is running or queued.
+     *
+     * @param owner the unique ID of the owner
+     * @return true if there is unfinished work
+     */
+    boolean hasPendingWork(UUID owner);
 
     /**
      * Run any queued work to completion and stop.

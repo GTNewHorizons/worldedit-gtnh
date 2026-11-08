@@ -173,6 +173,7 @@ public class ForgeWorldEdit {
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
         lightingScheduler = new ForgeLightingScheduler();
+        lightingScheduler.register();
         WorldEdit.getInstance()
             .setLightingScheduler(lightingScheduler);
 

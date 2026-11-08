@@ -76,6 +76,7 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
+import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItem;
@@ -196,16 +197,18 @@ public class ForgeWorld extends AbstractWorld {
             previousId = Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15));
         }
 
-        boolean successful = chunk.func_150807_a(x & 15, y, z & 15, Block.getBlockById(block.getId()), block.getData());
+        Block target = Block.getBlockById(block.getId());
+        boolean successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
 
-        // Create the TileEntity
-        if (successful) {
-            CompoundTag tag = block.getNbtData();
-            if (tag != null) {
-                NBTTagCompound nativeTag = NBTConverter.toNative(tag);
-                nativeTag.setString("id", block.getNbtId());
-                TileEntityUtils.setTileEntity(getWorld(), position, nativeTag);
-            }
+        // Create the TileEntity. The chunk ignores a write of the block already there, but its
+        // contents can still be different.
+        CompoundTag tag = block.getNbtData();
+        if (tag != null && (successful || (chunk.getBlock(x & 15, y, z & 15) == target
+            && chunk.getBlockMetadata(x & 15, y, z & 15) == block.getData()))) {
+            NBTTagCompound nativeTag = NBTConverter.toNative(tag);
+            nativeTag.setString("id", block.getNbtId());
+            TileEntityUtils.setTileEntity(getWorld(), position, nativeTag);
+            successful = true;
         }
 
         if (notifyAndLight) {
@@ -800,6 +803,33 @@ public class ForgeWorld extends AbstractWorld {
         } else {
             return false;
         }
+    }
+
+    /**
+     * Fast mode writes without telling clients or updating light, so send the new blocks now and
+     * send the chunks again once they have been relit.
+     */
+    @Override
+    public void fixAfterFastMode(Iterable<BlockVector2D> chunks) {
+        final List<Vector2D> changed = new ArrayList<Vector2D>();
+        for (BlockVector2D chunk : chunks) {
+            changed.add(chunk);
+        }
+
+        resendChunks(getWorld(), changed);
+
+        WorldEdit.getInstance()
+            .getLightingScheduler()
+            .schedule(this, chunks, null, new Runnable() {
+
+                @Override
+                public void run() {
+                    World world = worldRef.get();
+                    if (world != null) {
+                        resendChunks(world, changed);
+                    }
+                }
+            });
     }
 
     @Override

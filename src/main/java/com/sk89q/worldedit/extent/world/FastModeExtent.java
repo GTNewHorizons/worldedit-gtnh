@@ -107,7 +107,10 @@ public class FastModeExtent extends AbstractDelegateExtent {
             @Override
             public Operation resume(RunContext run) throws WorldEditException {
                 if (!dirtyChunks.isEmpty()) {
-                    world.fixAfterFastMode(dirtyChunks);
+                    Set<BlockVector2D> chunks = new HashSet<BlockVector2D>(dirtyChunks);
+                    dirtyChunks.clear();
+                    hasLastChunk = false;
+                    world.fixAfterFastMode(chunks);
                 }
                 return null;
             }
