@@ -43,6 +43,8 @@ public class EditSessionHistoryTest {
 
     private final Map<String, BaseBlock> blocks = new HashMap<String, BaseBlock>();
     private int writes;
+    private int drops;
+    private final Map<String, String> attachedTo = new HashMap<String, String>();
     private World world;
 
     @Before
@@ -67,7 +69,19 @@ public class EditSessionHistoryTest {
             @Override
             public Boolean answer(InvocationOnMock call) {
                 writes++;
-                blocks.put(key(call.<Vector>getArgument(0)), call.<BaseBlock>getArgument(1));
+                String written = key(call.<Vector>getArgument(0));
+                BaseBlock block = call.<BaseBlock>getArgument(1);
+                blocks.put(written, block);
+
+                // Anything still attached to a block that just went away pops off.
+                String attached = attachedTo.get(written);
+                if (block.getType() == BlockID.AIR && attached != null) {
+                    BaseBlock held = blocks.get(attached);
+                    if (held != null && held.getType() != BlockID.AIR && held.getType() != BlockID.LONG_GRASS) {
+                        drops++;
+                        blocks.remove(attached);
+                    }
+                }
                 return true;
             }
         };
@@ -264,6 +278,59 @@ public class EditSessionHistoryTest {
 
         assertEquals(afterFirst, writes);
         assertTrue(afterFirst > 0);
+    }
+
+    private void assertUndoKeepsAttachedBlock(BaseBlock restoredUnderIt, BaseBlock attached) throws Exception {
+        Vector wall = new Vector(0, 64, 0);
+        Vector spot = new Vector(1, 64, 0);
+        attachedTo.put(key(wall), key(spot));
+        put(spot, restoredUnderIt);
+
+        EditSession edit = newSession();
+        edit.setBlock(wall, STONE);
+        edit.setBlock(spot, attached);
+        edit.flushQueue();
+        assertEquals(0, drops);
+
+        undo(edit);
+
+        assertEquals(0, drops);
+        assertSameBlock(AIR, get(wall));
+        assertSameBlock(restoredUnderIt, get(spot));
+    }
+
+    @Test
+    public void undoRemovesATorchBeforeItsWallWhenAirIsRestored() throws Exception {
+        assertUndoKeepsAttachedBlock(AIR, TORCH);
+    }
+
+    @Test
+    public void undoRemovesATorchBeforeItsWallWhenGrassIsRestored() throws Exception {
+        assertUndoKeepsAttachedBlock(new BaseBlock(BlockID.LONG_GRASS, 1), TORCH);
+    }
+
+    @Test
+    public void undoRemovesATorchBeforeItsWallWhenASignIsRestored() throws Exception {
+        assertUndoKeepsAttachedBlock(new BaseBlock(BlockID.SIGN_POST, 1), TORCH);
+    }
+
+    @Test
+    public void undoRemovesASignBeforeItsWall() throws Exception {
+        assertUndoKeepsAttachedBlock(AIR, new BaseBlock(BlockID.WALL_SIGN, 2));
+    }
+
+    @Test
+    public void rewritingAnAttachedBlockDoesNotRemoveItFirst() throws Exception {
+        Vector spot = new Vector(1, 64, 0);
+        put(spot, TORCH);
+
+        EditSession edit = newSession();
+        edit.setBlock(spot, TORCH);
+        int before = writes;
+        edit.flushQueue();
+
+        assertEquals(TORCH.getType(), get(spot).getType());
+        assertEquals(before + 1, writes);
     }
 
     @Test

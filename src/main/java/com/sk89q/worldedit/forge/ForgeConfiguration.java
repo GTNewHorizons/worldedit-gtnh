@@ -17,6 +17,9 @@
 package com.sk89q.worldedit.forge;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.sk89q.worldedit.util.PropertiesConfiguration;
 
@@ -24,6 +27,8 @@ public class ForgeConfiguration extends PropertiesConfiguration {
 
     public boolean creativeEnable = false;
     public boolean cheatMode = false;
+    public Set<String> placeLastBlocks = Collections.emptySet();
+    public Set<String> placeNormallyBlocks = Collections.emptySet();
 
     public ForgeConfiguration(ForgeWorldEdit mod) {
         super(new File(mod.getWorkingDir() + File.separator + "worldedit.properties"));
@@ -33,6 +38,19 @@ public class ForgeConfiguration extends PropertiesConfiguration {
     protected void loadExtra() {
         creativeEnable = getBool("use-in-creative", false);
         cheatMode = getBool("cheat-mode", false);
+        placeLastBlocks = readNames("place-last-blocks");
+        placeNormallyBlocks = readNames("place-normally-blocks");
+    }
+
+    private Set<String> readNames(String key) {
+        Set<String> names = new HashSet<String>();
+        for (String name : getString(key, "").split(",")) {
+            if (!name.trim()
+                .isEmpty()) {
+                names.add(name.trim());
+            }
+        }
+        return names;
     }
 
     @Override

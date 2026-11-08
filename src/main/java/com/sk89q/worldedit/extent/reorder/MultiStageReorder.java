@@ -96,22 +96,29 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         }
 
         BaseBlock lazyBlock = getLazyBlock(location);
+        boolean changed = !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
+        boolean replacingAttached = changed
+            && (BlockType.shouldPlaceLast(lazyBlock.getType()) || BlockType.shouldPlaceFinal(lazyBlock.getType()));
+
+        // Destroy torches, etc. first, whatever replaces them. They would fall off if what they're
+        // attached to went away while they were still waiting for their turn.
+        if (replacingAttached) {
+            super.setBlock(location, new BaseBlock(BlockID.AIR));
+        }
 
         if (BlockType.shouldPlaceLast(block.getType())) {
             // Place torches, etc. last
             stage2.add(location, block);
-            return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
+            return changed;
         } else if (BlockType.shouldPlaceFinal(block.getType())) {
             // Place signs, reed, etc even later
             stage3.add(location, block);
-            return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
-        } else if (BlockType.shouldPlaceLast(lazyBlock.getType())) {
-            // Destroy torches, etc. first
-            super.setBlock(location, new BaseBlock(BlockID.AIR));
+            return changed;
+        } else if (replacingAttached) {
             return super.setBlock(location, block);
         } else {
             stage1.add(location, block);
-            return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
+            return changed;
         }
     }
 

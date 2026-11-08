@@ -40,6 +40,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
+import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
@@ -172,6 +173,8 @@ public class ForgeWorldEdit {
 
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
+        BlockType.setPlacementRules(new ForgeBlockPlacementRules(config.placeLastBlocks, config.placeNormallyBlocks));
+
         lightingScheduler = new ForgeLightingScheduler();
         lightingScheduler.register();
         WorldEdit.getInstance()
@@ -187,6 +190,8 @@ public class ForgeWorldEdit {
 
     @EventHandler
     public void serverStopping(FMLServerStoppingEvent event) {
+        BlockType.setPlacementRules(null);
+
         if (lightingScheduler != null) {
             lightingScheduler.shutdown();
             lightingScheduler = null;

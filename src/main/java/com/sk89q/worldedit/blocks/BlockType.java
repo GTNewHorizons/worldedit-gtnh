@@ -434,6 +434,16 @@ public enum BlockType {
      * HashSet for shouldPlaceLast.
      */
     private static final BitSet shouldPlaceLast = new BitSet();
+
+    /**
+     * The highest ID used by vanilla blocks, which are covered by these tables.
+     */
+    private static final int LAST_VANILLA_ID = 175;
+
+    private static BlockPlacementRules placementRules;
+    private static final BitSet placementKnown = new BitSet();
+    private static final BitSet placementAttached = new BitSet();
+
     static {
         shouldPlaceLast.set(BlockID.SAPLING);
         shouldPlaceLast.set(BlockID.BED);
@@ -497,7 +507,30 @@ public enum BlockType {
      * @return true if the block should be placed last
      */
     public static boolean shouldPlaceLast(int id) {
-        return shouldPlaceLast.get(id);
+        return shouldPlaceLast.get(id) || isModdedAttached(id);
+    }
+
+    /**
+     * Set the rules for blocks that aren't in the vanilla tables, forgetting earlier answers.
+     *
+     * @param rules the rules, or null to treat those blocks as ordinary
+     */
+    public static void setPlacementRules(@Nullable BlockPlacementRules rules) {
+        placementRules = rules;
+        placementKnown.clear();
+        placementAttached.clear();
+    }
+
+    private static boolean isModdedAttached(int id) {
+        if (placementRules == null || id <= LAST_VANILLA_ID) {
+            return false;
+        }
+
+        if (!placementKnown.get(id)) {
+            placementKnown.set(id);
+            placementAttached.set(id, placementRules.isAttached(id));
+        }
+        return placementAttached.get(id);
     }
 
     /**
