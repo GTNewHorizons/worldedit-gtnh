@@ -22,7 +22,6 @@ import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
-import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.world.World;
@@ -52,11 +51,14 @@ public class BlockQuirkExtent extends AbstractDelegateExtent {
         BaseBlock lazyBlock = getExtent().getLazyBlock(position);
         int existing = lazyBlock.getType();
 
-        if (BlockType.isContainerBlock(existing)) {
-            world.clearContainerBlockContents(position); // Clear the container block so that it doesn't drop items
-        } else if (existing == BlockID.ICE) {
+        if (existing == BlockID.ICE) {
             world.setBlock(position, new BaseBlock(BlockID.AIR)); // Ice turns until water so this has to be done first
-        }
+        } else
+            if (existing != BlockID.AIR && !(existing == block.getType() && lazyBlock.getData() == block.getData())) {
+                // Otherwise the old block drops its inventory, on top of the copy kept for undo.
+                // A write of the same block is ignored, so emptying it would only lose the contents.
+                world.clearContainerBlockContents(position);
+            }
 
         return super.setBlock(position, block);
     }
