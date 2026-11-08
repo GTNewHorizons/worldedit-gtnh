@@ -226,7 +226,8 @@ public class BaseBlock extends Block implements TileEntityBlock {
      */
     @Override
     public boolean hasWildcardData() {
-        return getData() == -1;
+        // Reads the field because EndlessIDs makes getData() return this as 65535.
+        return data == -1;
     }
 
     @Override
@@ -374,7 +375,7 @@ public class BaseBlock extends Block implements TileEntityBlock {
      * @return true if equal
      */
     public boolean equalsFuzzy(BaseBlock o) {
-        return (getType() == o.getType()) && (getData() == o.getData() || getData() == -1 || o.getData() == -1);
+        return (getType() == o.getType()) && (getData() == o.getData() || hasWildcardData() || o.hasWildcardData());
     }
 
     /**
