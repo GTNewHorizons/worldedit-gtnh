@@ -292,99 +292,171 @@ public class ForgeWorld extends AbstractWorld {
 
     @Override
     public boolean regenerate(Region region, EditSession editSession) {
-        BaseBlock[] history = new BaseBlock[256 * (getMaxY() + 1)];
+        World world = getWorld();
+        IChunkProvider provider = world.getChunkProvider();
+        if (!(provider instanceof ChunkProviderServer)) {
+            return false;
+        }
+
+        ChunkProviderServer chunkServer = (ChunkProviderServer) provider;
+        ChunkProviderHandles handles;
+        try {
+            handles = ChunkProviderHandles.resolve(chunkServer);
+        } catch (Throwable t) {
+            logger.log(Level.WARNING, "Failed to access the chunk provider; cannot regenerate", t);
+            return false;
+        }
+
+        int maxY = getMaxY();
+        BaseBlock[] column = new BaseBlock[256 * (maxY + 1)];
 
         for (Vector2D chunk : region.getChunks()) {
-            Vector min = new Vector(chunk.getBlockX() * 16, 0, chunk.getBlockZ() * 16);
+            int chunkX = chunk.getBlockX();
+            int chunkZ = chunk.getBlockZ();
+            int baseX = chunkX << 4;
+            int baseZ = chunkZ << 4;
 
+            // Snapshot the column before the chunk is thrown away.
             for (int x = 0; x < 16; x++) {
-                for (int y = 0; y < getMaxY() + 1; y++) {
+                for (int y = 0; y <= maxY; y++) {
                     for (int z = 0; z < 16; z++) {
-                        Vector pt = min.add(x, y, z);
-                        int index = y * 16 * 16 + z * 16 + x;
-                        history[index] = editSession.getBlock(pt);
+                        column[columnIndex(x, y, z)] = editSession.getBlock(new Vector(baseX + x, y, baseZ + z));
                     }
                 }
             }
-            try {
-                Set<Vector2D> chunks = region.getChunks();
-                IChunkProvider provider = getWorld().getChunkProvider();
-                if (!(provider instanceof ChunkProviderServer)) {
-                    return false;
-                }
-                ChunkProviderServer chunkServer = (ChunkProviderServer) provider;
-                Field u;
-                try {
-                    u = ChunkProviderServer.class.getDeclaredField("field_73248_b"); // chunksToUnload
-                } catch (NoSuchFieldException e) {
-                    u = ChunkProviderServer.class.getDeclaredField("chunksToUnload");
-                }
-                u.setAccessible(true);
-                Set<?> unloadQueue = (Set<?>) u.get(chunkServer);
-                Field m;
-                try {
-                    m = ChunkProviderServer.class.getDeclaredField("field_73244_f"); // loadedChunkHashMap
-                } catch (NoSuchFieldException e) {
-                    m = ChunkProviderServer.class.getDeclaredField("loadedChunkHashMap");
-                }
-                m.setAccessible(true);
-                LongHashMap loadedMap = (LongHashMap) m.get(chunkServer);
-                Field lc;
-                try {
-                    lc = ChunkProviderServer.class.getDeclaredField("field_73245_g"); // loadedChunkHashMap
-                } catch (NoSuchFieldException e) {
-                    lc = ChunkProviderServer.class.getDeclaredField("loadedChunks");
-                }
-                lc.setAccessible(true);
-                @SuppressWarnings("unchecked")
-                List<Chunk> loaded = (List<Chunk>) lc.get(chunkServer);
-                Field p;
-                try {
-                    p = ChunkProviderServer.class.getDeclaredField("field_73246_d"); // currentChunkProvider
-                } catch (NoSuchFieldException e) {
-                    p = ChunkProviderServer.class.getDeclaredField("currentChunkProvider");
-                }
-                p.setAccessible(true);
-                IChunkProvider chunkProvider = (IChunkProvider) p.get(chunkServer);
 
-                for (Vector2D coord : chunks) {
-                    long pos = ChunkCoordIntPair.chunkXZ2Int(coord.getBlockX(), coord.getBlockZ());
-                    Chunk mcChunk;
-                    if (chunkServer.chunkExists(coord.getBlockX(), coord.getBlockZ())) {
-                        mcChunk = chunkServer.loadChunk(coord.getBlockX(), coord.getBlockZ());
-                        mcChunk.onChunkUnload();
-                    }
-                    unloadQueue.remove(pos);
-                    loadedMap.remove(pos);
-                    mcChunk = chunkProvider.provideChunk(coord.getBlockX(), coord.getBlockZ());
-                    loadedMap.add(pos, mcChunk);
-                    loaded.add(mcChunk);
-                    if (mcChunk != null) {
-                        mcChunk.onChunkLoad();
-                        mcChunk.populateChunk(chunkProvider, chunkProvider, coord.getBlockX(), coord.getBlockZ());
-                    }
-                }
+            try {
+                handles.regenerateChunk(chunkServer, chunkX, chunkZ);
             } catch (Throwable t) {
-                logger.log(Level.WARNING, "Failed to generate chunk", t);
+                logger.log(Level.WARNING, "Failed to regenerate chunk " + chunkX + ", " + chunkZ, t);
                 return false;
             }
 
+            // Put back whatever the selection does not cover, and record the rest for undo.
             for (int x = 0; x < 16; x++) {
-                for (int y = 0; y < getMaxY() + 1; y++) {
+                for (int y = 0; y <= maxY; y++) {
                     for (int z = 0; z < 16; z++) {
-                        Vector pt = min.add(x, y, z);
-                        int index = y * 16 * 16 + z * 16 + x;
+                        Vector pt = new Vector(baseX + x, y, baseZ + z);
+                        BaseBlock previous = column[columnIndex(x, y, z)];
+                        BaseBlock current = editSession.getBlock(pt);
 
-                        if (!region.contains(pt)) editSession.smartSetBlock(pt, history[index]);
-                        else {
-                            editSession.rememberChange(pt, history[index], editSession.rawGetBlock(pt));
+                        if (unchanged(previous, current)) {
+                            continue;
+                        }
+
+                        if (region.contains(pt)) {
+                            editSession.rememberChange(pt, previous, current);
+                        } else {
+                            editSession.smartSetBlock(pt, previous);
                         }
                     }
                 }
             }
         }
 
-        return false;
+        return true;
+    }
+
+    private static int columnIndex(int x, int y, int z) {
+        return (y << 8) | (z << 4) | x;
+    }
+
+    /**
+     * Cheap "nothing to do here" test. Any block carrying NBT on either side counts as changed, so
+     * tile entities are always restored or recorded rather than compared.
+     */
+    private static boolean unchanged(BaseBlock previous, BaseBlock current) {
+        return previous.getType() == current.getType() && previous.getData() == current.getData()
+            && previous.getNbtData() == null
+            && current.getNbtData() == null;
+    }
+
+    /**
+     * Reflective access to the {@link ChunkProviderServer} internals that regenerating a chunk has
+     * to touch. The {@link Field} lookups are done once per JVM rather than once per chunk.
+     */
+    private static final class ChunkProviderHandles {
+
+        private static Field chunksToUnloadField;
+        private static Field loadedChunkMapField;
+        private static Field loadedChunksField;
+        private static Field currentProviderField;
+        private static Throwable failure;
+
+        static {
+            try {
+                chunksToUnloadField = findField("field_73248_b", "chunksToUnload");
+                loadedChunkMapField = findField("field_73244_f", "loadedChunkHashMap");
+                loadedChunksField = findField("field_73245_g", "loadedChunks");
+                currentProviderField = findField("field_73246_d", "currentChunkProvider");
+            } catch (Throwable t) {
+                failure = t;
+            }
+        }
+
+        private final Set<?> unloadQueue;
+        private final LongHashMap loadedChunkMap;
+        private final List<Chunk> loadedChunks;
+        private final IChunkProvider generator;
+
+        private ChunkProviderHandles(Set<?> unloadQueue, LongHashMap loadedChunkMap, List<Chunk> loadedChunks,
+            IChunkProvider generator) {
+            this.unloadQueue = unloadQueue;
+            this.loadedChunkMap = loadedChunkMap;
+            this.loadedChunks = loadedChunks;
+            this.generator = generator;
+        }
+
+        private static Field findField(String obfName, String name) throws NoSuchFieldException {
+            Field field;
+            try {
+                field = ChunkProviderServer.class.getDeclaredField(obfName);
+            } catch (NoSuchFieldException e) {
+                field = ChunkProviderServer.class.getDeclaredField(name);
+            }
+            field.setAccessible(true);
+            return field;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static ChunkProviderHandles resolve(ChunkProviderServer server) throws Throwable {
+            if (failure != null) {
+                throw failure;
+            }
+
+            return new ChunkProviderHandles(
+                (Set<?>) chunksToUnloadField.get(server),
+                (LongHashMap) loadedChunkMapField.get(server),
+                (List<Chunk>) loadedChunksField.get(server),
+                (IChunkProvider) currentProviderField.get(server));
+        }
+
+        private void regenerateChunk(ChunkProviderServer server, int chunkX, int chunkZ) {
+            long pos = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
+
+            if (server.chunkExists(chunkX, chunkZ)) {
+                Chunk existing = server.loadChunk(chunkX, chunkZ);
+                if (existing != null) {
+                    existing.onChunkUnload();
+                    // The stale chunk has to leave loadedChunks as well, or ChunkProviderServer
+                    // keeps ticking, saving and unloading a copy of every regenerated chunk.
+                    loadedChunks.remove(existing);
+                }
+            }
+
+            unloadQueue.remove(pos);
+            loadedChunkMap.remove(pos);
+
+            Chunk regenerated = generator.provideChunk(chunkX, chunkZ);
+            if (regenerated == null) {
+                return;
+            }
+
+            loadedChunkMap.add(pos, regenerated);
+            loadedChunks.add(regenerated);
+            regenerated.onChunkLoad();
+            regenerated.populateChunk(generator, generator, chunkX, chunkZ);
+        }
     }
 
     @Nullable
