@@ -16,6 +16,8 @@
 
 package com.sk89q.worldedit.world;
 
+import javax.annotation.Nullable;
+
 import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
@@ -44,6 +46,22 @@ public interface World extends Extent {
      * @return a name for the world
      */
     String getName();
+
+    /**
+     * Get the name of the save folder, which can differ from {@link #getName()}, for example after a
+     * world has been renamed.
+     *
+     * @return the folder name
+     */
+    String getDirectoryName();
+
+    /**
+     * Get the folder inside the save folder that holds this world's own data.
+     *
+     * @return the folder name, or null if it is stored directly in the save folder
+     */
+    @Nullable
+    String getDimensionFolder();
 
     /**
      * Get the maximum Y.

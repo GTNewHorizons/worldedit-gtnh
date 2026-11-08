@@ -149,6 +149,18 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
+    public String getDirectoryName() {
+        return getWorld().getSaveHandler()
+            .getWorldDirectoryName();
+    }
+
+    @Nullable
+    @Override
+    public String getDimensionFolder() {
+        return getWorld().provider.getSaveFolder();
+    }
+
+    @Override
     public boolean useItem(Vector position, BaseItem item, Direction face) {
         Item nativeItem = Item.getItemById(item.getType());
         ItemStack stack = new ItemStack(nativeItem, 1, item.getData());

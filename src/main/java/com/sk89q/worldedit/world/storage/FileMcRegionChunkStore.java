@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.util.regex.Pattern;
 
 import com.sk89q.worldedit.world.DataException;
+import com.sk89q.worldedit.world.World;
 
 public class FileMcRegionChunkStore extends McRegionChunkStore {
 
@@ -40,26 +41,24 @@ public class FileMcRegionChunkStore extends McRegionChunkStore {
     }
 
     @Override
-    protected InputStream getInputStream(String name, String world) throws IOException, DataException {
+    protected InputStream getInputStream(String name, World world) throws IOException, DataException {
         Pattern ext = Pattern.compile(".*\\.mc[ra]$"); // allow either file extension, both work the same
+        String dimension = world.getDimensionFolder();
+        File regionFolder = new File(dimension == null ? path : new File(path, dimension), "region");
         File file = null;
-        File[] files = new File(path, "region").listFiles();
-
+        File[] files = regionFolder.listFiles();
         if (files == null) {
-            throw new FileNotFoundException();
+            throw new MissingChunkException();
         }
-
         for (File f : files) {
             String tempName = f.getName()
                 .replaceFirst("mcr$", "mca"); // matcher only does one at a time
             if (ext.matcher(f.getName())
                 .matches() && name.equalsIgnoreCase(tempName)) {
-                // get full original path now
-                file = new File(path + File.separator + "region" + File.separator + f.getName());
+                file = f;
                 break;
             }
         }
-
         try {
             if (file == null) throw new FileNotFoundException();
             return new FileInputStream(file);

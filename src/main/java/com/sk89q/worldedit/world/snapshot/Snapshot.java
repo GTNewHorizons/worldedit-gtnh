@@ -21,15 +21,15 @@ package com.sk89q.worldedit.world.snapshot;
 import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Enumeration;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.storage.ChunkStore;
 import com.sk89q.worldedit.world.storage.FileLegacyChunkStore;
 import com.sk89q.worldedit.world.storage.FileMcRegionChunkStore;
-import com.sk89q.worldedit.world.storage.TrueZipLegacyChunkStore;
-import com.sk89q.worldedit.world.storage.TrueZipMcRegionChunkStore;
 import com.sk89q.worldedit.world.storage.ZippedLegacyChunkStore;
 import com.sk89q.worldedit.world.storage.ZippedMcRegionChunkStore;
 
@@ -80,95 +80,48 @@ public class Snapshot implements Comparable<Snapshot> {
      * @throws DataException
      */
     private ChunkStore internalGetChunkStore() throws IOException, DataException {
+        ChunkStore chunkStore;
         if (file.getName()
             .toLowerCase()
             .endsWith(".zip")) {
-            try {
-                ChunkStore chunkStore = new TrueZipMcRegionChunkStore(file);
+            chunkStore = new ZippedMcRegionChunkStore(file);
+            return chunkStore.isValid() ? chunkStore : new ZippedLegacyChunkStore(file);
+        }
 
-                if (!chunkStore.isValid()) {
-                    return new TrueZipLegacyChunkStore(file);
-                }
-
-                return chunkStore;
-            } catch (NoClassDefFoundError e) {
-                ChunkStore chunkStore = new ZippedMcRegionChunkStore(file);
-
-                if (!chunkStore.isValid()) {
-                    return new ZippedLegacyChunkStore(file);
-                }
-
-                return chunkStore;
-            }
-        } else if (file.getName()
-            .toLowerCase()
-            .endsWith(".tar.bz2")
-            || file.getName()
-                .toLowerCase()
-                .endsWith(".tar.gz")
-            || file.getName()
-                .toLowerCase()
-                .endsWith(".tar")) {
-                    try {
-                        ChunkStore chunkStore = new TrueZipMcRegionChunkStore(file);
-
-                        if (!chunkStore.isValid()) {
-                            return new TrueZipLegacyChunkStore(file);
-                        }
-
-                        return chunkStore;
-                    } catch (NoClassDefFoundError e) {
-                        throw new DataException("TrueZIP is required for .tar support");
-                    }
-                } else {
-                    ChunkStore chunkStore = new FileMcRegionChunkStore(file);
-
-                    if (!chunkStore.isValid()) {
-                        return new FileLegacyChunkStore(file);
-                    }
-
-                    return chunkStore;
-                }
+        chunkStore = new FileMcRegionChunkStore(file);
+        return chunkStore.isValid() ? chunkStore : new FileLegacyChunkStore(file);
     }
 
     /**
-     * Check the zip/tar file it contains the given world.
+     * Check whether the snapshot contains the given world.
      *
-     * @return true if the zip/tar file contains the given world
+     * @return true if it contains the given world
      */
     public boolean containsWorld(String worldname) {
-        try {
-            if (file.getName()
-                .toLowerCase()
-                .endsWith(".zip")) {
-                ZipFile entry = new ZipFile(file);
-                return (entry.getEntry(worldname) != null || entry.getEntry(worldname + "/level.dat") != null);
-            } else if (file.getName()
-                .toLowerCase()
-                .endsWith(".tar.bz2")
-                || file.getName()
-                    .toLowerCase()
-                    .endsWith(".tar.gz")
-                || file.getName()
-                    .toLowerCase()
-                    .endsWith(".tar")) {
-                        try {
-                            de.schlichtherle.util.zip.ZipFile entry = new de.schlichtherle.util.zip.ZipFile(file);
+        if (!file.getName()
+            .toLowerCase()
+            .endsWith(".zip")) {
+            return file.getName()
+                .equalsIgnoreCase(worldname);
+        }
 
-                            return entry.getEntry(worldname) != null;
-                        } catch (NoClassDefFoundError e) {
-                            throw new DataException("TrueZIP is required for .tar support");
-                        }
-                    } else {
-                        return (file.getName()
-                            .equalsIgnoreCase(worldname));
-                    }
+        String levelDat = worldname + "/level.dat";
+        try (ZipFile zip = new ZipFile(file)) {
+            if (zip.getEntry(worldname) != null) {
+                return true;
+            }
+            // The world can be at any depth, such as saves/<world> in a single player backup.
+            for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
+                String entry = e.nextElement()
+                    .getName()
+                    .replace('\\', '/');
+                if (entry.equals(levelDat) || entry.endsWith("/" + levelDat)) {
+                    return true;
+                }
+            }
         } catch (IOException ex) {
             // Skip the file, but print an error
             logger.info("Could not load snapshot: " + file.getPath());
-        } catch (DataException ex) {
-            // No truezip, so tar file not supported.
-            // Dont print, just skip the file.
         }
         return false;
     }

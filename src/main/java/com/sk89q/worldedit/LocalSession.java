@@ -84,7 +84,6 @@ public class LocalSession {
     private transient TimeZone timezone = TimeZone.getDefault();
 
     // Saved properties
-    private String lastScript;
     private RegionSelectorType defaultSelector;
 
     /**
@@ -680,20 +679,6 @@ public class LocalSession {
      * @return the last script's name
      */
     @Nullable
-    public String getLastScript() {
-        return lastScript;
-    }
-
-    /**
-     * Set the last script used.
-     *
-     * @param lastScript the last script's name
-     */
-    public void setLastScript(@Nullable String lastScript) {
-        this.lastScript = lastScript;
-        setDirty();
-    }
-
     /**
      * Tell the player the WorldEdit version.
      *

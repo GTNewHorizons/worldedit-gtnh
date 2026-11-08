@@ -69,7 +69,7 @@ public class SnapshotCommands {
             List<Snapshot> snapshots = config.snapshotRepo.getSnapshots(
                 true,
                 player.getWorld()
-                    .getName());
+                    .getDirectoryName());
 
             if (!snapshots.isEmpty()) {
 
@@ -77,7 +77,7 @@ public class SnapshotCommands {
 
                 player.print(
                     "Snapshots for world: '" + player.getWorld()
-                        .getName() + "'");
+                        .getDirectoryName() + "'");
                 for (byte i = 0; i < Math.min(num, snapshots.size()); i++) {
                     player.print(
                         (i + 1) + ". "
@@ -124,7 +124,7 @@ public class SnapshotCommands {
             try {
                 Snapshot snapshot = config.snapshotRepo.getDefaultSnapshot(
                     player.getWorld()
-                        .getName());
+                        .getDirectoryName());
 
                 if (snapshot != null) {
                     session.setSnapshot(null);
@@ -178,7 +178,7 @@ public class SnapshotCommands {
             List<Snapshot> snapshots = config.snapshotRepo.getSnapshots(
                 true,
                 player.getWorld()
-                    .getName());
+                    .getDirectoryName());
             if (snapshots.size() < index) {
                 player.printError("Invalid index, must be between 1 and " + snapshots.size() + ".");
                 return;
@@ -221,7 +221,7 @@ public class SnapshotCommands {
                 Snapshot snapshot = config.snapshotRepo.getSnapshotBefore(
                     date,
                     player.getWorld()
-                        .getName());
+                        .getDirectoryName());
 
                 if (snapshot == null) {
                     dateFormat.setTimeZone(session.getTimeZone());
@@ -262,7 +262,7 @@ public class SnapshotCommands {
                 Snapshot snapshot = config.snapshotRepo.getSnapshotAfter(
                     date,
                     player.getWorld()
-                        .getName());
+                        .getDirectoryName());
                 if (snapshot == null) {
                     dateFormat.setTimeZone(session.getTimeZone());
                     player.printError("Couldn't find a snapshot after " + dateFormat.format(date.getTime()) + ".");

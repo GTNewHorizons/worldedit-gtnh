@@ -87,7 +87,7 @@ public class SnapshotUtilCommands {
             try {
                 snapshot = config.snapshotRepo.getDefaultSnapshot(
                     player.getWorld()
-                        .getName());
+                        .getDirectoryName());
 
                 if (snapshot == null) {
                     player.printError("No snapshots were found. See console for details.");

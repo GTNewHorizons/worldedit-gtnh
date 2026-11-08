@@ -61,6 +61,17 @@ public class LocalWorldAdapter extends LocalWorld {
     }
 
     @Override
+    public String getDirectoryName() {
+        return world.getDirectoryName();
+    }
+
+    @Nullable
+    @Override
+    public String getDimensionFolder() {
+        return world.getDimensionFolder();
+    }
+
+    @Override
     public int getMaxY() {
         return world.getMaxY();
     }

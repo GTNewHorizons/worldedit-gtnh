@@ -20,19 +20,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.sk89q.worldedit.event.platform.Interaction.HIT;
 import static com.sk89q.worldedit.event.platform.Interaction.OPEN;
 
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import javax.script.ScriptException;
 
 import com.sk89q.worldedit.CuboidClipboard.FlipDirection;
 import com.sk89q.worldedit.blocks.BaseBlock;
@@ -56,11 +49,7 @@ import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.pattern.Patterns;
 import com.sk89q.worldedit.masks.Mask;
 import com.sk89q.worldedit.patterns.Pattern;
-import com.sk89q.worldedit.scripting.CraftScriptContext;
-import com.sk89q.worldedit.scripting.CraftScriptEngine;
-import com.sk89q.worldedit.scripting.RhinoCraftScriptEngine;
 import com.sk89q.worldedit.session.SessionManager;
-import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.util.io.file.FileSelectionAbortedException;
 import com.sk89q.worldedit.util.io.file.FilenameException;
@@ -754,102 +743,6 @@ public class WorldEdit {
         BlockInteractEvent event = new BlockInteractEvent(player, clicked.toLocation(), HIT);
         getEventBus().post(event);
         return event.isCancelled();
-    }
-
-    /**
-     * Executes a WorldEdit script.
-     *
-     * @param player the player
-     * @param f      the script file to execute
-     * @param args   arguments for the script
-     * @throws WorldEditException
-     */
-    public void runScript(Player player, File f, String[] args) throws WorldEditException {
-        Request.reset();
-
-        String filename = f.getPath();
-        int index = filename.lastIndexOf(".");
-        String ext = filename.substring(index + 1, filename.length());
-
-        if (!ext.equalsIgnoreCase("js")) {
-            player.printError("Only .js scripts are currently supported");
-            return;
-        }
-
-        String script;
-
-        try {
-            InputStream file;
-
-            if (!f.exists()) {
-                file = WorldEdit.class.getResourceAsStream("craftscripts/" + filename);
-
-                if (file == null) {
-                    player.printError("Script does not exist: " + filename);
-                    return;
-                }
-            } else {
-                file = new FileInputStream(f);
-            }
-
-            DataInputStream in = new DataInputStream(file);
-            byte[] data = new byte[in.available()];
-            in.readFully(data);
-            in.close();
-            script = new String(data, 0, data.length, "utf-8");
-        } catch (IOException e) {
-            player.printError("Script read error: " + e.getMessage());
-            return;
-        }
-
-        LocalSession session = getSessionManager().get(player);
-        CraftScriptContext scriptContext = new CraftScriptContext(
-            this,
-            getServer(),
-            getConfiguration(),
-            session,
-            player,
-            args);
-
-        CraftScriptEngine engine = null;
-
-        try {
-            engine = new RhinoCraftScriptEngine();
-        } catch (NoClassDefFoundError e) {
-            player.printError("Failed to find an installed script engine.");
-            player.printError("Please see http://wiki.sk89q.com/wiki/WorldEdit/Installation");
-            return;
-        }
-
-        engine.setTimeLimit(getConfiguration().scriptTimeout);
-
-        Map<String, Object> vars = new HashMap<String, Object>();
-        vars.put("argv", args);
-        vars.put("context", scriptContext);
-        vars.put("player", player);
-
-        try {
-            engine.evaluate(script, filename, vars);
-        } catch (ScriptException e) {
-            player.printError("Failed to execute:");
-            player.printRaw(e.getMessage());
-            logger.log(Level.WARNING, "Failed to execute script", e);
-        } catch (NumberFormatException e) {
-            throw e;
-        } catch (WorldEditException e) {
-            throw e;
-        } catch (Throwable e) {
-            player.printError("Failed to execute (see console):");
-            player.printRaw(
-                e.getClass()
-                    .getCanonicalName());
-            logger.log(Level.WARNING, "Failed to execute script", e);
-        } finally {
-            for (EditSession editSession : scriptContext.getEditSessions()) {
-                editSession.flushQueue();
-                session.remember(editSession);
-            }
-        }
     }
 
     /**

@@ -36,7 +36,6 @@ import com.sk89q.worldedit.command.GenerationCommands;
 import com.sk89q.worldedit.command.HistoryCommands;
 import com.sk89q.worldedit.command.NavigationCommands;
 import com.sk89q.worldedit.command.RegionCommands;
-import com.sk89q.worldedit.command.ScriptingCommands;
 import com.sk89q.worldedit.command.SelectionCommands;
 import com.sk89q.worldedit.command.SnapshotUtilCommands;
 import com.sk89q.worldedit.command.ToolCommands;
@@ -78,7 +77,6 @@ public final class DocumentationPrinter {
         classes.add(HistoryCommands.class);
         classes.add(NavigationCommands.class);
         classes.add(RegionCommands.class);
-        classes.add(ScriptingCommands.class);
         classes.add(SelectionCommands.class);
         classes.add(SnapshotUtilCommands.class);
         classes.add(ToolUtilCommands.class);

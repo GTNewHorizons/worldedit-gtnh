@@ -170,6 +170,17 @@ public abstract class AbstractWorld implements World {
     }
 
     @Override
+    public String getDirectoryName() {
+        return getName();
+    }
+
+    @Nullable
+    @Override
+    public String getDimensionFolder() {
+        return null;
+    }
+
+    @Override
     public void checkLoadedChunk(Vector pt) {}
 
     @Override

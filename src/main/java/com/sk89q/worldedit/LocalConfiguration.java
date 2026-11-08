@@ -76,10 +76,8 @@ public abstract class LocalConfiguration {
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;
-    public int scriptTimeout = 3000;
     public Set<Integer> allowedDataCycleBlocks = new HashSet<Integer>();
     public String saveDir = "schematics";
-    public String scriptsDir = "craftscripts";
     public boolean showHelpInfo = true;
     public int butcherDefaultRadius = -1;
     public int butcherMaxRadius = -1;

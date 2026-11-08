@@ -45,7 +45,6 @@ import com.sk89q.worldedit.command.HistoryCommands;
 import com.sk89q.worldedit.command.NavigationCommands;
 import com.sk89q.worldedit.command.RegionCommands;
 import com.sk89q.worldedit.command.SchematicCommands;
-import com.sk89q.worldedit.command.ScriptingCommands;
 import com.sk89q.worldedit.command.SelectionCommands;
 import com.sk89q.worldedit.command.SnapshotCommands;
 import com.sk89q.worldedit.command.SnapshotUtilCommands;
@@ -144,7 +143,6 @@ public final class CommandManager {
             .registerMethods(new HistoryCommands(worldEdit))
             .registerMethods(new NavigationCommands(worldEdit))
             .registerMethods(new RegionCommands(worldEdit))
-            .registerMethods(new ScriptingCommands(worldEdit))
             .registerMethods(new SelectionCommands(worldEdit))
             .registerMethods(new SnapshotUtilCommands(worldEdit))
             .registerMethods(new ToolUtilCommands(worldEdit))
