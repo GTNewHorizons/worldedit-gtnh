@@ -323,6 +323,13 @@ public class EditSession implements Extent {
     }
 
     /**
+     * Throw away all blocks waiting in the queue without writing them.
+     */
+    public void discardQueue() {
+        reorderExtent.discard();
+    }
+
+    /**
      * Get the mask.
      *
      * @return mask, may be null

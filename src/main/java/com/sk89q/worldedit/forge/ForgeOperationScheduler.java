@@ -309,6 +309,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
             if (job.operation != null) {
                 job.operation.cancel();
             }
+            // History keeps the edit session alive, which must not keep its queue alive too.
+            job.editSession.discardQueue();
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Failed to cancel an operation", e);
         } finally {

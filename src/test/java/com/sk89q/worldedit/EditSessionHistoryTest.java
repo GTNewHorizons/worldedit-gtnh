@@ -1,0 +1,293 @@
+package com.sk89q.worldedit;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import com.sk89q.jnbt.CompoundTag;
+import com.sk89q.jnbt.StringTag;
+import com.sk89q.jnbt.Tag;
+import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.blocks.BlockID;
+import com.sk89q.worldedit.event.extent.EditSessionEvent;
+import com.sk89q.worldedit.util.eventbus.EventBus;
+import com.sk89q.worldedit.world.World;
+
+/**
+ * Runs edits through a real {@link EditSession}, including its reorder queue and history, against an
+ * in-memory world, and checks what undo and redo leave behind.
+ */
+public class EditSessionHistoryTest {
+
+    private static final BaseBlock AIR = new BaseBlock(BlockID.AIR);
+    private static final BaseBlock STONE = new BaseBlock(BlockID.STONE);
+    private static final BaseBlock DIRT = new BaseBlock(BlockID.DIRT);
+    private static final BaseBlock TORCH = new BaseBlock(BlockID.TORCH, 5);
+
+    private final Map<String, BaseBlock> blocks = new HashMap<String, BaseBlock>();
+    private int writes;
+    private World world;
+
+    @Before
+    public void setUp() throws Exception {
+        // Stub only, or the mock would remember every call made during the big test.
+        world = mock(World.class, withSettings().stubOnly());
+        when(world.isValidBlockType(anyInt())).thenReturn(true);
+        when(world.getMaxY()).thenReturn(255);
+
+        Answer<BaseBlock> read = new Answer<BaseBlock>() {
+
+            @Override
+            public BaseBlock answer(InvocationOnMock call) {
+                return get(call.<Vector>getArgument(0));
+            }
+        };
+        when(world.getBlock(any(Vector.class))).thenAnswer(read);
+        when(world.getLazyBlock(any(Vector.class))).thenAnswer(read);
+
+        Answer<Boolean> write = new Answer<Boolean>() {
+
+            @Override
+            public Boolean answer(InvocationOnMock call) {
+                writes++;
+                blocks.put(key(call.<Vector>getArgument(0)), call.<BaseBlock>getArgument(1));
+                return true;
+            }
+        };
+        when(world.setBlock(any(Vector.class), any(BaseBlock.class))).thenAnswer(write);
+        when(world.setBlock(any(Vector.class), any(BaseBlock.class), anyBoolean())).thenAnswer(write);
+    }
+
+    private static String key(Vector position) {
+        return position.getBlockX() + "," + position.getBlockY() + "," + position.getBlockZ();
+    }
+
+    private BaseBlock get(Vector position) {
+        BaseBlock block = blocks.get(key(position));
+        return block != null ? block : AIR;
+    }
+
+    private void put(Vector position, BaseBlock block) {
+        blocks.put(key(position), block);
+    }
+
+    private EditSession newSession() {
+        EditSession session = new EditSession(
+            new EventBus(),
+            world,
+            -1,
+            null,
+            new EditSessionEvent(world, null, -1, null));
+        session.enableQueue();
+        return session;
+    }
+
+    private void undo(EditSession edit) {
+        EditSession session = newSession();
+        edit.undo(session);
+        session.flushQueue();
+    }
+
+    private void redo(EditSession edit) {
+        EditSession session = newSession();
+        edit.redo(session);
+        session.flushQueue();
+    }
+
+    private static BaseBlock machine(String contents) {
+        Map<String, Tag> nbt = new HashMap<String, Tag>();
+        nbt.put("contents", new StringTag(contents));
+        return new BaseBlock(4000, 3, new CompoundTag(nbt));
+    }
+
+    private static void assertSameBlock(BaseBlock expected, BaseBlock actual) {
+        assertEquals(expected.getType(), actual.getType());
+        assertEquals(expected.getData(), actual.getData());
+        assertEquals(nbtOf(expected), nbtOf(actual));
+    }
+
+    private static Map<String, Tag> nbtOf(BaseBlock block) {
+        return block.getNbtData() != null ? block.getNbtData()
+            .getValue() : Collections.<String, Tag>emptyMap();
+    }
+
+    @Test
+    public void undoAndRedoRestoreEveryKindOfBlock() throws Exception {
+        List<Vector> positions = Arrays
+            .asList(new Vector(0, 0, 0), new Vector(1, 64, -1), new Vector(-5, 255, 7), new Vector(2, 70, 2));
+        BaseBlock[] before = { STONE, machine("before"), TORCH, DIRT };
+        BaseBlock[] after = { TORCH, AIR, machine("after"), new BaseBlock(BlockID.SIGN_POST, 2) };
+        for (int i = 0; i < before.length; i++) {
+            put(positions.get(i), before[i]);
+        }
+
+        EditSession edit = newSession();
+        for (int i = 0; i < after.length; i++) {
+            edit.setBlock(positions.get(i), after[i]);
+        }
+        edit.flushQueue();
+
+        assertEquals(after.length, edit.size());
+        for (int i = 0; i < after.length; i++) {
+            assertSameBlock(after[i], get(positions.get(i)));
+        }
+
+        undo(edit);
+        for (int i = 0; i < before.length; i++) {
+            assertSameBlock(before[i], get(positions.get(i)));
+        }
+
+        redo(edit);
+        for (int i = 0; i < after.length; i++) {
+            assertSameBlock(after[i], get(positions.get(i)));
+        }
+    }
+
+    @Test
+    public void repeatedWritesUndoToTheOriginalAndRedoToTheLast() throws Exception {
+        Vector position = new Vector(3, 3, 3);
+        put(position, DIRT);
+
+        EditSession first = newSession();
+        first.setBlock(position, STONE);
+        first.flushQueue();
+        first.setBlock(position, new BaseBlock(BlockID.GLASS));
+        first.flushQueue();
+
+        assertEquals(2, first.size());
+        undo(first);
+        assertSameBlock(DIRT, get(position));
+        redo(first);
+        assertSameBlock(new BaseBlock(BlockID.GLASS), get(position));
+    }
+
+    @Test
+    public void lastWriteInOneQueueWins() throws Exception {
+        Vector position = new Vector(9, 9, 9);
+
+        EditSession edit = newSession();
+        edit.setBlock(position, STONE);
+        edit.setBlock(position, DIRT);
+        edit.flushQueue();
+
+        assertSameBlock(DIRT, get(position));
+    }
+
+    @Test
+    public void doorsAreWrittenAndUndone() throws Exception {
+        Vector lower = new Vector(0, 10, 0);
+        Vector upper = new Vector(0, 11, 0);
+
+        EditSession edit = newSession();
+        edit.setBlock(upper, new BaseBlock(BlockID.WOODEN_DOOR, 8));
+        edit.setBlock(lower, new BaseBlock(BlockID.WOODEN_DOOR, 0));
+        edit.flushQueue();
+
+        assertEquals(BlockID.WOODEN_DOOR, get(lower).getType());
+        assertEquals(8, get(upper).getData());
+
+        undo(edit);
+        assertEquals(BlockID.AIR, get(lower).getType());
+        assertEquals(BlockID.AIR, get(upper).getType());
+    }
+
+    @Test
+    public void extremeCoordinatesSurvive() throws Exception {
+        List<Vector> positions = Arrays.asList(
+            new Vector(29999999, 0, -29999999),
+            new Vector(-29999999, 255, 29999999),
+            new Vector(-1, 0, -1),
+            new Vector(40000000, 5, -40000000));
+
+        EditSession edit = newSession();
+        for (Vector position : positions) {
+            put(position, DIRT);
+            edit.setBlock(position, STONE);
+        }
+        edit.flushQueue();
+        for (Vector position : positions) {
+            assertSameBlock(STONE, get(position));
+        }
+
+        undo(edit);
+        for (Vector position : positions) {
+            assertSameBlock(DIRT, get(position));
+        }
+    }
+
+    @Test
+    public void manyBlocksCrossingStorageBoundariesRoundTrip() throws Exception {
+        int count = 200000;
+        EditSession edit = newSession();
+        for (int i = 0; i < count; i++) {
+            Vector position = new Vector(i % 1000, i / 1000 % 256, i / 256000);
+            put(position, new BaseBlock(1 + i % 50));
+            edit.setBlock(position, new BaseBlock(100 + i % 7));
+        }
+        edit.flushQueue();
+
+        assertEquals(count, edit.size());
+        assertEquals(100, get(new Vector(0, 0, 0)).getType());
+
+        undo(edit);
+        for (int i = 0; i < count; i += 977) {
+            Vector position = new Vector(i % 1000, i / 1000 % 256, i / 256000);
+            assertEquals(1 + i % 50, get(position).getType());
+        }
+    }
+
+    @Test
+    public void flushingTwiceWritesOnce() throws Exception {
+        EditSession edit = newSession();
+        edit.setBlock(new Vector(1, 1, 1), STONE);
+        edit.flushQueue();
+        int afterFirst = writes;
+
+        edit.flushQueue();
+
+        assertEquals(afterFirst, writes);
+        assertTrue(afterFirst > 0);
+    }
+
+    @Test
+    public void discardingTheQueueDropsWhatWasWaiting() throws Exception {
+        EditSession edit = newSession();
+        edit.setBlock(new Vector(1, 1, 1), STONE);
+        edit.discardQueue();
+        edit.flushQueue();
+
+        assertEquals(0, writes);
+        assertEquals(1, edit.size());
+    }
+
+    @Test
+    public void tileEntityDataIsKeptByReference() throws Exception {
+        Vector position = new Vector(4, 4, 4);
+        BaseBlock original = machine("mine");
+        put(position, original);
+
+        EditSession edit = newSession();
+        edit.setBlock(position, AIR);
+        edit.flushQueue();
+        undo(edit);
+
+        assertSame(original.getNbtData(), get(position).getNbtData());
+    }
+}

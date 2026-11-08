@@ -19,6 +19,7 @@ package com.sk89q.worldedit.extent.reorder;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -38,16 +39,16 @@ import com.sk89q.worldedit.function.operation.BlockMapEntryPlacer;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.OperationQueue;
 import com.sk89q.worldedit.function.operation.RunContext;
-import com.sk89q.worldedit.util.collection.TupleArrayList;
+import com.sk89q.worldedit.util.collection.PackedBlockList;
 
 /**
  * Re-orders blocks into several stages.
  */
 public class MultiStageReorder extends AbstractDelegateExtent implements ReorderingExtent {
 
-    private TupleArrayList<BlockVector, BaseBlock> stage1 = new TupleArrayList<BlockVector, BaseBlock>();
-    private TupleArrayList<BlockVector, BaseBlock> stage2 = new TupleArrayList<BlockVector, BaseBlock>();
-    private TupleArrayList<BlockVector, BaseBlock> stage3 = new TupleArrayList<BlockVector, BaseBlock>();
+    private final PackedBlockList stage1 = new PackedBlockList(1);
+    private final PackedBlockList stage2 = new PackedBlockList(1);
+    private final PackedBlockList stage3 = new PackedBlockList(1);
     private boolean enabled;
 
     /**
@@ -90,7 +91,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        if (!enabled) {
+        if (!enabled || !PackedBlockList.fits(location)) {
             return super.setBlock(location, block);
         }
 
@@ -98,26 +99,35 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
         if (BlockType.shouldPlaceLast(block.getType())) {
             // Place torches, etc. last
-            stage2.put(location.toBlockVector(), block);
+            stage2.add(location, block);
             return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
         } else if (BlockType.shouldPlaceFinal(block.getType())) {
             // Place signs, reed, etc even later
-            stage3.put(location.toBlockVector(), block);
+            stage3.add(location, block);
             return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
         } else if (BlockType.shouldPlaceLast(lazyBlock.getType())) {
             // Destroy torches, etc. first
             super.setBlock(location, new BaseBlock(BlockID.AIR));
             return super.setBlock(location, block);
         } else {
-            stage1.put(location.toBlockVector(), block);
+            stage1.add(location, block);
             return !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
         }
+    }
+
+    /**
+     * Throw away everything waiting to be written.
+     */
+    public void discard() {
+        stage1.clear();
+        stage2.clear();
+        stage3.clear();
     }
 
     @Override
     public Operation commitBefore() {
         return new OperationQueue(
-            new BlockMapEntryPlacer(getExtent(), Iterators.concat(stage1.iterator(), stage2.iterator())),
+            new BlockMapEntryPlacer(getExtent(), Iterators.concat(stage1.drain(), stage2.drain())),
             new Stage3Committer());
     }
 
@@ -129,7 +139,8 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
             final Set<BlockVector> blocks = new HashSet<BlockVector>();
             final Map<BlockVector, BaseBlock> blockTypes = new HashMap<BlockVector, BaseBlock>();
-            for (Map.Entry<BlockVector, BaseBlock> entry : stage3) {
+            for (Iterator<Map.Entry<BlockVector, BaseBlock>> it = stage3.drain(); it.hasNext();) {
+                final Map.Entry<BlockVector, BaseBlock> entry = it.next();
                 final BlockVector pt = entry.getKey();
                 blocks.add(pt);
                 blockTypes.put(pt, entry.getValue());

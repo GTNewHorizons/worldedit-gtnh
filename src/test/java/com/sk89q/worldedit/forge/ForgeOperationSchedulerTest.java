@@ -69,6 +69,7 @@ public class ForgeOperationSchedulerTest {
         assertEquals(1, operation.resumes);
         assertTrue(operation.cancelled);
         verify(session, never()).commit();
+        verify(session).discardQueue();
         assertEquals(Collections.singletonList("finalize a"), events);
         assertFalse(scheduler.isPending(session));
     }
