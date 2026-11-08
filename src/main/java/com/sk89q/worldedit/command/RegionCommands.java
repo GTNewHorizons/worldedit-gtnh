@@ -123,7 +123,7 @@ public class RegionCommands {
         final Player player, final String prefix, final String suffix) {
         WorldEdit.getInstance()
             .getOperationScheduler()
-            .submit(editSession, operation, new OperationCompletion() {
+            .submit(player, editSession, operation, new OperationCompletion() {
 
                 @Override
                 public void onSuccess() {
@@ -135,6 +135,45 @@ public class RegionCommands {
                     reportFailure(player, e);
                 }
             });
+    }
+
+    /**
+     * Shift the selection to follow a finished edit, unless the player has changed it in the meantime.
+     *
+     * @param player    the player
+     * @param session   the player's session
+     * @param selection the live selection the edit was started from
+     * @param snapshot  a copy of the selection from when the edit was started
+     * @param shift     how far to shift it
+     */
+    private static void shiftSelection(Player player, LocalSession session, Region selection, Region snapshot,
+        Vector shift) {
+        if (!isSameSelection(player, session, selection, snapshot)) {
+            player.print("Your selection changed during the edit, so it was not moved.");
+            return;
+        }
+
+        try {
+            selection.shift(shift);
+
+            session.getRegionSelector(player.getWorld())
+                .learnChanges();
+            session.getRegionSelector(player.getWorld())
+                .explainRegionAdjust(player, session);
+        } catch (RegionOperationException e) {
+            player.printError(e.getMessage());
+        }
+    }
+
+    private static boolean isSameSelection(Player player, LocalSession session, Region selection, Region snapshot) {
+        try {
+            return session.getSelection(player.getWorld()) == selection && selection.getMinimumPoint()
+                .equals(snapshot.getMinimumPoint())
+                && selection.getMaximumPoint()
+                    .equals(snapshot.getMaximumPoint());
+        } catch (IncompleteRegionException e) {
+            return false;
+        }
     }
 
     private static void reportFailure(Player player, WorldEditException e) {
@@ -322,26 +361,19 @@ public class RegionCommands {
         @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
         @Optional("air") BaseBlock replace, @Switch('s') boolean moveSelection) throws WorldEditException {
 
+        final Region snapshot = region.clone();
+        final Vector shift = direction.multiply(count);
         final CountedOperation operation = editSession.moveRegionOperation(region, direction, count, true, replace);
 
-        // The operation reads from the region, so the selection cannot be shifted until it is done.
+        // The selection follows the edit only once the edit has actually happened.
         WorldEdit.getInstance()
             .getOperationScheduler()
-            .submit(editSession, operation, new OperationCompletion() {
+            .submit(player, editSession, operation, new OperationCompletion() {
 
                 @Override
                 public void onSuccess() {
                     if (moveSelection) {
-                        try {
-                            region.shift(direction.multiply(count));
-
-                            session.getRegionSelector(player.getWorld())
-                                .learnChanges();
-                            session.getRegionSelector(player.getWorld())
-                                .explainRegionAdjust(player, session);
-                        } catch (RegionOperationException e) {
-                            player.printError(e.getMessage());
-                        }
+                        shiftSelection(player, session, region, snapshot, shift);
                     }
 
                     player.print(operation.getAffected() + " blocks moved.");
@@ -369,31 +401,22 @@ public class RegionCommands {
     public void stack(Player player, EditSession editSession, LocalSession session, @Selection Region region,
         @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
         @Switch('s') boolean moveSelection, @Switch('a') boolean ignoreAirBlocks) throws WorldEditException {
+        final Region snapshot = region.clone();
+        final Vector size = region.getMaximumPoint()
+            .subtract(region.getMinimumPoint());
+        final Vector shift = direction.multiply(count * (Math.abs(direction.dot(size)) + 1));
         final ForwardExtentCopy operation = editSession
             .stackCuboidRegionOperation(region, direction, count, !ignoreAirBlocks);
 
-        // The operation reads from the region, so the selection cannot be shifted until it is done.
+        // The selection follows the edit only once the edit has actually happened.
         WorldEdit.getInstance()
             .getOperationScheduler()
-            .submit(editSession, operation, new OperationCompletion() {
+            .submit(player, editSession, operation, new OperationCompletion() {
 
                 @Override
                 public void onSuccess() {
                     if (moveSelection) {
-                        try {
-                            final Vector size = region.getMaximumPoint()
-                                .subtract(region.getMinimumPoint());
-
-                            final Vector shiftVector = direction.multiply(count * (Math.abs(direction.dot(size)) + 1));
-                            region.shift(shiftVector);
-
-                            session.getRegionSelector(player.getWorld())
-                                .learnChanges();
-                            session.getRegionSelector(player.getWorld())
-                                .explainRegionAdjust(player, session);
-                        } catch (RegionOperationException e) {
-                            player.printError(e.getMessage());
-                        }
+                        shiftSelection(player, session, region, snapshot, shift);
                     }
 
                     player.print(operation.getAffected() + " blocks changed. Undo with //undo");

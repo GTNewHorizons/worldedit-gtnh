@@ -180,6 +180,7 @@ public class ForgeWorldEdit {
         previousOperationScheduler = WorldEdit.getInstance()
             .getOperationScheduler();
         operationScheduler = new ForgeOperationScheduler();
+        operationScheduler.register();
         WorldEdit.getInstance()
             .setOperationScheduler(operationScheduler);
     }

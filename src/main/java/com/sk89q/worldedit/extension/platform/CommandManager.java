@@ -358,8 +358,7 @@ public final class CommandManager {
      *
      * <p>
      * This does not flush the session. The {@link OperationScheduler} is responsible for that,
-     * because the reorder stages are not cleared on commit and flushing twice would write every
-     * buffered block a second time.
+     * because a flush has to wait for any work it has queued.
      * </p>
      */
     private final class SessionFinalizer implements Runnable {

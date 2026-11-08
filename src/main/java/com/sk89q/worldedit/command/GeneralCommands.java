@@ -18,6 +18,8 @@ package com.sk89q.worldedit.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.List;
+
 import com.sk89q.minecraft.util.commands.Command;
 import com.sk89q.minecraft.util.commands.CommandContext;
 import com.sk89q.minecraft.util.commands.CommandPermissions;
@@ -71,6 +73,34 @@ public class GeneralCommands {
             player.print("Block change limit set to " + limit + ". (Use //limit -1 to go back to the default.)");
         } else {
             player.print("Block change limit set to " + limit + ".");
+        }
+    }
+
+    @Command(
+        aliases = { "/cancel" },
+        usage = "",
+        desc = "Cancel your running and queued edits",
+        help = "Stops your large edits that are still running or waiting to run.\n"
+            + "Blocks already changed stay changed, and //undo reverts them.",
+        min = 0,
+        max = 0)
+    @CommandPermissions("worldedit.cancel")
+    public void cancel(Player player) throws WorldEditException {
+        List<EditSession> cancelled = worldEdit.getOperationScheduler()
+            .cancel(player.getUniqueId());
+
+        if (cancelled.isEmpty()) {
+            player.printError("You have no edits running.");
+            return;
+        }
+
+        player.print("Cancelled " + cancelled.size() + " edit(s).");
+        for (EditSession editSession : cancelled) {
+            // A queued edit that never started records nothing, and //undo would hit an older edit.
+            if (editSession.size() > 0) {
+                player.print("Blocks already changed stay changed. Use //undo to revert them.");
+                break;
+            }
         }
     }
 

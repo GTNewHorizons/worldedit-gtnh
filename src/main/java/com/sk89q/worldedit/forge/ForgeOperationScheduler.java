@@ -19,12 +19,17 @@ package com.sk89q.worldedit.forge;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
@@ -66,21 +71,18 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private Job current;
     private boolean registered;
 
-    public ForgeOperationScheduler() {
-        register();
-    }
-
     @Override
-    public boolean submit(EditSession editSession, Operation operation, OperationCompletion completion) {
+    public boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion) {
+        checkNotNull(owner);
         checkNotNull(editSession);
         checkNotNull(operation);
         checkNotNull(completion);
 
         if (queue.size() >= MAX_QUEUED) {
-            return fallback.submit(editSession, operation, completion);
+            return fallback.submit(owner, editSession, operation, completion);
         }
 
-        queue.offer(new Job(editSession, operation, completion));
+        queue.offer(new Job(owner.getUniqueId(), editSession, operation, completion));
         return true;
     }
 
@@ -103,6 +105,31 @@ public class ForgeOperationScheduler implements OperationScheduler {
         }
 
         job.finalizer = task;
+    }
+
+    @Override
+    public List<EditSession> cancel(UUID owner) {
+        checkNotNull(owner);
+
+        List<Job> cancelled = new ArrayList<Job>();
+        if (current != null && owner.equals(current.owner)) {
+            cancelled.add(current);
+            current = null;
+        }
+        for (Iterator<Job> it = queue.iterator(); it.hasNext();) {
+            Job job = it.next();
+            if (owner.equals(job.owner)) {
+                cancelled.add(job);
+                it.remove();
+            }
+        }
+
+        List<EditSession> editSessions = new ArrayList<EditSession>(cancelled.size());
+        for (Job job : cancelled) {
+            abort(job);
+            editSessions.add(job.editSession);
+        }
+        return editSessions;
     }
 
     @Override
@@ -132,7 +159,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
         return null;
     }
 
-    private void register() {
+    /**
+     * Start receiving server ticks. Until this is called, submitted work stays queued.
+     */
+    public void register() {
         if (!registered) {
             FMLCommonHandler.instance()
                 .bus()
@@ -188,11 +218,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
                 try {
                     job.operation = job.operation.resume(run);
                 } catch (WorldEditException e) {
-                    job.failure = e;
-                    job.operation = null;
+                    fail(job, e);
                 } catch (RuntimeException e) {
                     logger.log(Level.WARNING, "An operation failed", e);
-                    job.operation = null;
+                    fail(job, new OperationCrashedException(e));
                 }
 
                 if (job.operation != null) {
@@ -208,13 +237,24 @@ public class ForgeOperationScheduler implements OperationScheduler {
                     job.operation = job.editSession.commit();
                 } catch (RuntimeException e) {
                     logger.log(Level.WARNING, "Failed to commit an edit session", e);
-                    job.operation = null;
+                    fail(job, new OperationCrashedException(e));
                 }
                 continue;
             }
 
             return true;
         }
+    }
+
+    /**
+     * Stop the job's current phase. A failed operation still gets committed, so what it did write
+     * reaches the world and can be undone. The first failure is the one reported.
+     */
+    private void fail(Job job, WorldEditException e) {
+        if (job.failure == null) {
+            job.failure = e;
+        }
+        job.operation = null;
     }
 
     private void drain(Job job) {
@@ -235,18 +275,42 @@ public class ForgeOperationScheduler implements OperationScheduler {
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "An operation completion handler failed", e);
         } finally {
-            if (job.finalizer != null) {
-                try {
-                    job.finalizer.run();
-                } catch (RuntimeException e) {
-                    logger.log(Level.WARNING, "Failed to finalize an edit session", e);
-                }
+            runFinalizer(job);
+        }
+    }
+
+    private void abort(Job job) {
+        try {
+            if (job.operation != null) {
+                job.operation.cancel();
             }
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "Failed to cancel an operation", e);
+        } finally {
+            runFinalizer(job);
+        }
+    }
+
+    private void runFinalizer(Job job) {
+        if (job.finalizer != null) {
+            try {
+                job.finalizer.run();
+            } catch (RuntimeException e) {
+                logger.log(Level.WARNING, "Failed to finalize an edit session", e);
+            }
+        }
+    }
+
+    private static final class OperationCrashedException extends WorldEditException {
+
+        private OperationCrashedException(RuntimeException cause) {
+            super("An unexpected error stopped this edit. See the server log.", cause);
         }
     }
 
     private static final class Job {
 
+        private final UUID owner;
         private final EditSession editSession;
         private final OperationCompletion completion;
         private Operation operation;
@@ -254,7 +318,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
         private WorldEditException failure;
         private Runnable finalizer;
 
-        private Job(EditSession editSession, Operation operation, OperationCompletion completion) {
+        private Job(UUID owner, EditSession editSession, Operation operation, OperationCompletion completion) {
+            this.owner = owner;
             this.editSession = editSession;
             this.operation = operation;
             this.completion = completion;

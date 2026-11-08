@@ -937,6 +937,11 @@ public class EditSession implements Extent {
      * caller can hand it to an
      * {@link com.sk89q.worldedit.util.operation.OperationScheduler OperationScheduler} instead.
      *
+     * <p>
+     * This and the other operation factories work on a copy of the region. The region is usually
+     * the player's live selection, which can change before a scheduled operation has finished.
+     * </p>
+     *
      * @param region  the region
      * @param pattern the pattern that provides the replacement block
      * @return the operation, which also carries the affected count once it has run
@@ -947,7 +952,7 @@ public class EditSession implements Extent {
         checkNotNull(pattern);
 
         BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
-        return new RegionVisitor(region, replace);
+        return new RegionVisitor(region.clone(), replace);
     }
 
     /**
@@ -1017,7 +1022,7 @@ public class EditSession implements Extent {
 
         BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
         RegionMaskingFilter filter = new RegionMaskingFilter(mask, replace);
-        return new RegionVisitor(region, filter);
+        return new RegionVisitor(region.clone(), filter);
     }
 
     /**
@@ -1246,7 +1251,7 @@ public class EditSession implements Extent {
         RegionOffset offset = new RegionOffset(new Vector(0, 1, 0), replace);
         GroundFunction ground = new GroundFunction(new ExistingBlockMask(this), offset);
         LayerVisitor visitor = new LayerVisitor(
-            asFlatRegion(region),
+            asFlatRegion(region.clone()),
             minimumBlockY(region),
             maximumBlockY(region),
             ground);
@@ -1311,7 +1316,7 @@ public class EditSession implements Extent {
             .subtract(region.getMinimumPoint())
             .add(1, 1, 1);
         Vector to = region.getMinimumPoint();
-        ForwardExtentCopy copy = new ForwardExtentCopy(this, region, this, to);
+        ForwardExtentCopy copy = new ForwardExtentCopy(this, region.clone(), this, to);
         copy.setRepetitions(count);
         copy.setTransform(new AffineTransform().translate(dir.multiply(size)));
         if (!copyAir) {
@@ -1346,11 +1351,6 @@ public class EditSession implements Extent {
      * Build the operation that {@link #moveRegion(Region, Vector, int, boolean, BaseBlock)} runs,
      * without running it.
      *
-     * <p>
-     * The operation holds on to the given region, so a caller that shifts the selection afterwards
-     * has to wait until the operation has finished before doing so.
-     * </p>
-     *
      * @param region      the region to move
      * @param dir         the direction
      * @param distance    the distance to move
@@ -1372,8 +1372,9 @@ public class EditSession implements Extent {
         BlockReplace remove = new BlockReplace(this, pattern);
 
         // Copy to a buffer so the original is not destroyed before every block is copied from it
-        ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(region));
-        ForwardExtentCopy copy = new ForwardExtentCopy(this, region, buffer, to);
+        Region source = region.clone();
+        ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(source));
+        ForwardExtentCopy copy = new ForwardExtentCopy(this, source, buffer, to);
         copy.setTransform(new AffineTransform().translate(dir.multiply(distance)));
         copy.setSourceFunction(remove); // Remove
         copy.setRemovingEntities(true);

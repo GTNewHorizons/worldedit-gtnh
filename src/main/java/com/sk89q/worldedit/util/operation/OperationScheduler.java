@@ -16,7 +16,11 @@
 
 package com.sk89q.worldedit.util.operation;
 
+import java.util.List;
+import java.util.UUID;
+
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.operation.Operation;
 
 /**
@@ -40,13 +44,14 @@ public interface OperationScheduler {
     /**
      * Submit an operation to run against the given edit session.
      *
+     * @param owner       the actor the work is done for, who is the one able to cancel it
      * @param editSession the edit session the operation writes to
      * @param operation   the operation to run
      * @param completion  notified once both phases have finished
      * @return true if the operation was queued and will finish later, false if it already ran to
      *         completion before this method returned
      */
-    boolean submit(EditSession editSession, Operation operation, OperationCompletion completion);
+    boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion);
 
     /**
      * Whether work submitted for the given edit session has not finished yet.
@@ -61,9 +66,9 @@ public interface OperationScheduler {
      * for it, or after that work finishes.
      *
      * <p>
-     * The scheduler is responsible for flushing, so the task must not flush again: the reorder
-     * stages are not cleared on commit, and flushing twice would write every buffered block a
-     * second time.
+     * The scheduler is responsible for flushing because a flush has to wait for queued work: it
+     * writes out whatever the reorder queue holds, so running it early would write a half-built
+     * edit. The task itself must not flush.
      * </p>
      *
      * @param editSession the edit session
@@ -72,7 +77,23 @@ public interface OperationScheduler {
     void whenFinished(EditSession editSession, Runnable task);
 
     /**
-     * Drop any queued work and stop.
+     * Stop all work submitted by the given owner, running or queued.
+     *
+     * <p>
+     * A cancelled edit is not flushed, so blocks still waiting in its reorder queue are dropped and
+     * blocks already written stay written. The task given to {@link #whenFinished} still runs before
+     * this method returns, which records the edit for undo. Its history can cover more than reached
+     * the world, which is harmless: undoing a block that was never changed writes what is already
+     * there.
+     * </p>
+     *
+     * @param owner the unique ID of the owner
+     * @return the edit sessions that were cancelled, oldest first
+     */
+    List<EditSession> cancel(UUID owner);
+
+    /**
+     * Run any queued work to completion and stop.
      */
     void shutdown();
 }

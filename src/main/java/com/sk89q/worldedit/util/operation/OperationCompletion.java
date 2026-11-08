@@ -20,7 +20,8 @@ import com.sk89q.worldedit.WorldEditException;
 
 /**
  * Notified once an operation submitted to an {@link OperationScheduler} has finished, which may be
- * several server ticks after the command that submitted it returned.
+ * several server ticks after the command that submitted it returned. Neither method is called for
+ * an operation that gets cancelled.
  */
 public interface OperationCompletion {
 

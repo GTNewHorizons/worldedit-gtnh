@@ -16,8 +16,13 @@
 
 package com.sk89q.worldedit.util.operation;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.Operations;
 
@@ -29,7 +34,7 @@ import com.sk89q.worldedit.function.operation.Operations;
 public class DirectOperationScheduler implements OperationScheduler {
 
     @Override
-    public boolean submit(EditSession editSession, Operation operation, OperationCompletion completion) {
+    public boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion) {
         try {
             Operations.complete(operation);
         } catch (WorldEditException e) {
@@ -50,6 +55,11 @@ public class DirectOperationScheduler implements OperationScheduler {
     public void whenFinished(EditSession editSession, Runnable task) {
         editSession.flushQueue();
         task.run();
+    }
+
+    @Override
+    public List<EditSession> cancel(UUID owner) {
+        return Collections.emptyList();
     }
 
     @Override

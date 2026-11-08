@@ -78,7 +78,8 @@ public class SelectionCommand extends SimpleCommand<Operation> {
 
                 EditContext editContext = new EditContext();
                 editContext.setDestination(locals.get(EditSession.class));
-                editContext.setRegion(selection);
+                // The edit may run after the player has changed their selection.
+                editContext.setRegion(selection.clone());
 
                 final Operation operation = operationFactory.createFromContext(editContext);
                 final Actor completionActor = actor;
@@ -87,7 +88,7 @@ public class SelectionCommand extends SimpleCommand<Operation> {
                 // status message has to wait until it is actually done.
                 WorldEdit.getInstance()
                     .getOperationScheduler()
-                    .submit(editSession, operation, new OperationCompletion() {
+                    .submit(completionActor, editSession, operation, new OperationCompletion() {
 
                         @Override
                         public void onSuccess() {
