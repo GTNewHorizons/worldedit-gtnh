@@ -74,7 +74,7 @@ public final class ClipboardCommands {
 
         Nodes.registerWithFlags(dispatcher, literal("/paste", "Paste the clipboard's contents")
                 .executes(run("worldedit.clipboard.paste", LogMode.PLACEMENT, c ->
-                        paste(c.worldEdit(), c.player(), c.session(), c.editSession(), c.flag('a'), c.flag('o'), c.flag('s')))),
+                        paste(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.flag('a'), c.flag('o'), c.flag('s')))),
                 "sao");
 
         Nodes.register(dispatcher, literal("/rotate", "Rotate the contents of the clipboard").executes(Nodes.USAGE)

@@ -42,6 +42,7 @@ import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.TreeGenerator;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.biome.BaseBiome;
 import com.sk89q.worldedit.world.biome.Biomes;
@@ -94,10 +95,34 @@ public final class CommandCall {
 
     /**
      * The edit session of this command, created on first use. It is recorded for undo when the command is done.
+     *
+     * <p>
+     * This is for commands that edit straight away, which are refused while the player still has edits queued. The
+     * queued edits would otherwise land on top of this one once they caught up.
+     * </p>
+     *
+     * @throws CommandFailure if the player has edits queued
      */
     public EditSession editSession() {
+        return editSession(false);
+    }
+
+    /**
+     * The edit session of a command that hands its work to the
+     * {@link com.sk89q.worldedit.util.operation.OperationScheduler OperationScheduler}, which runs it after whatever
+     * the player has queued already.
+     */
+    public EditSession queuedEditSession() {
+        return editSession(true);
+    }
+
+    private EditSession editSession(boolean queued) {
         if (editSession == null) {
             Player player = player();
+            if (!queued && worldEdit.getOperationScheduler()
+                .hasPendingWork(player.getUniqueId())) {
+                throw new CommandFailure(OperationScheduler.STILL_RUNNING);
+            }
             LocalSession session = session();
             editSession = session.createEditSession(player);
             editSession.enableQueue();

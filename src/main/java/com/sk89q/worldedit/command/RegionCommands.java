@@ -117,16 +117,16 @@ public final class RegionCommands {
         Nodes.registerWithFlags(dispatcher, literal("/replace", "Replace all blocks in the selection with another").executes(Nodes.USAGE)
                 .then(word("from-or-to")
                         .executes(run("worldedit.region.replace", LogMode.REGION, c ->
-                                replace(c.player(), c.editSession(), c.region(), null, c.pattern("from-or-to"))))
+                                replace(c.player(), c.queuedEditSession(), c.region(), null, c.pattern("from-or-to"))))
                         .then(word("to")
                                 .executes(run("worldedit.region.replace", LogMode.REGION, c ->
-                                        replace(c.player(), c.editSession(), c.region(), c.mask("from-or-to"), c.pattern("to")))))),
+                                        replace(c.player(), c.queuedEditSession(), c.region(), c.mask("from-or-to"), c.pattern("to")))))),
                 "f", "/re", "/rep");
 
         Nodes.register(dispatcher, literal("/overlay", "Set a block on top of blocks in the region").executes(Nodes.USAGE)
                 .then(word("pattern")
                         .executes(run("worldedit.region.overlay", LogMode.REGION, c ->
-                                overlay(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))));
+                                overlay(c.player(), c.queuedEditSession(), c.region(), c.pattern("pattern"))))));
 
         Nodes.register(dispatcher, literal("/center", "Set the center block(s)").executes(Nodes.USAGE)
                 .then(word("pattern")
@@ -141,50 +141,50 @@ public final class RegionCommands {
         Nodes.register(dispatcher, literal("/walls", "Build the four sides of the selection").executes(Nodes.USAGE)
                 .then(word("pattern")
                         .executes(run("worldedit.region.walls", LogMode.REGION, c ->
-                                walls(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))));
+                                walls(c.player(), c.queuedEditSession(), c.region(), c.pattern("pattern"))))));
 
         Nodes.register(dispatcher, literal("/faces", "Build the walls, ceiling, and floor of a selection").executes(Nodes.USAGE)
                 .then(word("pattern")
                         .executes(run("worldedit.region.faces", LogMode.REGION, c ->
-                                faces(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))),
+                                faces(c.player(), c.queuedEditSession(), c.region(), c.pattern("pattern"))))),
                 "/outline");
 
         Nodes.registerWithFlags(dispatcher, literal("/smooth", "Smooth the elevation in the selection")
                 .executes(run("worldedit.region.smooth", LogMode.REGION, c ->
-                        smooth(c.player(), c.editSession(), c.region(), 1, c.flag('n'))))
+                        smooth(c.player(), c.queuedEditSession(), c.region(), 1, c.flag('n'))))
                 .then(integer("iterations")
                         .executes(run("worldedit.region.smooth", LogMode.REGION, c ->
-                                smooth(c.player(), c.editSession(), c.region(), c.integer("iterations"), c.flag('n'))))),
+                                smooth(c.player(), c.queuedEditSession(), c.region(), c.integer("iterations"), c.flag('n'))))),
                 "n");
 
         Nodes.registerWithFlags(dispatcher, literal("/move", "Move the contents of the selection")
                 .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                        move(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
+                        move(c.player(), c.queuedEditSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                 .then(integer("count", 1)
                         .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
+                                move(c.player(), c.queuedEditSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                         .then(word("direction")
                                 .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                        move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
+                                        move(c.player(), c.queuedEditSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                                 .then(word("leave-block")
                                         .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.block("leave-block"), c.flag('s'), c.flag('a'))))))),
+                                                move(c.player(), c.queuedEditSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.block("leave-block"), c.flag('s'), c.flag('a'))))))),
                 "sa");
 
         Nodes.registerWithFlags(dispatcher, literal("/stack", "Repeat the contents of the selection")
                 .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
-                        stack(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
+                        stack(c.player(), c.queuedEditSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
                 .then(integer("count", 1)
                         .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
-                                stack(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
+                                stack(c.player(), c.queuedEditSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
                         .then(word("direction")
                                 .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
-                                        stack(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.flag('s'), c.flag('a')))))),
+                                        stack(c.player(), c.queuedEditSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.flag('s'), c.flag('a')))))),
                 "sa");
 
         Nodes.register(dispatcher, literal("/regen", "Regenerates the contents of the selection")
                 .executes(run("worldedit.regen", LogMode.REGION, c ->
-                        regenerateChunk(c.player(), c.session(), c.editSession(), c.region()))));
+                        regenerateChunk(c.player(), c.session(), c.queuedEditSession(), c.region()))));
 
         Nodes.registerWithFlags(dispatcher, literal("/deform", "Deforms a selected region with an expression").executes(Nodes.USAGE)
                 .then(text("expression")
@@ -251,7 +251,7 @@ public final class RegionCommands {
         Player player = call.player();
         Region selection = call.region();
         Pattern pattern = call.pattern("pattern");
-        EditSession editSession = call.editSession();
+        EditSession editSession = call.queuedEditSession();
 
         EditContext editContext = new EditContext();
         editContext.setDestination(editSession);

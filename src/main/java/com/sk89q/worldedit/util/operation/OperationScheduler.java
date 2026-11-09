@@ -42,6 +42,11 @@ import com.sk89q.worldedit.function.operation.Operation;
 public interface OperationScheduler {
 
     /**
+     * Told to a player who tries to edit straight away while edits of theirs are still queued.
+     */
+    String STILL_RUNNING = "You have an edit still running. Wait for it to finish, or use //cancel.";
+
+    /**
      * Submit an operation to run against the given edit session.
      *
      * @param owner       the actor the work is done for, who is the one able to cancel it

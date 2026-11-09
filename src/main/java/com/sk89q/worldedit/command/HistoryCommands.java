@@ -131,7 +131,7 @@ public class HistoryCommands {
     private boolean editStillRunning(Player player) {
         if (worldEdit.getOperationScheduler()
             .hasPendingWork(player.getUniqueId())) {
-            player.printError("You have an edit still running. Wait for it to finish, or use //cancel.");
+            player.printError(OperationScheduler.STILL_RUNNING);
             return true;
         }
         return false;

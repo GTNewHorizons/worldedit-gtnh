@@ -51,6 +51,7 @@ import com.sk89q.worldedit.extension.platform.permission.ActorSelectorLimits;
 import com.sk89q.worldedit.regions.RegionSelector;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.eventbus.Subscribe;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -350,6 +351,10 @@ public class PlatformManager {
                 if (player.isHoldingPickAxe() && session.hasSuperPickAxe()) {
                     final BlockTool superPickaxe = session.getSuperPickaxe();
                     if (superPickaxe != null && superPickaxe.canUse(player)) {
+                        if (editStillRunning(player)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         event.setCancelled(
                             superPickaxe.actPrimary(
                                 queryCapability(Capability.WORLD_EDITING),
@@ -364,6 +369,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionBlockTool) {
                     if (tool.canUse(player)) {
+                        if (editStillRunning(player)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((DoubleActionBlockTool) tool).actSecondary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -396,6 +405,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof BlockTool) {
                     if (tool.canUse(player)) {
+                        if (editStillRunning(player)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((BlockTool) tool).actPrimary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -444,6 +457,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionTraceTool) {
                     if (tool.canUse(player)) {
+                        if (editStillRunning(player)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((DoubleActionTraceTool) tool).actSecondary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -481,6 +498,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof TraceTool) {
                     if (tool.canUse(player)) {
+                        if (editStillRunning(player)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((TraceTool) tool)
                             .actPrimary(queryCapability(Capability.WORLD_EDITING), getConfiguration(), player, session);
                         event.setCancelled(true);
@@ -491,6 +512,18 @@ public class PlatformManager {
                 break;
             }
         }
+    }
+
+    /**
+     * Tools edit straight away, so like commands that do, they wait for the player's queued edits.
+     */
+    private boolean editStillRunning(Player player) {
+        if (worldEdit.getOperationScheduler()
+            .hasPendingWork(player.getUniqueId())) {
+            player.printError(OperationScheduler.STILL_RUNNING);
+            return true;
+        }
+        return false;
     }
 
 }
