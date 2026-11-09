@@ -29,7 +29,7 @@ import com.sk89q.worldedit.world.snapshot.SnapshotRepository;
  */
 public abstract class LocalConfiguration {
 
-    protected static final int[] defaultDisallowedBlocks = new int[] {
+    public static final int[] defaultDisallowedBlocks = new int[] {
         // dangerous stuff (physics/drops items)
         BlockID.SAPLING, BlockID.BED, BlockID.POWERED_RAIL, BlockID.DETECTOR_RAIL, BlockID.LONG_GRASS,
         BlockID.DEAD_BUSH, BlockID.PISTON_EXTENSION, BlockID.PISTON_MOVING_PIECE, BlockID.YELLOW_FLOWER,
@@ -64,7 +64,6 @@ public abstract class LocalConfiguration {
     public int maxBrushRadius = 6;
     public boolean logCommands = false;
     public String logFile = "";
-    public boolean registerHelp = true; // what is the point of this, it's not even used
     public int wandItem = ItemID.WOOD_AXE;
     public boolean superPickaxeDrop = true;
     public boolean superPickaxeManyDrop = true;
@@ -75,9 +74,7 @@ public abstract class LocalConfiguration {
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;
-    public Set<Integer> allowedDataCycleBlocks = new HashSet<Integer>();
     public String saveDir = "schematics";
-    public boolean showHelpInfo = true;
     public int butcherDefaultRadius = -1;
     public int butcherMaxRadius = -1;
     public boolean allowSymlinks = false;

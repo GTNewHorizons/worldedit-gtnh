@@ -15,6 +15,8 @@ dependencies {
     runtimeOnlyNonPublishable 'com.github.GTNewHorizons:NotEnoughItems:2.9.2-GTNH:dev'
 
     testImplementation 'junit:junit:4.13.2'
-    testRuntimeOnly 'com.mojang:brigadier:1.0.18' // GTNHExtLib only provides it in the game
+    // GTNHExtLib only provides these in the game
+    testRuntimeOnly 'com.mojang:brigadier:1.0.18'
+    testRuntimeOnly 'it.unimi.dsi:fastutil:8.5.18'
     testImplementation 'org.mockito:mockito-core:5.24.0'
 }

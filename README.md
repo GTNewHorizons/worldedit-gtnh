@@ -9,6 +9,11 @@ Requires [GTNHLib](https://github.com/GTNewHorizons/GTNHLib).
 
 See the [command documentation](docs/README.md) for everything you can type.
 
+## Configuration
+
+Settings are in `config/worldedit/worldedit.cfg`, see [configuration](docs/configuration.md). An old
+`worldedit.properties` is imported once on first start.
+
 ## Adding or changing a command
 
 Commands are [Brigadier](https://github.com/Mojang/brigadier) trees, registered through GTNHLib. Each group in

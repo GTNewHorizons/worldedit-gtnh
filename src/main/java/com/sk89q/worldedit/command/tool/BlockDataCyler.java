@@ -46,12 +46,6 @@ public class BlockDataCyler implements DoubleActionBlockTool {
         int type = world.getBlockType(clicked.toVector());
         int data = world.getBlockData(clicked.toVector());
 
-        if (!config.allowedDataCycleBlocks.isEmpty() && !player.hasPermission("worldedit.override.data-cycler")
-            && !config.allowedDataCycleBlocks.contains(type)) {
-            player.printError("You are not permitted to cycle the data value of that block.");
-            return true;
-        }
-
         int increment = forward ? 1 : -1;
         BaseBlock block = new BaseBlock(type, BlockData.cycle(type, data, increment));
         EditSession editSession = session.createEditSession(player);
