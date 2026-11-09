@@ -36,6 +36,7 @@ import com.sk89q.worldedit.command.brigadier.LogMode;
 import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.snapshot.InvalidSnapshotException;
 import com.sk89q.worldedit.world.snapshot.Snapshot;
@@ -51,18 +52,18 @@ public final class SnapshotUtilCommands {
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
         Nodes.register(dispatcher, literal("restore", "Restore the selection from a snapshot")
                 .executes(run("worldedit.snapshots.restore", LogMode.REGION,
-                        c -> restore(c.player(), c.session(), c.editSession(), null)))
+                        c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), null)))
                 .then(word("snapshot")
                         .executes(run("worldedit.snapshots.restore", LogMode.REGION,
-                                c -> restore(c.player(), c.session(), c.editSession(), c.string("snapshot"))))),
+                                c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.string("snapshot"))))),
                 "/restore");
     }
     // spotless:on
 
     private static final Logger logger = Logger.getLogger("Minecraft.WorldEdit");
 
-    private static void restore(Player player, LocalSession session, EditSession editSession, String snapshotName)
-        throws WorldEditException {
+    private static void restore(WorldEdit worldEdit, final Player player, LocalSession session, EditSession editSession,
+        String snapshotName) throws WorldEditException {
 
         LocalConfiguration config = WorldEdit.getInstance()
             .getConfiguration();
@@ -129,34 +130,51 @@ public final class SnapshotUtilCommands {
             return;
         }
 
-        try {
-            // Restore snapshot
-            SnapshotRestore restore = new SnapshotRestore(chunkStore, editSession, region);
-            // player.print(restore.getChunksAffected() + " chunk(s) will be loaded.");
+        // Each chunk is read from the snapshot in a step of its own, so this can take a while.
+        final ChunkStore store = chunkStore;
+        final SnapshotRestore restore = new SnapshotRestore(chunkStore, editSession, region);
+        worldEdit.getOperationScheduler()
+            .submit(player, editSession, restore, new OperationCompletion() {
 
-            restore.restore();
-
-            if (restore.hadTotalFailure()) {
-                String error = restore.getLastErrorMessage();
-                if (error != null) {
-                    player.printError("Errors prevented any blocks from being restored.");
-                    player.printError("Last error: " + error);
-                } else {
-                    player.printError("No chunks could be loaded. (Bad archive?)");
+                @Override
+                public void onSuccess() {
+                    close(store);
+                    if (restore.hadTotalFailure()) {
+                        String error = restore.getLastErrorMessage();
+                        if (error != null) {
+                            player.printError("Errors prevented any blocks from being restored.");
+                            player.printError("Last error: " + error);
+                        } else {
+                            player.printError("No chunks could be loaded. (Bad archive?)");
+                        }
+                    } else {
+                        player.print(
+                            String.format(
+                                "Restored; %d missing chunks and %d other errors.",
+                                restore.getMissingChunks()
+                                    .size(),
+                                restore.getErrorChunks()
+                                    .size()));
+                    }
                 }
-            } else {
-                player.print(
-                    String.format(
-                        "Restored; %d " + "missing chunks and %d other errors.",
-                        restore.getMissingChunks()
-                            .size(),
-                        restore.getErrorChunks()
-                            .size()));
-            }
-        } finally {
-            try {
-                chunkStore.close();
-            } catch (IOException ignored) {}
-        }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    close(store);
+                    String message = e.getMessage();
+                    player.printError(message != null ? message : "The operation could not be completed.");
+                }
+
+                @Override
+                public void onCancelled(boolean started) {
+                    close(store);
+                }
+            });
+    }
+
+    private static void close(ChunkStore store) {
+        try {
+            store.close();
+        } catch (IOException ignored) {}
     }
 }

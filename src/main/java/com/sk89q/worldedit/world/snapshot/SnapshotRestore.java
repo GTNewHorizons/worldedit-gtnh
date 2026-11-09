@@ -18,17 +18,18 @@ package com.sk89q.worldedit.world.snapshot;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
-import com.sk89q.worldedit.blocks.BaseBlock;
-import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.function.mask.Mask;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.chunk.Chunk;
@@ -39,13 +40,19 @@ import com.sk89q.worldedit.world.storage.MissingWorldException;
 /**
  * A snapshot restore operation.
  */
-public class SnapshotRestore {
+/**
+ * Restores a region from a snapshot one chunk at a time, so that it can be spread over several server
+ * ticks. Each chunk has to be read and decompressed from the snapshot, which is the slow part.
+ */
+public class SnapshotRestore implements Operation {
 
-    private final Map<BlockVector2D, ArrayList<Vector>> neededChunks = new LinkedHashMap<BlockVector2D, ArrayList<Vector>>();
     private final ChunkStore chunkStore;
     private final EditSession editSession;
-    private ArrayList<Vector2D> missingChunks;
-    private ArrayList<Vector2D> errorChunks;
+    private final Region region;
+    private final List<Vector2D> chunks;
+    private final Iterator<Vector2D> remaining;
+    private final ArrayList<Vector2D> missingChunks = new ArrayList<Vector2D>();
+    private final ArrayList<Vector2D> errorChunks = new ArrayList<Vector2D>();
     private String lastErrorMessage;
 
     /**
@@ -53,66 +60,15 @@ public class SnapshotRestore {
      *
      * @param chunkStore  The {@link ChunkStore} to restore from
      * @param editSession The {@link EditSession} to restore to
-     * @param region      The {@link Region} to restore to
+     * @param region      The {@link Region} to restore to, which is copied so that later changes to it
+     *                    don't affect the restore
      */
     public SnapshotRestore(ChunkStore chunkStore, EditSession editSession, Region region) {
         this.chunkStore = chunkStore;
         this.editSession = editSession;
-
-        if (region instanceof CuboidRegion) {
-            findNeededCuboidChunks(region);
-        } else {
-            findNeededChunks(region);
-        }
-    }
-
-    /**
-     * Find needed chunks in the axis-aligned bounding box of the region.
-     *
-     * @param region The {@link Region} to iterate
-     */
-    private void findNeededCuboidChunks(Region region) {
-        Vector min = region.getMinimumPoint();
-        Vector max = region.getMaximumPoint();
-
-        // First, we need to group points by chunk so that we only need
-        // to keep one chunk in memory at any given moment
-        for (int x = min.getBlockX(); x <= max.getBlockX(); ++x) {
-            for (int y = min.getBlockY(); y <= max.getBlockY(); ++y) {
-                for (int z = min.getBlockZ(); z <= max.getBlockZ(); ++z) {
-                    Vector pos = new Vector(x, y, z);
-                    checkAndAddBlock(pos);
-                }
-            }
-        }
-    }
-
-    /**
-     * Find needed chunks in the region.
-     *
-     * @param region The {@link Region} to iterate
-     */
-    private void findNeededChunks(Region region) {
-        // First, we need to group points by chunk so that we only need
-        // to keep one chunk in memory at any given moment
-        for (Vector pos : region) {
-            checkAndAddBlock(pos);
-        }
-    }
-
-    private void checkAndAddBlock(Vector pos) {
-        if (editSession.getMask() != null && !editSession.getMask()
-            .test(pos)) return;
-
-        BlockVector2D chunkPos = ChunkStore.toChunk(pos);
-
-        // Unidentified chunk
-        if (!neededChunks.containsKey(chunkPos)) {
-            neededChunks.put(chunkPos, new ArrayList<Vector>());
-        }
-
-        neededChunks.get(chunkPos)
-            .add(pos);
+        this.region = region.clone();
+        this.chunks = new ArrayList<Vector2D>(this.region.getChunks());
+        this.remaining = chunks.iterator();
     }
 
     /**
@@ -121,55 +77,83 @@ public class SnapshotRestore {
      * @return a number of chunks
      */
     public int getChunksAffected() {
-        return neededChunks.size();
+        return chunks.size();
     }
 
     /**
-     * Restores to world.
+     * Restores to world in one go.
      *
      * @throws MaxChangedBlocksException
      */
     public void restore() throws MaxChangedBlocksException {
+        Operations.completeLegacy(this);
+    }
 
-        missingChunks = new ArrayList<Vector2D>();
-        errorChunks = new ArrayList<Vector2D>();
+    @Override
+    public Operation resume(RunContext run) throws WorldEditException {
+        while (remaining.hasNext()) {
+            restoreChunk(remaining.next());
+            if (!run.shouldContinueAfterLargeStep()) {
+                return remaining.hasNext() ? this : null;
+            }
+        }
+        return null;
+    }
 
-        // Now let's start restoring!
-        for (Map.Entry<BlockVector2D, ArrayList<Vector>> entry : neededChunks.entrySet()) {
-            BlockVector2D chunkPos = entry.getKey();
-            Chunk chunk;
+    private void restoreChunk(Vector2D chunkPos) throws MaxChangedBlocksException {
+        Chunk chunk;
+        try {
+            chunk = chunkStore.getChunk(chunkPos, editSession.getWorld());
+        } catch (MissingChunkException me) {
+            missingChunks.add(chunkPos);
+            return;
+        } catch (MissingWorldException me) {
+            errorChunks.add(chunkPos);
+            lastErrorMessage = me.getMessage();
+            return;
+        } catch (DataException de) {
+            errorChunks.add(chunkPos);
+            lastErrorMessage = de.getMessage();
+            return;
+        } catch (IOException ioe) {
+            errorChunks.add(chunkPos);
+            lastErrorMessage = ioe.getMessage();
+            return;
+        }
 
-            try {
-                chunk = chunkStore.getChunk(chunkPos, editSession.getWorld());
-                // Good, the chunk could be at least loaded
+        Vector min = region.getMinimumPoint();
+        Vector max = region.getMaximumPoint();
+        int minX = Math.max(min.getBlockX(), chunkPos.getBlockX() << 4);
+        int maxX = Math.min(max.getBlockX(), (chunkPos.getBlockX() << 4) + 15);
+        int minZ = Math.max(min.getBlockZ(), chunkPos.getBlockZ() << 4);
+        int maxZ = Math.min(max.getBlockZ(), (chunkPos.getBlockZ() << 4) + 15);
+        Mask mask = editSession.getMask();
 
-                // Now just copy blocks!
-                for (Vector pos : entry.getValue()) {
+        for (int x = minX; x <= maxX; ++x) {
+            for (int z = minZ; z <= maxZ; ++z) {
+                for (int y = min.getBlockY(); y <= max.getBlockY(); ++y) {
+                    Vector pos = new Vector(x, y, z);
+                    if (!region.contains(pos) || (mask != null && !mask.test(pos))) {
+                        continue;
+                    }
                     try {
-                        BaseBlock block = chunk.getBlock(pos);
-                        editSession.setBlock(pos, block);
+                        editSession.setBlock(pos, chunk.getBlock(pos));
                     } catch (DataException e) {
                         // this is a workaround: just ignore for now
                     }
                 }
-            } catch (MissingChunkException me) {
-                missingChunks.add(chunkPos);
-            } catch (MissingWorldException me) {
-                errorChunks.add(chunkPos);
-                lastErrorMessage = me.getMessage();
-            } catch (DataException de) {
-                errorChunks.add(chunkPos);
-                lastErrorMessage = de.getMessage();
-            } catch (IOException ioe) {
-                errorChunks.add(chunkPos);
-                lastErrorMessage = ioe.getMessage();
             }
         }
     }
 
+    @Override
+    public void cancel() {}
+
+    @Override
+    public void addStatusMessages(List<String> messages) {}
+
     /**
-     * Get a list of the missing chunks. restore() must have been called
-     * already.
+     * Get a list of the missing chunks.
      *
      * @return a list of coordinates
      */
@@ -178,8 +162,7 @@ public class SnapshotRestore {
     }
 
     /**
-     * Get a list of the chunks that could not have been loaded for other
-     * reasons. restore() must have been called already.
+     * Get a list of the chunks that could not have been loaded for other reasons.
      *
      * @return a list of coordinates
      */
@@ -205,5 +188,4 @@ public class SnapshotRestore {
     public String getLastErrorMessage() {
         return lastErrorMessage;
     }
-
 }
