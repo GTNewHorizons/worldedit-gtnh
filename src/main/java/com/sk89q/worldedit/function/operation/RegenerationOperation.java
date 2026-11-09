@@ -82,7 +82,8 @@ public abstract class RegenerationOperation implements Operation {
     }
 
     /**
-     * Record a chunk and swap it for freshly generated terrain.
+     * Record a chunk, swap it for freshly generated terrain and put back what it held outside the
+     * selection, all within one step, so that the server never ticks with the outside replaced.
      *
      * @param chunkX the chunk's X coordinate
      * @param chunkZ the chunk's Z coordinate
@@ -90,7 +91,8 @@ public abstract class RegenerationOperation implements Operation {
     protected abstract void replaceChunk(int chunkX, int chunkZ);
 
     /**
-     * Decorate a chunk that has been replaced.
+     * Decorate a chunk that has been replaced. Whatever it changes outside the selection has to be
+     * undone in the same step.
      *
      * @param chunkX the chunk's X coordinate
      * @param chunkZ the chunk's Z coordinate
@@ -99,7 +101,7 @@ public abstract class RegenerationOperation implements Operation {
 
     /**
      * Run decoration for a chunk that has not been replaced, for the features it would place in a
-     * chunk that has been. Whatever it changes outside the replaced chunks has to be undone.
+     * chunk that has been. Whatever it changes outside the selection has to be undone in the same step.
      *
      * @param chunkX the chunk's X coordinate
      * @param chunkZ the chunk's Z coordinate
@@ -107,7 +109,7 @@ public abstract class RegenerationOperation implements Operation {
     protected abstract void decorateNeighbour(int chunkX, int chunkZ);
 
     /**
-     * Put back what a replaced chunk held outside the selection, and record the rest for undo.
+     * Record for undo what changed inside the selection in a replaced chunk.
      *
      * @param chunkX the chunk's X coordinate
      * @param chunkZ the chunk's Z coordinate

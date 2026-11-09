@@ -17,6 +17,7 @@
 package com.sk89q.worldedit.forge;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -46,8 +47,9 @@ import com.sk89q.worldedit.regions.Region;
  * Regenerates chunks in a Forge world.
  *
  * <p>
- * The server ticks between steps, so anything outside the replaced chunks is recorded and restored
- * within a single step. Otherwise whatever machines and players did in between would be reverted too.
+ * The server ticks between steps, so anything outside the selection is restored within the step that
+ * changed it, from a snapshot taken in that same step. Restoring it any later would revert whatever
+ * machines and players did in between, without a way to undo that.
  * </p>
  */
 final class ForgeRegeneration extends RegenerationOperation {
@@ -59,6 +61,8 @@ final class ForgeRegeneration extends RegenerationOperation {
     private final int maxY;
     private final BlockCache cache = new BlockCache();
     private final Map<Long, RegenColumn> columns = new HashMap<Long, RegenColumn>();
+    /** For each replaced chunk, the positions in it that are outside the selection. */
+    private final Map<Long, int[]> outside = new HashMap<Long, int[]>();
 
     ForgeRegeneration(World world, ChunkProviderServer server, Region region, EditSession editSession, int maxY) {
         super(region.getChunks());
@@ -78,8 +82,43 @@ final class ForgeRegeneration extends RegenerationOperation {
             }
         }
 
-        columns.put(ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ), snapshotSelected(chunkX, chunkZ));
+        long key = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
+        RegenColumn column = snapshotSelected(chunkX, chunkZ);
+        int[] unselected = unselectedPositions(chunkX, chunkZ);
+        columns.put(key, column);
+        if (unselected.length > 0) {
+            outside.put(key, unselected);
+        }
+
         swapChunk(chunkX, chunkZ);
+
+        // Put back what the selection doesn't cover before the server gets to tick.
+        int baseX = chunkX << 4;
+        int baseZ = chunkZ << 4;
+        for (int index : unselected) {
+            Vector pt = position(baseX, baseZ, index);
+            BaseBlock previous = column.blocks[index];
+            if (!unchanged(previous, editSession.getBlock(pt))) {
+                editSession.smartSetBlock(pt, previous);
+            }
+        }
+    }
+
+    private int[] unselectedPositions(int chunkX, int chunkZ) {
+        int baseX = chunkX << 4;
+        int baseZ = chunkZ << 4;
+        int[] found = new int[size()];
+        int count = 0;
+        for (int index = 0; index < found.length; index++) {
+            if (!region.contains(position(baseX, baseZ, index))) {
+                found[count++] = index;
+            }
+        }
+        return Arrays.copyOf(found, count);
+    }
+
+    private static Vector position(int baseX, int baseZ, int index) {
+        return new Vector(baseX + (index & 15), index >> 8, baseZ + ((index >> 4) & 15));
     }
 
     @Override
@@ -107,28 +146,24 @@ final class ForgeRegeneration extends RegenerationOperation {
 
     @Override
     protected void restoreChunk(int chunkX, int chunkZ) {
-        RegenColumn column = columns.remove(ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ));
+        long key = ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ);
+        RegenColumn column = columns.remove(key);
+        outside.remove(key);
         int baseX = chunkX << 4;
         int baseZ = chunkZ << 4;
 
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y <= maxY; y++) {
-                for (int z = 0; z < 16; z++) {
-                    Vector pt = new Vector(baseX + x, y, baseZ + z);
-                    BaseBlock previous = column.blocks[columnIndex(x, y, z)];
-                    BaseBlock current = editSession.getBlock(pt);
+        // Everything outside the selection was already put back, so only history is left.
+        for (int index = 0; index < size(); index++) {
+            Vector pt = position(baseX, baseZ, index);
+            if (!region.contains(pt)) {
+                continue;
+            }
 
-                    if (unchanged(previous, current)) {
-                        continue;
-                    }
-
-                    if (region.contains(pt)) {
-                        editSession.getChangeSet()
-                            .add(new BlockChange(pt.toBlockVector(), previous, current));
-                    } else {
-                        editSession.smartSetBlock(pt, previous);
-                    }
-                }
+            BaseBlock previous = column.blocks[index];
+            BaseBlock current = editSession.getBlock(pt);
+            if (!unchanged(previous, current)) {
+                editSession.getChangeSet()
+                    .add(new BlockChange(pt.toBlockVector(), previous, current));
             }
         }
     }
@@ -162,33 +197,56 @@ final class ForgeRegeneration extends RegenerationOperation {
     }
 
     /**
-     * Record the chunks around a decoration pass that are not being regenerated. A pass writes mostly
-     * to its own chunk and the ones at +x and +z, but generators can reach further.
+     * Record what a decoration pass could change outside the selection, as it is right now. A pass
+     * writes mostly to its own chunk and the ones at +x and +z, but generators can reach further.
      */
     private List<RegenColumn> snapshotAround(int chunkX, int chunkZ) {
         List<Chunk> chunks = new ArrayList<Chunk>(9);
+        List<int[]> limits = new ArrayList<int[]>(9);
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
-                if (!isReplaced(chunkX + dx, chunkZ + dz)) {
-                    chunks.add(server.loadChunk(chunkX + dx, chunkZ + dz));
+                int x = chunkX + dx;
+                int z = chunkZ + dz;
+                if (!isReplaced(x, z)) {
+                    chunks.add(server.loadChunk(x, z));
+                    limits.add(null);
+                } else {
+                    // In a replaced chunk, only the part outside the selection needs protecting.
+                    int[] unselected = outside.get(ChunkCoordIntPair.chunkXZ2Int(x, z));
+                    if (unselected != null) {
+                        chunks.add(world.getChunkFromChunkCoords(x, z));
+                        limits.add(unselected);
+                    }
                 }
             }
         }
 
         List<RegenColumn> around = new ArrayList<RegenColumn>(chunks.size());
-        for (Chunk chunk : chunks) {
-            around.add(snapshotNeighbour(chunk));
+        for (int i = 0; i < chunks.size(); i++) {
+            around.add(snapshotNeighbour(chunks.get(i), limits.get(i)));
         }
         return around;
     }
 
-    private RegenColumn snapshotNeighbour(Chunk chunk) {
+    /**
+     * @param only the positions to record, or null for the whole chunk along with its entities
+     */
+    private RegenColumn snapshotNeighbour(Chunk chunk, int[] only) {
         RegenColumn column = new RegenColumn(chunk.xPosition, chunk.zPosition, size());
-        for (int x = 0; x < 16; x++) {
-            for (int y = 0; y <= maxY; y++) {
-                for (int z = 0; z < 16; z++) {
-                    column.blocks[columnIndex(x, y, z)] = cache
-                        .get(Block.getIdFromBlock(chunk.getBlock(x, y, z)), chunk.getBlockMetadata(x, y, z));
+        column.only = only;
+        if (only != null) {
+            for (int index : only) {
+                column.blocks[index] = cache.get(
+                    Block.getIdFromBlock(chunk.getBlock(index & 15, index >> 8, (index >> 4) & 15)),
+                    chunk.getBlockMetadata(index & 15, index >> 8, (index >> 4) & 15));
+            }
+        } else {
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y <= maxY; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        column.blocks[columnIndex(x, y, z)] = cache
+                            .get(Block.getIdFromBlock(chunk.getBlock(x, y, z)), chunk.getBlockMetadata(x, y, z));
+                    }
                 }
             }
         }
@@ -199,8 +257,10 @@ final class ForgeRegeneration extends RegenerationOperation {
                 columnIndex(position.chunkPosX, position.chunkPosY, position.chunkPosZ),
                 (TileEntity) tile.getValue());
         }
-        for (List<?> entities : chunk.entityLists) {
-            column.entities.addAll(entities);
+        if (only == null) {
+            for (List<?> entities : chunk.entityLists) {
+                column.entities.addAll(entities);
+            }
         }
         return column;
     }
@@ -215,23 +275,27 @@ final class ForgeRegeneration extends RegenerationOperation {
             int baseX = column.chunkX << 4;
             int baseZ = column.chunkZ << 4;
 
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y <= maxY; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        int index = columnIndex(x, y, z);
-                        BaseBlock previous = column.blocks[index];
-                        if (previous.getType() == Block.getIdFromBlock(chunk.getBlock(x, y, z))
-                            && previous.getData() == chunk.getBlockMetadata(x, y, z)) {
-                            continue;
-                        }
-
-                        TileEntity tile = column.tiles.get(index);
-                        editSession.smartSetBlock(
-                            new Vector(baseX + x, y, baseZ + z),
-                            tile != null ? new TileEntityBaseBlock(previous.getType(), previous.getData(), tile)
-                                : previous);
-                    }
+            int count = column.only != null ? column.only.length : size();
+            for (int i = 0; i < count; i++) {
+                int index = column.only != null ? column.only[i] : i;
+                int x = index & 15;
+                int y = index >> 8;
+                int z = (index >> 4) & 15;
+                BaseBlock previous = column.blocks[index];
+                if (previous.getType() == Block.getIdFromBlock(chunk.getBlock(x, y, z))
+                    && previous.getData() == chunk.getBlockMetadata(x, y, z)) {
+                    continue;
                 }
+
+                TileEntity tile = column.tiles.get(index);
+                editSession.smartSetBlock(
+                    new Vector(baseX + x, y, baseZ + z),
+                    tile != null ? new TileEntityBaseBlock(previous.getType(), previous.getData(), tile) : previous);
+            }
+
+            // Mobs that decoration spawns in a regenerated chunk are meant to stay.
+            if (column.only != null) {
+                continue;
             }
 
             for (List<?> entities : chunk.entityLists) {
@@ -323,6 +387,7 @@ final class ForgeRegeneration extends RegenerationOperation {
         private final int chunkX;
         private final int chunkZ;
         private final BaseBlock[] blocks;
+        private int[] only;
         private final Map<Integer, TileEntity> tiles = new HashMap<Integer, TileEntity>();
         private final Set<Object> entities = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
 
