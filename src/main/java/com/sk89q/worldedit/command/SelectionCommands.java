@@ -30,6 +30,7 @@ import net.minecraft.command.ICommandSender;
 import com.google.common.base.Optional;
 import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
@@ -95,8 +96,9 @@ public final class SelectionCommands {
                         .executes(run("worldedit.selection.chunk", LogMode.POSITION, c -> chunk(c.player(), c.session(), c)))),
                 "sc");
 
-        Nodes.register(dispatcher, literal("/wand", "Get the wand object")
-                .executes(run("worldedit.wand", c -> wand(c.player(), c.session(), c))));
+        Nodes.registerWithFlags(dispatcher, literal("/wand", "Get the selection wand, or the navigation wand with -n")
+                .executes(run("worldedit.wand", c -> wand(c.player(), c.flag('n')))),
+                "n");
 
         Nodes.register(dispatcher, literal("toggleeditwand", "Toggle functionality of the edit wand")
                 .executes(run("worldedit.wand.toggle", c -> toggleWand(c.player(), c.session(), c))));
@@ -304,13 +306,23 @@ public final class SelectionCommands {
 
     }
 
-    private static void wand(Player player, LocalSession session, CommandCall args) throws Exception {
+    static void wand(Player player, boolean navigation) {
+        LocalConfiguration config = WorldEdit.getInstance()
+            .getConfiguration();
+        int item = navigation ? config.navigationWand : config.wandItem;
+        if (item <= 0 || !player.giveWand(
+            item,
+            navigation ? Player.NAVIGATION_WAND : Player.SELECTION_WAND,
+            navigation ? "WorldEdit Navigation Wand" : "WorldEdit Wand")) {
+            player.printError((navigation ? "The navigation wand" : "The wand") + " is turned off on this server.");
+            return;
+        }
 
-        player.giveItem(
-            WorldEdit.getInstance()
-                .getConfiguration().wandItem,
-            1);
-        player.print("Left click: select pos #1; Right click: select pos #2");
+        if (navigation) {
+            player.print("Left click: jump to where you look; Right click: pass through walls");
+        } else {
+            player.print("Left click: select pos #1; Right click: select pos #2");
+        }
     }
 
     private static void toggleWand(Player player, LocalSession session, CommandCall args) throws Exception {

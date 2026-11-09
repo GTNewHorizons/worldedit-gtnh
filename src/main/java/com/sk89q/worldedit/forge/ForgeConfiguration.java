@@ -116,6 +116,7 @@ public class ForgeConfiguration extends LocalConfiguration {
         }
 
         wandItem = WorldEditConfig.Tools.wandItem;
+        requireWandTag = WorldEditConfig.Tools.requireWandTag;
         superPickaxeDrop = WorldEditConfig.Tools.superPickaxeDropItems;
         superPickaxeManyDrop = WorldEditConfig.Tools.superPickaxeManyDropItems;
         navigationWand = WorldEditConfig.Tools.navigationWandItem;

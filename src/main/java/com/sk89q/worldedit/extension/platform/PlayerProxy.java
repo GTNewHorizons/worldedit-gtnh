@@ -66,6 +66,16 @@ class PlayerProxy extends AbstractPlayerActor {
     }
 
     @Override
+    public boolean isHoldingWand(String kind) {
+        return basePlayer.isHoldingWand(kind);
+    }
+
+    @Override
+    public boolean giveWand(int type, String kind, String name) {
+        return basePlayer.giveWand(type, kind, name);
+    }
+
+    @Override
     public BlockBag getInventoryBlockBag() {
         return basePlayer.getInventoryBlockBag();
     }

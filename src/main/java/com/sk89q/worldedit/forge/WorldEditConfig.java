@@ -185,11 +185,18 @@ public final class WorldEditConfig {
         filename = FILE_NAME)
     public static final class Tools {
 
-        @Config.Comment("The item ID of the selection wand. 271 is the wooden axe.")
+        @Config.Comment("The item ID of the selection wand. 271 is the wooden axe. 0 turns the wand off.")
         @Config.DefaultInt(271)
         @Config.RangeInt(min = 0)
         @Config.Reloadable(RELOAD)
         public static int wandItem;
+
+        @Config.Comment({ "Only wands given by //wand and //wand -n work, so ordinary items of the same type, such as",
+            "the wooden axes everyone uses early on, behave normally. When false, any item of the wand's type",
+            "is a wand. Either way, only players with permission can use a wand." })
+        @Config.DefaultBoolean(true)
+        @Config.Reloadable(RELOAD)
+        public static boolean requireWandTag;
 
         @Config.Comment("Blocks broken with the single block super pickaxe drop as items.")
         @Config.DefaultBoolean(true)
@@ -201,7 +208,7 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static boolean superPickaxeManyDropItems;
 
-        @Config.Comment("The item ID of the navigation wand. 345 is the compass.")
+        @Config.Comment("The item ID of the navigation wand. 345 is the compass. 0 turns the wand off.")
         @Config.DefaultInt(345)
         @Config.RangeInt(min = 0)
         @Config.Reloadable(RELOAD)

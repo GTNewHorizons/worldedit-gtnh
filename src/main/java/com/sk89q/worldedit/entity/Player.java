@@ -62,6 +62,40 @@ public interface Player extends Entity, Actor {
     int getItemInHand();
 
     /**
+     * The item data key that marks an item as a wand given by WorldEdit, holding the kind of wand.
+     */
+    String WAND_TAG = "WorldEditWand";
+
+    /**
+     * The kind of the selection wand.
+     */
+    String SELECTION_WAND = "selection";
+
+    /**
+     * The kind of the navigation wand.
+     */
+    String NAVIGATION_WAND = "navigation";
+
+    /**
+     * Whether the item in hand was given by WorldEdit as the given kind of wand.
+     *
+     * @param kind the kind of wand, such as {@link #SELECTION_WAND}
+     * @return true if it is that wand
+     */
+    boolean isHoldingWand(String kind);
+
+    /**
+     * Give the player a wand: an item marked as the given kind of wand, so that only it acts as one
+     * and not every item of the same type.
+     *
+     * @param type the item ID
+     * @param kind the kind of wand, such as {@link #SELECTION_WAND}
+     * @param name the name the item shows
+     * @return false if there is no item with that ID
+     */
+    boolean giveWand(int type, String kind, String name);
+
+    /**
      * Get the Block that the player is holding.
      *
      * @return the item id of the item the player is holding

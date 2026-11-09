@@ -329,7 +329,7 @@ public class PlatformManager {
                 .get(actor);
 
             if (event.getType() == Interaction.HIT) {
-                if (player.getItemInHand() == getConfiguration().wandItem) {
+                if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
                     if (!session.isToolControlEnabled()) {
                         return;
                     }
@@ -384,7 +384,7 @@ public class PlatformManager {
                 }
 
             } else if (event.getType() == Interaction.OPEN) {
-                if (player.getItemInHand() == getConfiguration().wandItem) {
+                if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
                     if (!session.isToolControlEnabled()) {
                         return;
                     }
@@ -431,7 +431,7 @@ public class PlatformManager {
 
         switch (event.getInputType()) {
             case PRIMARY: {
-                if (player.getItemInHand() == getConfiguration().navigationWand) {
+                if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
                     if (getConfiguration().navigationWandMaxDistance <= 0) {
                         return;
                     }
@@ -475,7 +475,7 @@ public class PlatformManager {
             }
 
             case SECONDARY: {
-                if (player.getItemInHand() == getConfiguration().navigationWand) {
+                if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
                     if (getConfiguration().navigationWandMaxDistance <= 0) {
                         return;
                     }
@@ -517,6 +517,17 @@ public class PlatformManager {
     /**
      * Tools edit straight away, so like commands that do, they wait for the player's queued edits.
      */
+    /**
+     * Whether the player holds the given wand. Using it still needs its permission, which the caller
+     * checks.
+     */
+    private boolean holdsWand(Player player, int item, String kind) {
+        if (item <= 0 || player.getItemInHand() != item) {
+            return false;
+        }
+        return !getConfiguration().requireWandTag || player.isHoldingWand(kind);
+    }
+
     private boolean editStillRunning(Player player) {
         if (worldEdit.getOperationScheduler()
             .hasPendingWork(player.getUniqueId())) {

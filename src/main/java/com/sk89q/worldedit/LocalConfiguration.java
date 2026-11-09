@@ -74,6 +74,10 @@ public abstract class LocalConfiguration {
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;
+    /**
+     * Whether only wands given by //wand act as wands, rather than any item of the wand's type.
+     */
+    public boolean requireWandTag = true;
     public String saveDir = "schematics";
     public int butcherDefaultRadius = -1;
     public int butcherMaxRadius = -1;
