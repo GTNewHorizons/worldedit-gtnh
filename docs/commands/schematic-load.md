@@ -24,8 +24,4 @@ Also typed `//load`. Paste it afterwards with [//paste](paste.md).
 | `/schem load house` | Load `house.schematic`. |
 | `/schem load mcedit house` | Load it with an explicit format. |
 
-## Permission
-
-`worldedit.clipboard.load or worldedit.schematic.load`
-
 [All commands](../README.md)

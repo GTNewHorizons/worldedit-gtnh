@@ -24,8 +24,4 @@ It reads the real commands, so it always shows what can be typed. The slashes ar
 | `//help 2` | The second page. |
 | `//help brush sphere` | How to use the sphere brush. |
 
-## Permission
-
-`worldedit.help`
-
 [All commands](../README.md)

@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 | `/schem list` | The first page. |
 | `/schem list -n -p 2` | The second page, newest first. |
 
-## Permission
-
-`worldedit.schematic.list`
-
 [All commands](../README.md)

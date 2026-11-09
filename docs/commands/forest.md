@@ -22,8 +22,4 @@ Grow a forest in your selection.
 | `//forest` | Grow an oak forest. |
 | `//forest birch 10` | Grow a denser birch forest. |
 
-## Permission
-
-`worldedit.region.forest`
-
 [All commands](../README.md)

@@ -14,8 +14,4 @@ Reload the configuration.
 |---|---|
 | `/we reload` | Apply changes to the configuration file. |
 
-## Permission
-
-`worldedit.reload`
-
 [All commands](../README.md)

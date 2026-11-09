@@ -22,8 +22,4 @@ Clicking the ground grows a tree.
 |---|---|
 | `/tree birch` | Plant birch trees. |
 
-## Permission
-
-`worldedit.tool.tree`
-
 [All commands](../README.md)

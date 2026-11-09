@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//inset 1` | Shrink by 1 block on all sides. |
 
-## Permission
-
-`worldedit.selection.inset`
-
 [All commands](../README.md)

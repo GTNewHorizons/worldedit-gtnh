@@ -22,8 +22,4 @@ Also typed: `/thaw`
 |---|---|
 | `//thaw 30` | Melt the snow. |
 
-## Permission
-
-`worldedit.thaw`
-
 [All commands](../README.md)

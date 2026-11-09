@@ -25,8 +25,4 @@ Flags go right after the command, before the arguments.
 | `//size` | Inspect the selection. |
 | `//size -c` | Inspect the clipboard. |
 
-## Permission
-
-`worldedit.selection.size`
-
 [All commands](../README.md)

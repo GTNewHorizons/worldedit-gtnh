@@ -23,8 +23,4 @@ The same as [//pyramid](pyramid.md) with `-h`.
 |---|---|
 | `//hpyramid sandstone 15` | A hollow pyramid. |
 
-## Permission
-
-`worldedit.generation.pyramid`
-
 [All commands](../README.md)

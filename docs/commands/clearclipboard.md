@@ -16,8 +16,4 @@ Frees the memory of a big copy.
 |---|---|
 | `/clearclipboard` | Forget the clipboard. |
 
-## Permission
-
-`worldedit.clipboard.clear`
-
 [All commands](../README.md)

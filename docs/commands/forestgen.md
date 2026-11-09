@@ -22,8 +22,4 @@ Generate a forest around you.
 |---|---|
 | `/forestgen 20 birch 10` | A dense birch forest. |
 
-## Permission
-
-`worldedit.generation.forest`
-
 [All commands](../README.md)

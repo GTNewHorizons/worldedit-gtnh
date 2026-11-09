@@ -16,8 +16,4 @@ While it is off, the wand item acts like a normal item, so you can use the axe w
 |---|---|
 | `/toggleeditwand` | Switch between on and off. |
 
-## Permission
-
-`worldedit.wand.toggle`
-
 [All commands](../README.md)

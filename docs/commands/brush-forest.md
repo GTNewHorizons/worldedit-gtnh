@@ -23,8 +23,4 @@ Plant trees on the surfaces in a shape.
 |---|---|
 | `/br forest sphere 10 5 birch` | Paint a birch forest. |
 
-## Permission
-
-`worldedit.brush.forest`
-
 [All commands](../README.md)

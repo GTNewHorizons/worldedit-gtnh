@@ -25,8 +25,4 @@ Pulls one side of the selection in.
 | `//contract 5` | Pull in the side you look at by 5 blocks. |
 | `//contract 5 2 up` | Pull in the top by 5 and the bottom by 2. |
 
-## Permission
-
-`worldedit.selection.contract`
-
 [All commands](../README.md)

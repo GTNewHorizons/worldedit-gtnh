@@ -21,8 +21,4 @@ Lower terrain by one block where you click.
 |---|---|
 | `/br lower sphere 5` | Dig out a valley. |
 
-## Permission
-
-`worldedit.brush.lower`
-
 [All commands](../README.md)

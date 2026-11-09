@@ -22,8 +22,4 @@ Also typed: `/biomels`
 |---|---|
 | `/biomelist 2` | The second page. |
 
-## Permission
-
-`worldedit.biome.list`
-
 [All commands](../README.md)

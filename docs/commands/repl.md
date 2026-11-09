@@ -22,8 +22,4 @@ Right clicking a block replaces it. Left clicking takes the clicked block as the
 |---|---|
 | `/repl stone` | Replace with stone. |
 
-## Permission
-
-`worldedit.tool.replacer`
-
 [All commands](../README.md)

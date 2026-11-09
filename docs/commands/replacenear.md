@@ -34,8 +34,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//replacenear 10 stone dirt` | Turn nearby stone into dirt. |
 
-## Permission
-
-`worldedit.replacenear`
-
 [All commands](../README.md)

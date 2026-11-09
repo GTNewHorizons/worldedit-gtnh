@@ -16,8 +16,4 @@ Without a selection, it fixes the area around you.
 |---|---|
 | `//fixlighting` | Repair wrong lighting. |
 
-## Permission
-
-`worldedit.light.fix`
-
 [All commands](../README.md)

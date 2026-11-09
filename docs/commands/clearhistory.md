@@ -18,8 +18,4 @@ Also typed: `/clearhistory`
 |---|---|
 | `//clearhistory` | Empty the history. |
 
-## Permission
-
-`worldedit.history.clear`
-
 [All commands](../README.md)

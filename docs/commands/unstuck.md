@@ -18,8 +18,4 @@ Also typed: `/!`
 |---|---|
 | `/unstuck` | Free yourself. |
 
-## Permission
-
-`worldedit.navigation.unstuck`
-
 [All commands](../README.md)

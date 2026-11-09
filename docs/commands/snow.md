@@ -22,8 +22,4 @@ Also typed: `/snow`
 |---|---|
 | `//snow 30` | Let it snow. |
 
-## Permission
-
-`worldedit.snow`
-
 [All commands](../README.md)

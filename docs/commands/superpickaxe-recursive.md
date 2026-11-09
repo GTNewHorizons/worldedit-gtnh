@@ -22,8 +22,4 @@ Also typed: `/superpickaxe recur`
 |---|---|
 | `/sp recursive 10` | Break a whole vein. |
 
-## Permission
-
-`worldedit.superpickaxe.recursive`
-
 [All commands](../README.md)

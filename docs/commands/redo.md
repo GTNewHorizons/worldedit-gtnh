@@ -25,8 +25,4 @@ Also typed: `/redo`
 |---|---|
 | `//redo` | Redo one edit. |
 
-## Permission
-
-`worldedit.history.redo`
-
 [All commands](../README.md)

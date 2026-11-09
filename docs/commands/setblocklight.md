@@ -22,8 +22,4 @@ Also typed: `//setlight`
 |---|---|
 | `//setblocklight 15` | Light up the selection. |
 
-## Permission
-
-`worldedit.light.set`
-
 [All commands](../README.md)

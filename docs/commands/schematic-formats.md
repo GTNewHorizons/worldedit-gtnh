@@ -16,8 +16,4 @@ Also typed: `/schematic f`, `/schematic listformats`
 |---|---|
 | `/schem formats` | Show which formats exist and their names. |
 
-## Permission
-
-`worldedit.schematic.formats`
-
 [All commands](../README.md)

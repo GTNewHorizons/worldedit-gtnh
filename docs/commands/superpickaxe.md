@@ -21,8 +21,4 @@ Also typed: `/pickaxe`, `/sp`
 - [`/superpickaxe recursive`](superpickaxe-recursive.md): Break all connected blocks of the same type.
 - [`//`](superpickaxe-toggle.md): Turn the super pickaxe on or off.
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

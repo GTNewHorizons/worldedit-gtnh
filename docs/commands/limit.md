@@ -23,8 +23,4 @@ The server can set a maximum for this.
 | `//limit 100000` | Allow bigger edits. |
 | `//limit -1` | Back to the default. |
 
-## Permission
-
-`worldedit.limit`
-
 [All commands](../README.md)

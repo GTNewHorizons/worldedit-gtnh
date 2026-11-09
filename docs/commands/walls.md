@@ -22,8 +22,4 @@ Leaves the top and the bottom alone. To include them, use [//faces](faces.md).
 |---|---|
 | `//walls stonebrick` | Build a room's walls. |
 
-## Permission
-
-`worldedit.region.walls`
-
 [All commands](../README.md)

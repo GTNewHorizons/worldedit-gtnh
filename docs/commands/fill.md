@@ -24,8 +24,4 @@ Starts at your [placement position](toggleplace.md) and only goes down and sidew
 |---|---|
 | `//fill water 10 3` | Fill a pond. |
 
-## Permission
-
-`worldedit.fill`
-
 [All commands](../README.md)

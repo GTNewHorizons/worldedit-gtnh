@@ -22,8 +22,4 @@ Also typed: `/asc`
 |---|---|
 | `/ascend 2` | Go up two floors. |
 
-## Permission
-
-`worldedit.navigation.ascend`
-
 [All commands](../README.md)

@@ -23,8 +23,4 @@ Flips across the point where you stood when you copied.
 | `//flip` | Flip along where you look. |
 | `//flip up` | Flip upside down. |
 
-## Permission
-
-`worldedit.clipboard.flip`
-
 [All commands](../README.md)

@@ -10,8 +10,4 @@ The WorldEditCUI client mod sends this by itself, you do not need to type it.
 /worldedit cui
 ```
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

@@ -25,8 +25,4 @@ Rotations add up, and the blocks are only changed when you paste. Positive angle
 | `//rotate 90` | Turn a quarter clockwise. |
 | `//rotate 0 180` | Turn upside down. |
 
-## Permission
-
-`worldedit.clipboard.rotate`
-
 [All commands](../README.md)

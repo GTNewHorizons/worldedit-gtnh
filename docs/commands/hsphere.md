@@ -24,8 +24,4 @@ The same as [//sphere](sphere.md) with `-h`.
 |---|---|
 | `//hsphere glass 10` | A glass ball. |
 
-## Permission
-
-`worldedit.generation.sphere`
-
 [All commands](../README.md)

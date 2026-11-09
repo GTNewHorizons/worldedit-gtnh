@@ -16,8 +16,4 @@ Shows the emitted light and the sky light.
 |---|---|
 | `//getlighting` | Read the light levels. |
 
-## Permission
-
-`worldedit.light.fix`
-
 [All commands](../README.md)

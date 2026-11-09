@@ -22,8 +22,4 @@ Also typed: `/fixlava`
 |---|---|
 | `//fixlava 10` | Stop lava from flowing. |
 
-## Permission
-
-`worldedit.fixlava`
-
 [All commands](../README.md)

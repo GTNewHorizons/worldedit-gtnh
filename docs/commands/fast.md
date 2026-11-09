@@ -23,8 +23,4 @@ Fast mode skips some updates, which makes edits quicker but can leave wrong ligh
 | `//fast` | Switch fast mode. |
 | `//fast off` | Make sure it is off. |
 
-## Permission
-
-`worldedit.fast`
-
 [All commands](../README.md)

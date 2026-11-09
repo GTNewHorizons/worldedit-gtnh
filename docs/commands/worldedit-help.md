@@ -22,8 +22,4 @@ The same as [//help](help.md).
 |---|---|
 | `/we help` | List the commands. |
 
-## Permission
-
-`worldedit.help`
-
 [All commands](../README.md)

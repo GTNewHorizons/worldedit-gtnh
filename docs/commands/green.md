@@ -30,8 +30,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//green 20` | Green the area. |
 
-## Permission
-
-`worldedit.green`
-
 [All commands](../README.md)

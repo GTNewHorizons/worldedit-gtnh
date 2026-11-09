@@ -33,8 +33,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br deform sphere 8 y-=0.2` | Pull terrain up a little. |
 
-## Permission
-
-`worldedit.brush.deform`
-
 [All commands](../README.md)

@@ -30,8 +30,4 @@ Flags go right after the command, before the arguments.
 | `//outset 3` | Grow by 3 blocks on all sides. |
 | `//outset -h 3` | Grow by 3 blocks on the four sides only. |
 
-## Permission
-
-`worldedit.selection.outset`
-
 [All commands](../README.md)

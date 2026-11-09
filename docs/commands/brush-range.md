@@ -20,8 +20,4 @@ Change how far the brush in your hand reaches.
 |---|---|
 | `/range 50` | Reach 50 blocks. |
 
-## Permission
-
-`worldedit.brush.options.range`
-
 [All commands](../README.md)

@@ -24,8 +24,4 @@ Also typed: `/schematic d`
 |---|---|
 | `/schem delete house` | Delete `house.schematic`. |
 
-## Permission
-
-`worldedit.schematic.delete`
-
 [All commands](../README.md)

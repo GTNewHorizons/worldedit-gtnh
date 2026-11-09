@@ -32,8 +32,4 @@ Flags go right after the command, before the arguments.
 
 - You may have to rejoin the game to see the change.
 
-## Permission
-
-`worldedit.biome.set`
-
 [All commands](../README.md)

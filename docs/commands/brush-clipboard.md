@@ -25,8 +25,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br clipboard -a` | Stamp the clipboard without air. |
 
-## Permission
-
-`worldedit.brush.clipboard`
-
 [All commands](../README.md)

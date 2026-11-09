@@ -34,8 +34,4 @@ Flags go right after the command, before the arguments.
 | `//searchitem wool` | Find everything called wool. |
 | `//searchitem -b 35` | Look up ID 35. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

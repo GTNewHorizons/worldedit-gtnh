@@ -24,8 +24,4 @@ Like [//fill](fill.md), but follows the hole wherever it goes, also around corne
 |---|---|
 | `//fillr water 20` | Fill a cave lake. |
 
-## Permission
-
-`worldedit.fill.recursive`
-
 [All commands](../README.md)

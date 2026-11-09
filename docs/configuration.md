@@ -1,6 +1,6 @@
 # Configuration
 
-For server owners. The settings are in `config/worldedit/worldedit.cfg`, and each option explains itself in a comment. After editing the file, apply it with [`/we reload`](commands/worldedit-reload.md). `noDoubleSlash` and the two lists in the `placement` category only apply after a restart.
+For server owners. The settings are in `config/worldedit/worldedit.cfg`, and each option explains itself in a comment. After editing the file, apply it with [`/we reload`](commands/worldedit-reload.md). `noDoubleSlash` and the two lists in the `placement` category only apply after a restart. The `permissions` category is explained in [permissions](permissions.md).
 
 ## Coming from `worldedit.properties`
 

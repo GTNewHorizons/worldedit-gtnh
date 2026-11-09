@@ -25,8 +25,4 @@ Also typed: `//calculate`, `//eval`, `//evaluate`, `//solve`
 | `//calc 2 + 2 * 8` | Prints 18. |
 | `//calc sqrt(1024)` | Prints 32. |
 
-## Permission
-
-`worldedit.calc`
-
 [All commands](../README.md)

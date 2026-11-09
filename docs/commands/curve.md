@@ -31,8 +31,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//curve stone 1` | Draw a stone curve. |
 
-## Permission
-
-`worldedit.region.curve`
-
 [All commands](../README.md)

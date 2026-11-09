@@ -24,8 +24,4 @@ Large edits run over several ticks, so the server keeps running. You get a messa
 | `//set 50%stone,50%dirt` | Fill with a mix of stone and dirt. |
 | `//set air` | Clear the selection. |
 
-## Permission
-
-`worldedit.region.set`
-
 [All commands](../README.md)

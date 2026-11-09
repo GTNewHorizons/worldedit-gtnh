@@ -25,8 +25,4 @@ Also typed: `/gmask`
 | `//gmask !air` | Only change blocks that are not air. |
 | `//gmask` | Turn it off. |
 
-## Permission
-
-`worldedit.global-mask`
-
 [All commands](../README.md)

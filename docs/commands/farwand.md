@@ -16,8 +16,4 @@ Click to select the block you are looking at, however far away.
 |---|---|
 | `/farwand` | Bind it to the item in your hand. |
 
-## Permission
-
-`worldedit.tool.farwand`
-
 [All commands](../README.md)

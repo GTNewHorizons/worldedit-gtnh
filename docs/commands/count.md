@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 | `//count stone` | Count stone of any data value. |
 | `//count wool:14,wool:11` | Count red and blue wool. |
 
-## Permission
-
-`worldedit.analysis.count`
-
 [All commands](../README.md)

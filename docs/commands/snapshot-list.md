@@ -20,8 +20,4 @@ List the available snapshots.
 |---|---|
 | `/snap list 20` | Show the last 20. |
 
-## Permission
-
-`worldedit.snapshots.list`
-
 [All commands](../README.md)

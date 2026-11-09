@@ -22,8 +22,4 @@ Also typed: `/ex`, `/ext`, `/extinguish`
 |---|---|
 | `//ex` | Extinguish nearby fire. |
 
-## Permission
-
-`worldedit.extinguish`
-
 [All commands](../README.md)

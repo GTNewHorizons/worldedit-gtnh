@@ -20,8 +20,4 @@ Grow grass and flowers in your selection.
 |---|---|
 | `//flora 20` | Add plants to a field. |
 
-## Permission
-
-`worldedit.region.flora`
-
 [All commands](../README.md)

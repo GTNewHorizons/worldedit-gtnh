@@ -33,8 +33,4 @@ Flags go right after the command, before the arguments.
 | `//cyl stone 5 10` | A stone pillar. |
 | `//cyl -h stonebrick 8,12 5` | A hollow elliptical tower. |
 
-## Permission
-
-`worldedit.generation.cylinder`
-
 [All commands](../README.md)

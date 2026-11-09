@@ -23,8 +23,4 @@ The brush only changes blocks that match. Use it without a mask to turn it off.
 | `/mask grass` | Only paint over grass. |
 | `/mask` | Turn it off. |
 
-## Permission
-
-`worldedit.brush.options.mask`
-
 [All commands](../README.md)

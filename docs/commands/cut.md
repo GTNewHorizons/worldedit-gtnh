@@ -32,8 +32,4 @@ Flags go right after the command, before the arguments.
 | `//cut` | Cut the selection. |
 | `//cut dirt` | Cut and leave dirt behind. |
 
-## Permission
-
-`worldedit.clipboard.cut`
-
 [All commands](../README.md)

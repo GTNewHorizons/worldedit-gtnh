@@ -22,8 +22,4 @@ Removes the connected pool.
 |---|---|
 | `//drain 20` | Drain a lake. |
 
-## Permission
-
-`worldedit.drain`
-
 [All commands](../README.md)

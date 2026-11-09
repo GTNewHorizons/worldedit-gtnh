@@ -34,8 +34,4 @@ Flags go right after the command, before the arguments.
 | `//sel sphere` | Select with a center and a radius. |
 | `//sel -d extend` | Use the extending selection from now on. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

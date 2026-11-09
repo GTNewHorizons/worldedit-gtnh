@@ -24,8 +24,4 @@ Also typed: `//middle`
 |---|---|
 | `//center glowstone` | Mark the center. |
 
-## Permission
-
-`worldedit.region.center`
-
 [All commands](../README.md)

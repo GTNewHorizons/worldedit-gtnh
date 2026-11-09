@@ -23,8 +23,4 @@ Also typed: `/removeabove`
 |---|---|
 | `//removeabove 5` | Clear a column above you. |
 
-## Permission
-
-`worldedit.removeabove`
-
 [All commands](../README.md)

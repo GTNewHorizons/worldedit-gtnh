@@ -16,8 +16,4 @@ Clicking a block changes its data value, which turns or recolors it.
 |---|---|
 | `/cycler` | Bind it to the item in your hand. |
 
-## Permission
-
-`worldedit.tool.data-cycler`
-
 [All commands](../README.md)

@@ -18,8 +18,4 @@ Each of these can also be typed without `tool`, so `//tool info` and `/info` are
 /tool lrbuild <leftclick> <rightclick>
 ```
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

@@ -20,8 +20,4 @@ Choose a snapshot by name.
 |---|---|
 | `/snap use latest` | Use the newest. |
 
-## Permission
-
-`worldedit.snapshots.restore`
-
 [All commands](../README.md)

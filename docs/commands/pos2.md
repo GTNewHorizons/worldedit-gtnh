@@ -23,8 +23,4 @@ Sets position 2 to the block you are standing in, or to the coordinates you type
 | `//pos2` | Use the block you stand in. |
 | `//pos2 120,80,-180` | Use exact coordinates. |
 
-## Permission
-
-`worldedit.selection.pos`
-
 [All commands](../README.md)

@@ -16,8 +16,4 @@ Also shows the region file of each.
 |---|---|
 | `/listchunks` | List them. |
 
-## Permission
-
-`worldedit.listchunks`
-
 [All commands](../README.md)

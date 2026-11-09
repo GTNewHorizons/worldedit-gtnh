@@ -26,8 +26,4 @@ Flags go right after the command, before the arguments.
 | `//distr` | List block types. |
 | `//distr -d` | List block types with their data values. |
 
-## Permission
-
-`worldedit.analysis.distr`
-
 [All commands](../README.md)

@@ -20,8 +20,4 @@ Choose the last snapshot before a date.
 |---|---|
 | `/snap before yesterday` | The last one before yesterday. |
 
-## Permission
-
-`worldedit.snapshots.restore`
-
 [All commands](../README.md)

@@ -18,8 +18,4 @@ Also typed: `/j`
 |---|---|
 | `/jumpto` | Jump to where you look. |
 
-## Permission
-
-`worldedit.navigation.jumpto.command`
-
 [All commands](../README.md)

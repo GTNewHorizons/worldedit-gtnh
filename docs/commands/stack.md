@@ -33,8 +33,4 @@ Flags go right after the command, before the arguments.
 | `//stack 5` | Make 5 copies towards where you look. |
 | `//stack -a 3 up` | Make 3 copies upwards without pasting air. |
 
-## Permission
-
-`worldedit.region.stack`
-
 [All commands](../README.md)

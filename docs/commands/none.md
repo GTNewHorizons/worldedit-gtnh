@@ -14,8 +14,4 @@ Unbind the tool from the item in your hand.
 |---|---|
 | `/none` | The item goes back to normal. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

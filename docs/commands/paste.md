@@ -27,8 +27,4 @@ Flags go right after the command, before the arguments.
 | `//paste` | Paste relative to you. |
 | `//paste -as` | Paste without air and select the result. |
 
-## Permission
-
-`worldedit.clipboard.paste`
-
 [All commands](../README.md)

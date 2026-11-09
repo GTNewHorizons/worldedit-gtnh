@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br smooth 5` | Smooth with a bigger brush. |
 
-## Permission
-
-`worldedit.brush.smooth`
-
 [All commands](../README.md)

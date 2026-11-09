@@ -33,8 +33,4 @@ Flags go right after the command, before the arguments.
 | `//chunk -c 3,-2` | Select chunk 3,-2. |
 | `//chunk -s` | Grow the selection to whole chunks. |
 
-## Permission
-
-`worldedit.selection.chunk`
-
 [All commands](../README.md)

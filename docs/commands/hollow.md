@@ -24,8 +24,4 @@ Keeps a shell and clears the inside.
 | `//hollow` | Clear the inside. |
 | `//hollow 2 water` | Keep a shell of 2 and fill the inside with water. |
 
-## Permission
-
-`worldedit.region.hollow`
-
 [All commands](../README.md)

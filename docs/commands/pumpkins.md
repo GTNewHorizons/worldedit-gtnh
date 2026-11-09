@@ -20,8 +20,4 @@ Generate pumpkin patches around you.
 |---|---|
 | `/pumpkins 15` | Scatter pumpkins. |
 
-## Permission
-
-`worldedit.generation.pumpkins`
-
 [All commands](../README.md)

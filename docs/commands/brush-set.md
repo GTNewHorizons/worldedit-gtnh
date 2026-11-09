@@ -22,8 +22,4 @@ Fill a shape where you click.
 |---|---|
 | `/br set sphere 5 stone` | Paint stone balls. |
 
-## Permission
-
-`worldedit.brush.set`
-
 [All commands](../README.md)

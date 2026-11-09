@@ -24,8 +24,4 @@ Flags go right after the command, before the arguments.
 | `/biomeinfo` | The biomes in your selection. |
 | `/biomeinfo -p` | The biome where you stand. |
 
-## Permission
-
-`worldedit.biome.info`
-
 [All commands](../README.md)

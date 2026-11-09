@@ -16,8 +16,4 @@ Also shows the region file that holds it.
 |---|---|
 | `/chunkinfo` | Show the chunk. |
 
-## Permission
-
-`worldedit.chunkinfo`
-
 [All commands](../README.md)

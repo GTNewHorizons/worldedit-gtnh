@@ -26,8 +26,4 @@ Also typed: `/we`
 - [`/worldedit tz`](worldedit-tz.md): Set your timezone.
 - [`/worldedit help`](worldedit-help.md): Show the commands and how to use them.
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

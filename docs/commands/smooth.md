@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 | `//smooth 3` | Smooth three times. |
 | `//smooth -n` | Smooth without being disturbed by what stands on the terrain. |
 
-## Permission
-
-`worldedit.region.smooth`
-
 [All commands](../README.md)

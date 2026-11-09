@@ -27,8 +27,4 @@ Apply a function to the surfaces in a shape.
 |---|---|
 | `/br paint sphere 8 30 set grass` | Scatter grass on surfaces. |
 
-## Permission
-
-`worldedit.brush.paint`
-
 [All commands](../README.md)

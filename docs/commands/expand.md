@@ -29,8 +29,4 @@ Pushes the selection out in a direction. With `vert` or `vertical` it stretches 
 | `//expand 10 5 north` | Grow 10 blocks north and 5 blocks south. |
 | `//expand vert` | Stretch from bedrock to the top of the world. |
 
-## Permission
-
-`worldedit.selection.expand`
-
 [All commands](../README.md)

@@ -21,8 +21,4 @@ Raise terrain by one block where you click.
 |---|---|
 | `/br raise sphere 5` | Build up a hill. |
 
-## Permission
-
-`worldedit.brush.raise`
-
 [All commands](../README.md)

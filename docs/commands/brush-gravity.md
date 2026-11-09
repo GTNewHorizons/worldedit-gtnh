@@ -30,8 +30,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br gravity 8` | Drop floating blocks. |
 
-## Permission
-
-`worldedit.brush.gravity`
-
 [All commands](../README.md)

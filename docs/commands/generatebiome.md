@@ -40,8 +40,4 @@ Flags go right after the command, before the arguments.
 
 - You may have to rejoin the game to see a biome change.
 
-## Permission
-
-`worldedit.generation.shape or worldedit.biome.set`
-
 [All commands](../README.md)

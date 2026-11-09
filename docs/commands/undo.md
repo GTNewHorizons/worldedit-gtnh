@@ -27,8 +27,4 @@ Also typed: `/undo`
 | `//undo 3` | Undo the last three. |
 | `//undo 1 Notch` | Undo the last edit of another player. |
 
-## Permission
-
-`worldedit.history.undo`
-
 [All commands](../README.md)

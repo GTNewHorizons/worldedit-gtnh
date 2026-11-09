@@ -23,8 +23,4 @@ Also typed: `/removenear`
 |---|---|
 | `//removenear torch 20` | Remove the torches nearby. |
 
-## Permission
-
-`worldedit.removenear`
-
 [All commands](../README.md)

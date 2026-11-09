@@ -25,8 +25,4 @@ Also typed: `/,`
 | `//` | Switch the super pickaxe. |
 | `// off` | Make sure it is off. |
 
-## Permission
-
-`worldedit.superpickaxe`
-
 [All commands](../README.md)

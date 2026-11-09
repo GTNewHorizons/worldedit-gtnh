@@ -22,8 +22,4 @@ Typed with one slash. The double slash `//size` is [something else](size.md).
 |---|---|
 | `/size 8` | Use a bigger brush. |
 
-## Permission
-
-`worldedit.brush.options.size`
-
 [All commands](../README.md)

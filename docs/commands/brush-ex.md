@@ -22,8 +22,4 @@ Also typed: `/brush extinguish`
 |---|---|
 | `/br ex 10` | A fire extinguisher. |
 
-## Permission
-
-`worldedit.brush.ex`
-
 [All commands](../README.md)

@@ -31,8 +31,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/ceil` | Go up to the ceiling. |
 
-## Permission
-
-`worldedit.navigation.ceiling`
-
 [All commands](../README.md)

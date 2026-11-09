@@ -16,8 +16,4 @@ These say how modded blocks turn when a copy is rotated.
 |---|---|
 | `/we reloadmappings` | Apply changes to the mapping files. |
 
-## Permission
-
-`worldedit.reload`
-
 [All commands](../README.md)

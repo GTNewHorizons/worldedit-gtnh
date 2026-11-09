@@ -34,8 +34,4 @@ Flags go right after the command, before the arguments.
 | `//move -a 10 north` | Move a tree or a ship next to something else without cutting a box out of it. |
 | `//move 3 north stone` | Move 3 blocks north and leave stone behind. |
 
-## Permission
-
-`worldedit.region.move`
-
 [All commands](../README.md)

@@ -22,8 +22,4 @@ Used for reading the dates of [snapshots](snapshot.md).
 |---|---|
 | `/we tz UTC` | Use UTC. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

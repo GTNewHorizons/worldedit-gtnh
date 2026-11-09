@@ -35,8 +35,4 @@ Flags go right after the command, before the arguments.
 | `//replace stone dirt` | Turn stone into dirt. |
 | `//replace stone,cobblestone 50%dirt,50%sand` | Replace two blocks with a mix. |
 
-## Permission
-
-`worldedit.region.replace`
-
 [All commands](../README.md)

@@ -39,8 +39,4 @@ Flags go right after the command, before the arguments.
 | `/butcher 30` | Kill hostile mobs within 30 blocks. |
 | `/butcher -a 30` | Animals too. |
 
-## Permission
-
-`worldedit.butcher, and a permission such as worldedit.butcher.pets for the flags`
-
 [All commands](../README.md)

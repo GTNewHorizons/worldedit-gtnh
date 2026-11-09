@@ -22,8 +22,4 @@ Also typed: `/fixwater`
 |---|---|
 | `//fixwater 10` | Stop water from flowing. |
 
-## Permission
-
-`worldedit.fixwater`
-
 [All commands](../README.md)

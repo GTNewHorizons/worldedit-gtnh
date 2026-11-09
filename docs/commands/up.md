@@ -31,8 +31,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/up 20` | Rise 20 blocks. |
 
-## Permission
-
-`worldedit.navigation.up`
-
 [All commands](../README.md)

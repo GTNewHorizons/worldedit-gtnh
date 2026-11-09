@@ -20,8 +20,4 @@ Put a layer on top of the blocks in your selection.
 |---|---|
 | `//overlay grass` | Put grass on top of everything. |
 
-## Permission
-
-`worldedit.region.overlay`
-
 [All commands](../README.md)

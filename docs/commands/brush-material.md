@@ -22,8 +22,4 @@ Also typed: `/material`
 |---|---|
 | `/mat stone` | Paint with stone from now on. |
 
-## Permission
-
-`worldedit.brush.options.material`
-
 [All commands](../README.md)

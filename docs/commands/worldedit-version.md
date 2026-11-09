@@ -16,8 +16,4 @@ Also typed: `/worldedit ver`
 |---|---|
 | `/we version` | Show the version and the platform. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

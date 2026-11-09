@@ -32,8 +32,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br cylinder stone 3 5` | Paint stone pillars. |
 
-## Permission
-
-`worldedit.brush.cylinder`
-
 [All commands](../README.md)

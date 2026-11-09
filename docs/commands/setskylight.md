@@ -20,8 +20,4 @@ Set the sky light in your selection.
 |---|---|
 | `//setskylight 15` | Set full sky light. |
 
-## Permission
-
-`worldedit.light.set`
-
 [All commands](../README.md)

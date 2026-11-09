@@ -20,8 +20,4 @@ Break a cube of blocks.
 |---|---|
 | `/sp area 3` | Break everything within 3 blocks. |
 
-## Permission
-
-`worldedit.superpickaxe.area`
-
 [All commands](../README.md)

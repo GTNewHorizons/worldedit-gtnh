@@ -25,8 +25,4 @@ Also typed: `/flood`
 |---|---|
 | `/floodfill stone 10` | Flood fill with stone. |
 
-## Permission
-
-`worldedit.tool.flood-fill`
-
 [All commands](../README.md)

@@ -50,8 +50,4 @@ Also typed: `/br`
 - [`/range`](brush-range.md): Change how far the brush in your hand reaches.
 - [`/size`](brush-size.md): Change the size of the brush in your hand.
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

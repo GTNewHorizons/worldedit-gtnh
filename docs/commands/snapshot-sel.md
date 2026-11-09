@@ -20,8 +20,4 @@ Choose a snapshot by its number in the list.
 |---|---|
 | `/snap sel 2` | Use the second one. |
 
-## Permission
-
-`worldedit.snapshots.restore`
-
 [All commands](../README.md)

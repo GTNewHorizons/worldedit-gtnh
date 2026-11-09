@@ -34,7 +34,7 @@ Big edits run over several ticks, so the server keeps going. You get a message w
 - [Tree types](trees.md): what to plant
 - [Expressions](expressions.md): math formulas
 
-Server owners can change the limits and defaults, see [configuration](configuration.md).
+Server owners can change the limits and defaults, see [configuration](configuration.md), and choose who can use what, see [permissions](permissions.md).
 
 ## All commands
 

@@ -40,8 +40,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br butcher 10` | Kill hostile mobs at a distance. |
 
-## Permission
-
-`worldedit.brush.butcher`
-
 [All commands](../README.md)

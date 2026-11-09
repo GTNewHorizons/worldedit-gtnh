@@ -16,8 +16,4 @@ Gives you the wand item, a wooden axe unless the server changed it. Left click s
 |---|---|
 | `//wand` | Get the wand. |
 
-## Permission
-
-`worldedit.wand`
-
 [All commands](../README.md)

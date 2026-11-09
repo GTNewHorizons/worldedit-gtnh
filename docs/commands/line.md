@@ -32,8 +32,4 @@ Flags go right after the command, before the arguments.
 | `//line stone` | Draw a thin stone line. |
 | `//line -h glass 3` | Draw a hollow glass tube. |
 
-## Permission
-
-`worldedit.region.line`
-
 [All commands](../README.md)

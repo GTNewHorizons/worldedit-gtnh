@@ -22,8 +22,4 @@ Also typed: `/desc`
 |---|---|
 | `/descend` | Go down one floor. |
 
-## Permission
-
-`worldedit.navigation.descend`
-
 [All commands](../README.md)

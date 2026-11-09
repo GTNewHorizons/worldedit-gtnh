@@ -26,8 +26,4 @@ Flags go right after the command, before the arguments.
 | `//copy` | Copy the selection. |
 | `//copy -m !air` | Copy everything that is not air. |
 
-## Permission
-
-`worldedit.clipboard.copy`
-
 [All commands](../README.md)

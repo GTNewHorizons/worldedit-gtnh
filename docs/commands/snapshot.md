@@ -24,8 +24,4 @@ Also typed: `/snap`
 - [`/snapshot before`](snapshot-before.md): Choose the last snapshot before a date.
 - [`/snapshot after`](snapshot-after.md): Choose the first snapshot after a date.
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

@@ -37,8 +37,4 @@ Flags go right after the command, before the arguments.
 | `//generate stone x*x+y*y+z*z<1` | A sphere that fills the selection. |
 | `//generate -h glass x*x+z*z<1` | A hollow cylinder. |
 
-## Permission
-
-`worldedit.generation.shape`
-
 [All commands](../README.md)

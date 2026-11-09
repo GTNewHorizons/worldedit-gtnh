@@ -16,8 +16,4 @@ Clicking a floating tree removes it.
 |---|---|
 | `/deltree` | Bind it to the item in your hand. |
 
-## Permission
-
-`worldedit.tool.deltree`
-
 [All commands](../README.md)

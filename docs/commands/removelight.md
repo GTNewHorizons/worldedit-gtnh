@@ -18,8 +18,4 @@ Also typed: `//removelighting`
 |---|---|
 | `//removelight` | Clear the light data. |
 
-## Permission
-
-`worldedit.light.remove`
-
 [All commands](../README.md)

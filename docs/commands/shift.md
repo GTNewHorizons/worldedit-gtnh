@@ -24,8 +24,4 @@ Only the selection moves. To move the blocks too, use [//move](move.md).
 | `//shift 10` | Move the selection 10 blocks towards where you look. |
 | `//shift 5 up` | Move the selection 5 blocks up. |
 
-## Permission
-
-`worldedit.selection.shift`
-
 [All commands](../README.md)

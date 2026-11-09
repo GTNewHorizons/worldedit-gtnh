@@ -34,8 +34,4 @@ Flags go right after the command, before the arguments.
 | `//sphere -h glass 10 yes` | A glass dome shell standing on your position. |
 | `//sphere stone 4,8,4` | A tall ellipsoid. |
 
-## Permission
-
-`worldedit.generation.sphere`
-
 [All commands](../README.md)

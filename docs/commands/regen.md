@@ -16,8 +16,4 @@ Blocks outside the selection are kept, but mobs and other entities in the affect
 |---|---|
 | `//regen` | Restore the original terrain. |
 
-## Permission
-
-`worldedit.regen`
-
 [All commands](../README.md)

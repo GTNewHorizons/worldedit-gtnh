@@ -23,8 +23,4 @@ Place and remove blocks at a distance.
 |---|---|
 | `/lrbuild air stone` | Left click removes, right click builds. |
 
-## Permission
-
-`worldedit.tool.lrbuild`
-
 [All commands](../README.md)

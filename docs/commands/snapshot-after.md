@@ -20,8 +20,4 @@ Choose the first snapshot after a date.
 |---|---|
 | `/snap after 2 days ago` | The first one in the last two days. |
 
-## Permission
-
-`worldedit.snapshots.restore`
-
 [All commands](../README.md)

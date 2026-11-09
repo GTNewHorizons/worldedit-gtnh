@@ -14,8 +14,4 @@ Break one block at a time.
 |---|---|
 | `/sp single` | Instantly break the block you hit. |
 
-## Permission
-
-`worldedit.superpickaxe`
-
 [All commands](../README.md)

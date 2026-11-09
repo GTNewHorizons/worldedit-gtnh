@@ -29,8 +29,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//pyramid sandstone 15` | A sandstone pyramid. |
 
-## Permission
-
-`worldedit.generation.pyramid`
-
 [All commands](../README.md)

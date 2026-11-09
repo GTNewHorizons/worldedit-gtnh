@@ -24,8 +24,4 @@ The same as [//cyl](cyl.md) with `-h`.
 |---|---|
 | `//hcyl stonebrick 8 20` | A round tower. |
 
-## Permission
-
-`worldedit.generation.cylinder`
-
 [All commands](../README.md)

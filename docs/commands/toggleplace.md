@@ -18,8 +18,4 @@ Also typed: `/toggleplace`
 |---|---|
 | `//toggleplace` | Switch the placement position. |
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

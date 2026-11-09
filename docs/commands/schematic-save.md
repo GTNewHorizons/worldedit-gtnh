@@ -23,8 +23,4 @@ Also typed `//save`. Rotations and flips of the clipboard are saved too.
 |---|---|
 | `/schem save house` | Save `house.schematic`. |
 
-## Permission
-
-`worldedit.clipboard.save or worldedit.schematic.save`
-
 [All commands](../README.md)

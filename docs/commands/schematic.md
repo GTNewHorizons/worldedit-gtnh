@@ -24,8 +24,4 @@ Also typed: `/schem`
 - [`/schematic formats`](schematic-formats.md): List the schematic formats.
 - [`/schematic list`](schematic-list.md): List the saved schematics.
 
-## Permission
-
-None needed.
-
 [All commands](../README.md)

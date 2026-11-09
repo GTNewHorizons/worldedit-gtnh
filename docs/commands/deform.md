@@ -32,8 +32,4 @@ Flags go right after the command, before the arguments.
 | `//deform y-=0.2` | Shift the contents of the selection. |
 | `//deform -r y=y+sin(x/10)*3` | Add a wave along the x axis. |
 
-## Permission
-
-`worldedit.region.deform`
-
 [All commands](../README.md)

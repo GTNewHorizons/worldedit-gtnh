@@ -24,8 +24,4 @@ Also typed: `/rem`, `/rement`
 | `/remove items 20` | Clear dropped items. |
 | `/remove all -1` | Remove all of these everywhere it is loaded. |
 
-## Permission
-
-`worldedit.remove`
-
 [All commands](../README.md)

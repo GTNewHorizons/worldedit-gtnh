@@ -27,8 +27,4 @@ Apply a function to every block of a shape.
 | `/br apply sphere 5 forest oak` | Grow oaks wherever they fit. |
 | `/br apply sphere 5 item minecraft:dye:15` | Bone meal everything. |
 
-## Permission
-
-`worldedit.brush.apply`
-
 [All commands](../README.md)

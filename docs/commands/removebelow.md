@@ -23,8 +23,4 @@ Also typed: `/removebelow`
 |---|---|
 | `//removebelow 5` | Dig a shaft. |
 
-## Permission
-
-`worldedit.removebelow`
-
 [All commands](../README.md)

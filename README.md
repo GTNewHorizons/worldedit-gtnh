@@ -12,7 +12,8 @@ See the [command documentation](docs/README.md) for everything you can type.
 ## Configuration
 
 Settings are in `config/worldedit/worldedit.cfg`, see [configuration](docs/configuration.md). An old
-`worldedit.properties` is imported once on first start.
+`worldedit.properties` is imported once on first start. Who can use what is described in
+[permissions](docs/permissions.md).
 
 ## Adding or changing a command
 

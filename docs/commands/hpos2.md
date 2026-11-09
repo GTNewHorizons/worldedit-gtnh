@@ -16,8 +16,4 @@ Handy for corners you can not reach. It looks up to 300 blocks away.
 |---|---|
 | `//hpos2` | Select the block in your crosshair as position 2. |
 
-## Permission
-
-`worldedit.selection.hpos`
-
 [All commands](../README.md)

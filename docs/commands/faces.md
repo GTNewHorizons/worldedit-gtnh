@@ -24,8 +24,4 @@ Also typed: `//outline`
 |---|---|
 | `//faces glass` | Build a glass box. |
 
-## Permission
-
-`worldedit.region.faces`
-
 [All commands](../README.md)

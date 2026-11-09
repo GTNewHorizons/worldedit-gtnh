@@ -31,8 +31,4 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `/br sphere stone 5` | Paint stone balls. |
 
-## Permission
-
-`worldedit.brush.sphere`
-
 [All commands](../README.md)
