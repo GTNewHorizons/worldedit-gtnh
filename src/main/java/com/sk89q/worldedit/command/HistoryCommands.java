@@ -22,6 +22,8 @@ import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
 import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
 import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.command.ICommandSender;
@@ -34,6 +36,7 @@ import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
 
@@ -101,9 +104,10 @@ public class HistoryCommands {
      * Hand a history step to the scheduler, which may spread it over several server ticks.
      */
     private void schedule(final Player player, final EditSession writer, Operation operation, final String message,
-        final String command, final Runnable giveBackPlace) {
+        final String command, final Runnable giveBackPlace, final boolean[] batchFailed) {
+        final SkippableStep step = new SkippableStep(operation, batchFailed);
         OperationScheduler scheduler = worldEdit.getOperationScheduler();
-        scheduler.submit(player, writer, operation, new OperationCompletion() {
+        scheduler.submit(player, writer, step, new OperationCompletion() {
 
             @Override
             public void onCancelled(boolean started) {
@@ -120,13 +124,22 @@ public class HistoryCommands {
 
             @Override
             public void onSuccess() {
-                player.print(message);
+                if (step.skipped) {
+                    giveBackPlace.run();
+                } else {
+                    player.print(message);
+                }
             }
 
             @Override
             public void onFailure(WorldEditException e) {
+                // Like a cancel: the step didn't finish, so it doesn't count, and the steps after it in
+                // the same command would leave the history out of order if they went ahead.
+                batchFailed[0] = true;
+                giveBackPlace.run();
                 String error = e.getMessage();
                 player.printError(error != null ? error : "The operation could not be completed.");
+                player.printError("Run " + command + " again to retry.");
             }
         });
         scheduler.whenFinished(player, writer, new Runnable() {
@@ -161,6 +174,7 @@ public class HistoryCommands {
         }
 
         int times = Math.max(1, requestedTimes);
+        boolean[] batchFailed = { false };
         for (int i = 0; i < times; ++i) {
             LocalSession target = other == null ? session : findOther(player, other, "undo");
             if (target == null) {
@@ -181,7 +195,7 @@ public class HistoryCommands {
                 public void run() {
                     history.cancelStepBack();
                 }
-            });
+            }, batchFailed);
         }
     }
 
@@ -195,6 +209,7 @@ public class HistoryCommands {
         }
 
         int times = Math.max(1, requestedTimes);
+        boolean[] batchFailed = { false };
         for (int i = 0; i < times; ++i) {
             LocalSession target = other == null ? session : findOther(player, other, "redo");
             if (target == null) {
@@ -215,7 +230,7 @@ public class HistoryCommands {
                 public void run() {
                     history.cancelStepForward();
                 }
-            });
+            }, batchFailed);
         }
     }
 
@@ -223,4 +238,50 @@ public class HistoryCommands {
         session.clearHistory();
         player.print("History cleared.");
     }
+
+    /**
+     * One step of an undo or redo that does nothing if an earlier step of the same command failed.
+     */
+    private static final class SkippableStep implements Operation {
+
+        private final Operation original;
+        private final boolean[] batchFailed;
+        private Operation current;
+        private boolean checked;
+        private boolean skipped;
+
+        private SkippableStep(Operation operation, boolean[] batchFailed) {
+            this.original = operation;
+            this.current = operation;
+            this.batchFailed = batchFailed;
+        }
+
+        @Override
+        public Operation resume(RunContext run) throws WorldEditException {
+            if (!checked) {
+                checked = true;
+                if (batchFailed[0]) {
+                    skipped = true;
+                    current = null;
+                }
+            }
+            if (current != null) {
+                current = current.resume(run);
+            }
+            return current != null ? this : null;
+        }
+
+        @Override
+        public void cancel() {
+            if (current != null) {
+                current.cancel();
+            }
+        }
+
+        @Override
+        public void addStatusMessages(List<String> messages) {
+            original.addStatusMessages(messages);
+        }
+    }
+
 }

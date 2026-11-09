@@ -49,6 +49,7 @@ public class CancelledHistoryTest {
     private World world;
     private LocalSession session;
     private HistoryCommands commands;
+    private boolean writesFail;
 
     @Before
     public void setUp() throws Exception {
@@ -71,6 +72,9 @@ public class CancelledHistoryTest {
 
             @Override
             public Boolean answer(InvocationOnMock call) {
+                if (writesFail) {
+                    throw new IllegalStateException("expected by this test");
+                }
                 blocks.put(key(call.<Vector>getArgument(0)), call.<BaseBlock>getArgument(1));
                 return true;
             }
@@ -207,6 +211,59 @@ public class CancelledHistoryTest {
         commands.redo(player, session, 1, null);
         runToCompletion();
         assertEquals(SIDE * SIDE * SIDE, count(3));
+    }
+
+    @Test
+    public void aFailedUndoCanBeRetried() throws Exception {
+        writesFail = true;
+        commands.undo(player, session, 1, null);
+        runToCompletion();
+        writesFail = false;
+
+        verify(player).printError(contains("//undo again"));
+        assertEquals(SIDE * SIDE * SIDE, count(3));
+
+        commands.undo(player, session, 1, null);
+        runToCompletion();
+        assertEquals(SIDE * SIDE * SIDE, count(1));
+    }
+
+    @Test
+    public void aFailedRedoCanBeRetried() throws Exception {
+        commands.undo(player, session, 1, null);
+        runToCompletion();
+
+        writesFail = true;
+        commands.redo(player, session, 1, null);
+        runToCompletion();
+        writesFail = false;
+
+        verify(player).printError(contains("//redo again"));
+        assertEquals(SIDE * SIDE * SIDE, count(1));
+
+        commands.redo(player, session, 1, null);
+        runToCompletion();
+        assertEquals(SIDE * SIDE * SIDE, count(3));
+    }
+
+    @Test
+    public void aFailedStepStopsTheRestOfItsBatch() throws Exception {
+        session.remember(filledEdit(3, 5));
+
+        writesFail = true;
+        commands.undo(player, session, 2, null);
+        runToCompletion();
+        writesFail = false;
+        assertEquals(SIDE * SIDE * SIDE, count(5));
+
+        // Both steps gave their places back, so this undoes the newest edit first again.
+        commands.undo(player, session, 1, null);
+        runToCompletion();
+        assertEquals(SIDE * SIDE * SIDE, count(3));
+
+        commands.undo(player, session, 1, null);
+        runToCompletion();
+        assertEquals(SIDE * SIDE * SIDE, count(1));
     }
 
     @Test
