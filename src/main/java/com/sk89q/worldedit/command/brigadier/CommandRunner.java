@@ -35,6 +35,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extension.platform.CommandManager;
+import com.sk89q.worldedit.extension.platform.permission.PermissionNodes;
 import com.sk89q.worldedit.forge.ForgeWorldEdit;
 import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
@@ -80,6 +81,9 @@ public final class CommandRunner {
      * @param handler    what the command does
      */
     public static Command<ICommandSender> run(String permission, LogMode logMode, Handler handler) {
+        if (permission != null) {
+            PermissionNodes.declare(permission);
+        }
         return ctx -> execute(ctx, permission, logMode, handler);
     }
 

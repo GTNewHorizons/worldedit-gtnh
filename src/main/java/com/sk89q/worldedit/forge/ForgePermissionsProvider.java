@@ -25,6 +25,11 @@ public interface ForgePermissionsProvider {
 
     public boolean hasPermission(EntityPlayerMP player, String permission);
 
+    /**
+     * Tell the permission system about every node WorldEdit declared, once the commands are registered.
+     */
+    default void registerNodes() {}
+
     public static class VanillaPermissionsProvider implements ForgePermissionsProvider {
 
         private ForgePlatform platform;

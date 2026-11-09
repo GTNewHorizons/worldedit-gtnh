@@ -48,6 +48,7 @@ import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
 import com.sk89q.worldedit.forge.compat.ModRotationBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
+import com.sk89q.worldedit.forge.compat.ServerUtilitiesPermissionsProvider;
 import com.sk89q.worldedit.forge.compat.rotation.RotationMappings;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
@@ -75,7 +76,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
     name = "WorldEdit",
     version = WETags.VERSION,
     acceptableRemoteVersions = "*",
-    dependencies = "required-after:gtnhlib;after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
+    dependencies = "required-after:gtnhlib;after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks;after:serverutilities")
 public class ForgeWorldEdit {
 
     public static Logger logger;
@@ -168,11 +169,15 @@ public class ForgeWorldEdit {
         WorldEdit.getInstance()
             .getPlatformManager()
             .register(platform);
-        this.provider = new ForgePermissionsProvider.VanillaPermissionsProvider(platform);
+        final ForgePlatform forgePlatform = platform;
+        this.provider = Loader.isModLoaded("serverutilities")
+            ? new ServerUtilitiesPermissionsProvider(forgePlatform::getConfiguration)
+            : new ForgePermissionsProvider.VanillaPermissionsProvider(platform);
 
         // GTNHLib creates a new command dispatcher for each server, right before this. Not any later: on Thermos it
         // wraps the registered commands when the server is starting.
         CommandRegistry.registerAll(WorldEdit.getInstance(), config.noDoubleSlash);
+        provider.registerNodes();
 
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
