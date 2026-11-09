@@ -174,6 +174,36 @@ public class ScheduledHistoryTest {
     }
 
     @Test
+    public void anImmediateCommandsBlocksLandOverLaterTicks() throws Exception {
+        EditSession edit = newSession();
+        for (int x = 0; x < SIDE; x++) {
+            for (int z = 0; z < SIDE; z++) {
+                for (int y = 0; y < SIDE; y++) {
+                    edit.setBlock(new Vector(x, y, z), new BaseBlock(7));
+                }
+            }
+        }
+        final int[] finalized = { 0 };
+
+        scheduler.whenFinished(player, edit, new Runnable() {
+
+            @Override
+            public void run() {
+                finalized[0]++;
+            }
+        });
+
+        assertEquals(0, get(new Vector(0, 0, 0)).getType());
+        assertEquals(0, finalized[0]);
+
+        runToCompletion();
+
+        assertFilledWith(7);
+        assertEquals(1, finalized[0]);
+        assertFalse(edit.hasQueuedBlocks());
+    }
+
+    @Test
     public void undoAndRedoResumeUntilEverythingIsBack() throws Exception {
         EditSession edit = filledEdit(1, 3);
         assertFilledWith(3);

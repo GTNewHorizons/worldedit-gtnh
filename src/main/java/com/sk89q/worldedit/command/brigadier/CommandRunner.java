@@ -122,6 +122,7 @@ public final class CommandRunner {
                 // queued for this session finishes.
                 worldEdit.getOperationScheduler()
                     .whenFinished(
+                        actor,
                         editSession,
                         new SessionFinalizer(
                             worldEdit,

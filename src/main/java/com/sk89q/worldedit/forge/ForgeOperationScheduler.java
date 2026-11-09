@@ -97,19 +97,46 @@ public class ForgeOperationScheduler implements OperationScheduler {
     }
 
     @Override
-    public void whenFinished(EditSession editSession, Runnable task) {
+    public void whenFinished(final Actor owner, EditSession editSession, Runnable task) {
+        checkNotNull(owner);
         checkNotNull(editSession);
         checkNotNull(task);
 
         Job job = find(editSession);
-        if (job == null) {
-            // Nothing queued for this session, so it was an ordinary synchronous command.
+        if (job != null) {
+            job.finalizer = task;
+            return;
+        }
+
+        if (!editSession.hasQueuedBlocks()) {
+            // Nothing to write, so there is no point waiting a tick.
             editSession.flushQueue();
             task.run();
             return;
         }
 
+        if (queue.size() >= MAX_QUEUED) {
+            finishEverything();
+            editSession.flushQueue();
+            task.run();
+            return;
+        }
+
+        // The command did its own work straight away but only queued its blocks, so writing them is
+        // spread over ticks like any other edit.
+        job = new Job(owner.getUniqueId(), editSession, null, new OperationCompletion() {
+
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(WorldEditException e) {
+                String message = e.getMessage();
+                owner.printError(message != null ? message : "The operation could not be completed.");
+            }
+        });
         job.finalizer = task;
+        queue.offer(job);
     }
 
     @Override

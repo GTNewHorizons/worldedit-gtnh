@@ -288,6 +288,15 @@ public class EditSession implements Extent {
     }
 
     /**
+     * Whether blocks are waiting in the queue, so that flushing would write to the world.
+     *
+     * @return true if blocks are waiting
+     */
+    public boolean hasQueuedBlocks() {
+        return reorderExtent.hasPendingBlocks();
+    }
+
+    /**
      * Throw away all blocks waiting in the queue without writing them.
      */
     public void discardQueue() {

@@ -67,7 +67,7 @@ public class HistoryCommandsTest {
         commands.undo(player, session, 1, null);
 
         verify(scheduler).submit(eq(player), eq(writer), eq(operation), any());
-        verify(scheduler).whenFinished(eq(writer), any());
+        verify(scheduler).whenFinished(eq(player), eq(writer), any());
         verify(player, never()).print(anyString());
     }
 

@@ -179,6 +179,67 @@ public class ForgeOperationSchedulerTest {
     }
 
     @Test
+    public void anImmediateCommandsQueuedBlocksAreWrittenOnTheNextTick() {
+        EditSession session = mock(EditSession.class);
+        when(session.hasQueuedBlocks()).thenReturn(true);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session, never()).commit();
+        verify(session, never()).flushQueue();
+        assertTrue(events.isEmpty());
+        assertTrue(scheduler.hasPendingWork(ownerId));
+
+        tick();
+
+        verify(session).commit();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void anImmediateCommandWithNothingQueuedFinishesStraightAway() {
+        EditSession session = mock(EditSession.class);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).flushQueue();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void anImmediateCommandsWritesCanBeCancelled() {
+        EditSession session = mock(EditSession.class);
+        when(session.hasQueuedBlocks()).thenReturn(true);
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        assertEquals(Collections.singletonList(session), scheduler.cancel(ownerId));
+
+        verify(session).discardQueue();
+        verify(session, never()).commit();
+        assertEquals(Collections.singletonList("finalize"), events);
+    }
+
+    @Test
     public void cancelWithNothingRunningReturnsNothing() {
         assertTrue(
             scheduler.cancel(ownerId)
@@ -269,7 +330,7 @@ public class ForgeOperationSchedulerTest {
                 events.add("failure " + name);
             }
         });
-        scheduler.whenFinished(session, new Runnable() {
+        scheduler.whenFinished(actor, session, new Runnable() {
 
             @Override
             public void run() {

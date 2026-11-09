@@ -239,6 +239,15 @@ public final class PackedBlockList {
     }
 
     /**
+     * Whether anything added has not been drained yet.
+     *
+     * @return true if there is something left
+     */
+    public boolean hasRemaining() {
+        return head < size;
+    }
+
+    /**
      * Remove everything.
      */
     public void clear() {

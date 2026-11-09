@@ -126,6 +126,15 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
     }
 
     /**
+     * Whether any blocks are still waiting to be written.
+     *
+     * @return true if committing would write something
+     */
+    public boolean hasPendingBlocks() {
+        return detach.hasRemaining() || stage1.hasRemaining() || stage2.hasRemaining() || stage3.hasRemaining();
+    }
+
+    /**
      * Throw away everything waiting to be written.
      */
     public void discard() {

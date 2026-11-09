@@ -71,15 +71,21 @@ public interface OperationScheduler {
      * for it, or after that work finishes.
      *
      * <p>
+     * A command that edited straight away still leaves its blocks in the reorder queue, so a
+     * scheduler may write those across several ticks as well, before running the task.
+     * </p>
+     *
+     * <p>
      * The scheduler is responsible for flushing because a flush has to wait for queued work: it
      * writes out whatever the reorder queue holds, so running it early would write a half-built
      * edit. The task itself must not flush.
      * </p>
      *
+     * @param owner       the actor the edit session belongs to, who is the one able to cancel it
      * @param editSession the edit session
      * @param task        the task to run once the session is finished with
      */
-    void whenFinished(EditSession editSession, Runnable task);
+    void whenFinished(Actor owner, EditSession editSession, Runnable task);
 
     /**
      * Stop all work submitted by the given owner, running or queued.

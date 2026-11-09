@@ -129,7 +129,7 @@ public class HistoryCommands {
                 player.printError(error != null ? error : "The operation could not be completed.");
             }
         });
-        scheduler.whenFinished(writer, new Runnable() {
+        scheduler.whenFinished(player, writer, new Runnable() {
 
             @Override
             public void run() {

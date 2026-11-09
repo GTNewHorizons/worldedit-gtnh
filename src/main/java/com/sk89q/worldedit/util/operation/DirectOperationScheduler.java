@@ -52,7 +52,7 @@ public class DirectOperationScheduler implements OperationScheduler {
     }
 
     @Override
-    public void whenFinished(EditSession editSession, Runnable task) {
+    public void whenFinished(Actor owner, EditSession editSession, Runnable task) {
         editSession.flushQueue();
         task.run();
     }
