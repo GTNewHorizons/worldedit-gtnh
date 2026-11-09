@@ -58,6 +58,11 @@ import com.sk89q.worldedit.world.snapshot.Snapshot;
 public class LocalSession {
 
     public transient static int MAX_HISTORY_SIZE = 15;
+    /**
+     * The most changed blocks the undo history may hold in total, or -1 for no limit. The newest edit is
+     * always kept, however large.
+     */
+    public transient static int MAX_HISTORY_BLOCKS = 10000000;
 
     // Non-session related fields
     private transient LocalConfiguration config;
@@ -197,6 +202,16 @@ public class LocalSession {
         history.add(editSession);
         while (history.size() > MAX_HISTORY_SIZE) {
             history.remove(0);
+        }
+        if (MAX_HISTORY_BLOCKS >= 0) {
+            long total = 0;
+            for (EditSession remembered : history) {
+                total += remembered.size();
+            }
+            while (history.size() > 1 && total > MAX_HISTORY_BLOCKS) {
+                total -= history.remove(0)
+                    .size();
+            }
         }
         historyPointer = history.size();
     }

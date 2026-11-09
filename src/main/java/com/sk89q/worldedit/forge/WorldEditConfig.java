@@ -165,6 +165,14 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static int historySize;
 
+        @Config.Comment({ "The most changed blocks each player's undo history may hold, or -1 for no limit.",
+            "The oldest edits are forgotten past this. The newest edit is always kept, however large.",
+            "Each block takes about 30 bytes, more for blocks with tile entity data." })
+        @Config.DefaultInt(10000000)
+        @Config.RangeInt(min = -1)
+        @Config.Reloadable(RELOAD)
+        public static int historyBlockLimit;
+
         @Config.Comment("The IDs of the blocks players can not place with WorldEdit.")
         @Config.Reloadable(RELOAD)
         public static int[] disallowedBlocks = LocalConfiguration.defaultDisallowedBlocks;

@@ -109,6 +109,7 @@ public class ForgeConfiguration extends LocalConfiguration {
         defaultMaxPolyhedronPoints = WorldEditConfig.Limits.defaultMaxPolyhedronPoints;
         maxPolyhedronPoints = WorldEditConfig.Limits.maxPolyhedronPoints;
         LocalSession.MAX_HISTORY_SIZE = WorldEditConfig.Limits.historySize;
+        LocalSession.MAX_HISTORY_BLOCKS = WorldEditConfig.Limits.historyBlockLimit;
         disallowedBlocks = new HashSet<Integer>();
         for (int id : WorldEditConfig.Limits.disallowedBlocks) {
             disallowedBlocks.add(id);
