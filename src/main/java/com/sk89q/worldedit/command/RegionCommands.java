@@ -159,17 +159,17 @@ public final class RegionCommands {
 
         Nodes.registerWithFlags(dispatcher, literal("/move", "Move the contents of the selection")
                 .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                        move(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'))))
+                        move(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                 .then(integer("count", 1)
                         .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'))))
+                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                         .then(word("direction")
                                 .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                        move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.parseBlock("air"), c.flag('s'))))
+                                        move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.parseBlock("air"), c.flag('s'), c.flag('a'))))
                                 .then(word("leave-block")
                                         .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
-                                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.block("leave-block"), c.flag('s'))))))),
-                "s");
+                                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.block("leave-block"), c.flag('s'), c.flag('a'))))))),
+                "sa");
 
         Nodes.registerWithFlags(dispatcher, literal("/stack", "Repeat the contents of the selection")
                 .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
@@ -466,11 +466,12 @@ public final class RegionCommands {
     }
 
     private static void move(Player player, EditSession editSession, LocalSession session, Region region, int count,
-        Vector direction, BaseBlock replace, boolean moveSelection) throws WorldEditException {
+        Vector direction, BaseBlock replace, boolean moveSelection, boolean ignoreAir) throws WorldEditException {
 
         final Region snapshot = region.clone();
         final Vector shift = direction.multiply(count);
-        final CountedOperation operation = editSession.moveRegionOperation(region, direction, count, true, replace);
+        final CountedOperation operation = editSession
+            .moveRegionOperation(region, direction, count, !ignoreAir, replace);
 
         // The selection follows the edit only once the edit has actually happened.
         WorldEdit.getInstance()

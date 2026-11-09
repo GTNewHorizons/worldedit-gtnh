@@ -1304,11 +1304,15 @@ public class EditSession implements Extent {
         ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(source));
         ForwardExtentCopy copy = new ForwardExtentCopy(this, source, buffer, to);
         copy.setTransform(new AffineTransform().translate(dir.multiply(distance)));
-        copy.setSourceFunction(remove); // Remove
-        copy.setRemovingEntities(true);
-        if (!copyAir) {
-            copy.setSourceMask(new ExistingBlockMask(this));
+        if (copyAir) {
+            copy.setSourceFunction(remove); // Remove
+        } else {
+            // Skipped air must not overwrite the destination, and must not count as moved or get the replacement
+            Mask existing = new ExistingBlockMask(this);
+            copy.setSourceMask(existing);
+            copy.setSourceFunction(new RegionMaskingFilter(existing, remove));
         }
+        copy.setRemovingEntities(true);
 
         // Then we need to copy the buffer to the world
         BlockReplace replace = new BlockReplace(this, buffer);

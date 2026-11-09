@@ -5,7 +5,7 @@ Move the blocks in your selection.
 ## Usage
 
 ```
-//move [-s] [<count> [<direction> [<leave-block>]]]
+//move [-sa] [<count> [<direction> [<leave-block>]]]
 ```
 
 ## Arguments
@@ -23,6 +23,7 @@ Flags go right after the command, before the arguments.
 | Flag | Meaning |
 |---|---|
 | `-s` | Move the selection along with the blocks. |
+| `-a` | Skip air, so it does not overwrite what is at the destination. Only the blocks that moved are replaced by `leave-block`. |
 
 ## Examples
 
@@ -30,6 +31,7 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//move 10` | Move 10 blocks towards where you look. |
 | `//move -s 5 up` | Move 5 blocks up and bring the selection along. |
+| `//move -a 10 north` | Move a tree or a ship next to something else without cutting a box out of it. |
 | `//move 3 north stone` | Move 3 blocks north and leave stone behind. |
 
 ## Permission
