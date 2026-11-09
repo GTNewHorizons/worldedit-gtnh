@@ -42,6 +42,8 @@ import com.sk89q.worldedit.blocks.BlockPlacementRules;
  */
 final class ForgeBlockPlacementRules implements BlockPlacementRules {
 
+    private static final String MULTIPART_BLOCK = "ForgeMultipart:block";
+
     private final Set<String> placeLast;
     private final Set<String> placeNormally;
 
@@ -63,6 +65,12 @@ final class ForgeBlockPlacementRules implements BlockPlacementRules {
         }
         if (placeNormally.contains(name)) {
             return false;
+        }
+
+        // Its material says solid, but the parts inside, such as ProjectRed wires and gates, drop
+        // themselves if a neighbour changes while the block they sit on is missing.
+        if (MULTIPART_BLOCK.equals(name)) {
+            return true;
         }
 
         return isAttached(block);
