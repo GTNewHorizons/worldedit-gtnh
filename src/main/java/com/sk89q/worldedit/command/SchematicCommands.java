@@ -38,6 +38,8 @@ import net.minecraft.command.ICommandSender;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.EmptyClipboardException;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
@@ -50,13 +52,14 @@ import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
-import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter;
+import com.sk89q.worldedit.function.operation.BackgroundOperation;
 import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.transform.Transform;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.util.io.Closer;
 import com.sk89q.worldedit.util.io.file.FilenameException;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.registry.WorldData;
 
@@ -72,10 +75,10 @@ public final class SchematicCommands {
         LiteralCommandNode<ICommandSender> load = literal("load", "Load a schematic into your clipboard").executes(Nodes.USAGE)
                         .then(word("filename-or-format")
                                 .executes(run("worldedit.clipboard.load|worldedit.schematic.load",
-                                        c -> load(c.player(), c.session(), "schematic", c.string("filename-or-format"))))
+                                        c -> load(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), "schematic", c.string("filename-or-format"))))
                                 .then(word("filename")
                                         .executes(run("worldedit.clipboard.load|worldedit.schematic.load",
-                                                c -> load(c.player(), c.session(), c.string("filename-or-format"), c.string("filename")))))).build();
+                                                c -> load(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.string("filename-or-format"), c.string("filename")))))).build();
 
         LiteralCommandNode<ICommandSender> save = literal("save", "Save your clipboard into a schematic").executes(Nodes.USAGE)
                         .then(word("filename-or-format")
@@ -129,49 +132,78 @@ public final class SchematicCommands {
     private static final int SCHEMATICS_PER_PAGE = 9;
     private static final Logger log = Logger.getLogger(SchematicCommands.class.getCanonicalName());
 
-    private static void load(Player player, LocalSession session, String formatName, String filename)
-        throws FilenameException {
-        LocalConfiguration config = WorldEdit.getInstance()
-            .getConfiguration();
+    private static void load(WorldEdit worldEdit, final Player player, final LocalSession session,
+        EditSession editSession, String formatName, final String filename) throws FilenameException {
+        LocalConfiguration config = worldEdit.getConfiguration();
 
-        File dir = WorldEdit.getInstance()
-            .getWorkingDirectoryFile(config.saveDir);
-        File f = WorldEdit.getInstance()
-            .getSafeOpenFile(player, dir, filename, "schematic", "schematic");
+        File dir = worldEdit.getWorkingDirectoryFile(config.saveDir);
+        final File f = worldEdit.getSafeOpenFile(player, dir, filename, "schematic", "schematic");
 
         if (!f.exists()) {
             player.printError("Schematic " + filename + " does not exist!");
             return;
         }
 
-        ClipboardFormat format = ClipboardFormat.findByAlias(formatName);
+        final ClipboardFormat format = ClipboardFormat.findByAlias(formatName);
         if (format == null) {
             player.printError("Unknown schematic format: " + formatName);
             return;
         }
 
-        Closer closer = Closer.create();
-        try {
-            FileInputStream fis = closer.register(new FileInputStream(f));
-            BufferedInputStream bis = closer.register(new BufferedInputStream(fis));
-            ClipboardReader reader = format.getReader(bis);
-
-            WorldData worldData = player.getWorld()
-                .getWorldData();
-            Clipboard clipboard = reader.read(
-                player.getWorld()
-                    .getWorldData());
-            session.setClipboard(new ClipboardHolder(clipboard, worldData));
-
-            log.info(player.getName() + " loaded " + f.getCanonicalPath());
-            player.print(filename + " loaded. Paste it with //paste");
-        } catch (IOException e) {
-            player.printError("Schematic could not read or it does not exist: " + e.getMessage());
-            log.log(Level.WARNING, "Failed to load a saved clipboard", e);
-        } finally {
+        // Reading and parsing the file doesn't touch the world, so it happens on a background thread.
+        final WorldData worldData = player.getWorld()
+            .getWorldData();
+        final BackgroundOperation<Clipboard> reading = new BackgroundOperation<Clipboard>(() -> {
+            Closer closer = Closer.create();
             try {
+                FileInputStream fis = closer.register(new FileInputStream(f));
+                BufferedInputStream bis = closer.register(new BufferedInputStream(fis));
+                return format.getReader(bis)
+                    .read(worldData);
+            } finally {
                 closer.close();
-            } catch (IOException ignored) {}
+            }
+        });
+
+        final ClipboardHolder before = currentClipboard(session);
+        session.setLoadingClipboard(true);
+        worldEdit.getOperationScheduler()
+            .submit(player, editSession, reading, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {
+                    session.setLoadingClipboard(false);
+                    // A //copy queued behind the load sets its own clipboard, which must win.
+                    if (currentClipboard(session) != before) {
+                        player.printError(filename + " loaded, but your clipboard changed meanwhile, so it was kept.");
+                        return;
+                    }
+                    session.setClipboard(new ClipboardHolder(reading.getResult(), worldData));
+                    try {
+                        log.info(player.getName() + " loaded " + f.getCanonicalPath());
+                    } catch (IOException ignored) {}
+                    player.print(filename + " loaded. Paste it with //paste");
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    session.setLoadingClipboard(false);
+                    player.printError("Schematic could not read or it does not exist: " + e.getMessage());
+                    log.log(Level.WARNING, "Failed to load a saved clipboard", e);
+                }
+
+                @Override
+                public void onCancelled(boolean started) {
+                    session.setLoadingClipboard(false);
+                }
+            });
+    }
+
+    private static ClipboardHolder currentClipboard(LocalSession session) {
+        try {
+            return session.getClipboard();
+        } catch (EmptyClipboardException e) {
+            return null;
         }
     }
 

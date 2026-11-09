@@ -173,6 +173,11 @@ public final class ClipboardCommands {
     public static void paste(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession,
         boolean ignoreAirBlocks, boolean atOrigin, boolean selectPasted) throws WorldEditException {
 
+        if (session.isLoadingClipboard()) {
+            player.printError("Your schematic is still loading. Wait for it to finish, or use //cancel.");
+            return;
+        }
+
         ClipboardHolder holder = session.getClipboard();
         Clipboard clipboard = holder.getClipboard();
         Region region = clipboard.getRegion();

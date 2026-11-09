@@ -64,6 +64,13 @@ public class TimeBudgetRunContext extends RunContext {
     }
 
     @Override
+    public boolean waitForNextTick() {
+        // Spending the rest of the budget would only spin on the server thread.
+        expired = true;
+        return true;
+    }
+
+    @Override
     public boolean shouldContinueAfterLargeStep() {
         return !expired && checkClock();
     }

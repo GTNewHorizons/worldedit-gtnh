@@ -1,15 +1,18 @@
 package com.sk89q.worldedit.command;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -167,6 +170,16 @@ public class ScheduledClipboardTest {
 
         assertCopyAt(200);
         assertEquals(0, get(new Vector(3, 3, 3)).getType());
+    }
+
+    @Test
+    public void aPasteWaitsForASchematicStillLoading() throws Exception {
+        session.setLoadingClipboard(true);
+
+        ClipboardCommands.paste(worldEdit, player, session, newSession(), false, false, false);
+
+        verify(player).printError(contains("still loading"));
+        assertFalse(scheduler.hasPendingWork(id));
     }
 
     @Test

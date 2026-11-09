@@ -69,6 +69,7 @@ public class LocalSession {
     private transient LinkedList<EditSession> history = new LinkedList<EditSession>();
     private transient int historyPointer = 0;
     private transient ClipboardHolder clipboard;
+    private transient boolean loadingClipboard;
     private transient boolean toolControl = true;
     private transient boolean superPickaxe = false;
     private transient BlockTool pickaxeMode = new SinglePickaxe();
@@ -393,6 +394,24 @@ public class LocalSession {
      */
     public void setClipboard(@Nullable ClipboardHolder clipboard) {
         this.clipboard = clipboard;
+    }
+
+    /**
+     * Whether a schematic is being loaded into the clipboard.
+     *
+     * @return true if one is loading
+     */
+    public boolean isLoadingClipboard() {
+        return loadingClipboard;
+    }
+
+    /**
+     * Set whether a schematic is being loaded into the clipboard.
+     *
+     * @param loading true while one is loading
+     */
+    public void setLoadingClipboard(boolean loading) {
+        this.loadingClipboard = loading;
     }
 
     /**

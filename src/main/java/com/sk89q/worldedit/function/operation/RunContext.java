@@ -44,4 +44,15 @@ public class RunContext {
         return shouldContinue();
     }
 
+    /**
+     * Ask to be resumed on a later tick, for an operation that is waiting on something else and has
+     * nothing to do yet.
+     *
+     * @return true if the operation should return and will be resumed later, false if this context
+     *         can't do that and the operation has to wait where it is
+     */
+    public boolean waitForNextTick() {
+        return false;
+    }
+
 }
