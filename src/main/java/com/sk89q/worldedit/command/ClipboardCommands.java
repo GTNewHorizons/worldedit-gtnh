@@ -25,6 +25,7 @@ import net.minecraft.command.ICommandSender;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.EmptyClipboardException;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
@@ -40,7 +41,6 @@ import com.sk89q.worldedit.function.block.BlockReplace;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
-import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.math.transform.AffineTransform;
 import com.sk89q.worldedit.regions.Region;
@@ -61,15 +61,15 @@ public final class ClipboardCommands {
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
         Nodes.registerWithFlags(dispatcher, literal("/copy", "Copy the selection to the clipboard")
                 .executes(run("worldedit.clipboard.copy", c ->
-                        copy(c.player(), c.session(), c.editSession(), c.region(), c.flag('e'), c.maskFlag('m')))),
+                        copy(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.region(), c.flag('e'), c.maskFlag('m')))),
                 Flags.of("e").value('m', "mask"));
 
         Nodes.registerWithFlags(dispatcher, literal("/cut", "Cut the selection to the clipboard")
                 .executes(run("worldedit.clipboard.cut", LogMode.REGION, c ->
-                        cut(c.player(), c.session(), c.editSession(), c.region(), c.parsePattern("air"), c.flag('e'), c.maskFlag('m'))))
+                        cut(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.region(), c.parsePattern("air"), c.flag('e'), c.maskFlag('m'))))
                 .then(word("leave-pattern")
                         .executes(run("worldedit.clipboard.cut", LogMode.REGION, c ->
-                                cut(c.player(), c.session(), c.editSession(), c.region(), c.pattern("leave-pattern"), c.flag('e'), c.maskFlag('m'))))),
+                                cut(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.region(), c.pattern("leave-pattern"), c.flag('e'), c.maskFlag('m'))))),
                 Flags.of("e").value('m', "mask"));
 
         Nodes.registerWithFlags(dispatcher, literal("/paste", "Paste the clipboard's contents")
@@ -95,43 +95,79 @@ public final class ClipboardCommands {
     }
     // spotless:on
 
-    private static void copy(Player player, LocalSession session, EditSession editSession, Region region,
+    static void copy(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession, Region region,
         boolean copyEntities, Mask mask) throws WorldEditException {
-
-        BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
-        clipboard.setOrigin(session.getPlacementPosition(player));
-        ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
-        if (mask != null) {
-            copy.setSourceMask(mask);
-        }
-        Operations.completeLegacy(copy);
-        session.setClipboard(
-            new ClipboardHolder(
-                clipboard,
-                editSession.getWorld()
-                    .getWorldData()));
-
-        player.print(region.getArea() + " block(s) were copied.");
+        copyToClipboard(worldEdit, player, session, editSession, region, null, mask);
     }
 
-    static void cut(Player player, LocalSession session, EditSession editSession, Region region, Pattern leavePattern,
-        boolean copyEntities, Mask mask) throws WorldEditException {
+    static void cut(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession, Region region,
+        Pattern leavePattern, boolean copyEntities, Mask mask) throws WorldEditException {
+        copyToClipboard(worldEdit, player, session, editSession, region, leavePattern, mask);
+    }
 
+    /**
+     * Copy a region into a new clipboard on the scheduler, leaving the given pattern behind if there is one.
+     *
+     * <p>
+     * The new clipboard becomes the player's clipboard straight away, empty, so that a //paste queued behind
+     * this pastes it: the copy fills it in before the paste gets to run. If the copy doesn't finish, the
+     * previous clipboard comes back.
+     * </p>
+     */
+    private static void copyToClipboard(WorldEdit worldEdit, final Player player, final LocalSession session,
+        EditSession editSession, Region selection, Pattern leavePattern, Mask mask) throws WorldEditException {
+        final Region region = selection.clone();
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));
         ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
-        copy.setSourceFunction(new BlockReplace(editSession, leavePattern));
+        if (leavePattern != null) {
+            copy.setSourceFunction(new BlockReplace(editSession, leavePattern));
+        }
         if (mask != null) {
             copy.setSourceMask(mask);
         }
-        Operations.completeLegacy(copy);
-        session.setClipboard(
-            new ClipboardHolder(
-                clipboard,
-                editSession.getWorld()
-                    .getWorldData()));
 
-        player.print(region.getArea() + " block(s) were copied.");
+        final ClipboardHolder previous = currentClipboard(session);
+        final ClipboardHolder holder = new ClipboardHolder(
+            clipboard,
+            editSession.getWorld()
+                .getWorldData());
+        session.setClipboard(holder);
+
+        worldEdit.getOperationScheduler()
+            .submit(player, editSession, copy, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {
+                    player.print(region.getArea() + " block(s) were copied.");
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    putBack();
+                    String message = e.getMessage();
+                    player.printError(message != null ? message : "The operation could not be completed.");
+                }
+
+                @Override
+                public void onCancelled(boolean started) {
+                    putBack();
+                }
+
+                private void putBack() {
+                    if (currentClipboard(session) == holder) {
+                        session.setClipboard(previous);
+                    }
+                }
+            });
+    }
+
+    private static ClipboardHolder currentClipboard(LocalSession session) {
+        try {
+            return session.getClipboard();
+        } catch (EmptyClipboardException e) {
+            return null;
+        }
     }
 
     public static void paste(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession,

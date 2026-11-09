@@ -57,6 +57,7 @@ import com.sk89q.worldedit.math.transform.Transform;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.util.io.Closer;
 import com.sk89q.worldedit.util.io.file.FilenameException;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.registry.WorldData;
 
 /**
@@ -176,6 +177,14 @@ public final class SchematicCommands {
 
     private static void save(Player player, LocalSession session, String formatName, String filename)
         throws WorldEditException {
+        if (WorldEdit.getInstance()
+            .getOperationScheduler()
+            .hasPendingWork(player.getUniqueId())) {
+            // A //copy still running would save a half-filled clipboard.
+            player.printError(OperationScheduler.STILL_RUNNING);
+            return;
+        }
+
         LocalConfiguration config = WorldEdit.getInstance()
             .getConfiguration();
 

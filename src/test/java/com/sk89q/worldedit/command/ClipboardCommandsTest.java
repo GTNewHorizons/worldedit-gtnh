@@ -21,6 +21,7 @@ import org.mockito.stubbing.Answer;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
@@ -30,6 +31,7 @@ import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.util.operation.DirectOperationScheduler;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.registry.WorldData;
 
@@ -88,8 +90,10 @@ public class ClipboardCommandsTest {
     }
 
     private Clipboard cut(int leave, Mask mask) throws Exception {
+        WorldEdit worldEdit = mock(WorldEdit.class);
+        when(worldEdit.getOperationScheduler()).thenReturn(new DirectOperationScheduler());
         ClipboardCommands
-            .cut(player, session, editSession, region, new BlockPattern(new BaseBlock(leave)), false, mask);
+            .cut(worldEdit, player, session, editSession, region, new BlockPattern(new BaseBlock(leave)), false, mask);
         ArgumentCaptor<ClipboardHolder> holder = ArgumentCaptor.forClass(ClipboardHolder.class);
         verify(session).setClipboard(holder.capture());
         return holder.getValue()
