@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Set;
 
 import net.minecraft.block.Block;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.ChunkCoordIntPair;
@@ -250,17 +252,22 @@ final class ForgeRegeneration extends RegenerationOperation {
                 }
             }
         }
+        // Save the data now. Decoration replacing a chest empties the live tile entity on its way out,
+        // so saving it only when restoring would bring back an empty chest.
         for (Object entry : chunk.chunkTileEntityMap.entrySet()) {
             Map.Entry<?, ?> tile = (Map.Entry<?, ?>) entry;
             ChunkPosition position = (ChunkPosition) tile.getKey();
-            column.tiles.put(
-                columnIndex(position.chunkPosX, position.chunkPosY, position.chunkPosZ),
-                (TileEntity) tile.getValue());
-        }
-        if (only == null) {
-            for (List<?> entities : chunk.entityLists) {
-                column.entities.addAll(entities);
+            int index = columnIndex(position.chunkPosX, position.chunkPosY, position.chunkPosZ);
+            BaseBlock block = column.blocks[index];
+            if (block != null) {
+                column.blocks[index] = new TileEntityBaseBlock(
+                    block.getType(),
+                    block.getData(),
+                    (TileEntity) tile.getValue());
             }
+        }
+        for (List<?> entities : chunk.entityLists) {
+            column.entities.addAll(entities);
         }
         return column;
     }
@@ -287,20 +294,17 @@ final class ForgeRegeneration extends RegenerationOperation {
                     continue;
                 }
 
-                TileEntity tile = column.tiles.get(index);
-                editSession.smartSetBlock(
-                    new Vector(baseX + x, y, baseZ + z),
-                    tile != null ? new TileEntityBaseBlock(previous.getType(), previous.getData(), tile) : previous);
-            }
-
-            // Mobs that decoration spawns in a regenerated chunk are meant to stay.
-            if (column.only != null) {
-                continue;
+                editSession.smartSetBlock(new Vector(baseX + x, y, baseZ + z), previous);
             }
 
             for (List<?> entities : chunk.entityLists) {
                 for (Object entity : new ArrayList<Object>(entities)) {
-                    if (!column.entities.contains(entity) && !(entity instanceof EntityPlayer)) {
+                    if (column.entities.contains(entity) || entity instanceof EntityPlayer) {
+                        continue;
+                    }
+                    // Mobs that decoration spawns in a regenerated chunk are meant to stay, but items
+                    // dropped by blocks that were just put back would be duplicates.
+                    if (column.only == null || entity instanceof EntityItem || entity instanceof EntityXPOrb) {
                         world.removeEntity((net.minecraft.entity.Entity) entity);
                     }
                 }
@@ -388,7 +392,6 @@ final class ForgeRegeneration extends RegenerationOperation {
         private final int chunkZ;
         private final BaseBlock[] blocks;
         private int[] only;
-        private final Map<Integer, TileEntity> tiles = new HashMap<Integer, TileEntity>();
         private final Set<Object> entities = Collections.newSetFromMap(new IdentityHashMap<Object, Boolean>());
 
         private RegenColumn(int chunkX, int chunkZ, int size) {
