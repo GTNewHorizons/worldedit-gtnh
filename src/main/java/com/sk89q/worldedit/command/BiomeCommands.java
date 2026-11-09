@@ -16,23 +16,24 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.REGION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.FlatRegionFunction;
 import com.sk89q.worldedit.function.FlatRegionMaskingFilter;
@@ -45,48 +46,56 @@ import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.FlatRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.Regions;
-import com.sk89q.worldedit.util.command.binding.Switch;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.biome.BaseBiome;
 import com.sk89q.worldedit.world.biome.BiomeData;
 import com.sk89q.worldedit.world.registry.BiomeRegistry;
 
 /**
- * Implements biome-related commands such as "/biomelist".
+ * Biome commands.
+ *
+ * <ul>
+ * <li>{@code //biomelist [page]} (alias {@code //biomels}): list all biomes</li>
+ * <li>{@code //biomeinfo [-p] [-t]}: show the biome of the selection, your position or the block you look at</li>
+ * <li>{@code //setbiome [-p] <biome>}: change the biome of the selection or your position</li>
+ * </ul>
  */
-public class BiomeCommands {
+public final class BiomeCommands {
 
-    private final WorldEdit worldEdit;
+    private static final int BIOMES_PER_PAGE = 19;
 
-    /**
-     * Create a new instance.
-     *
-     * @param worldEdit reference to WorldEdit
-     */
-    public BiomeCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    private BiomeCommands() {}
+
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("biomelist")
+                .executes(run("worldedit.biome.list", c -> biomeList(c.player(), 1)))
+                .then(integer("page", 1)
+                        .executes(run("worldedit.biome.list", c -> biomeList(c.player(), c.integer("page"))))),
+                "biomels");
+
+        Nodes.registerWithFlags(dispatcher, literal("biomeinfo")
+                .executes(run("worldedit.biome.info", c -> biomeInfo(c.player(), c.session(), c.flag('t'), c.flag('p')))),
+                "pt");
+
+        Nodes.registerWithFlags(dispatcher, literal("/setbiome").executes(Nodes.USAGE)
+                .then(word("biome")
+                        .executes(run("worldedit.biome.set", LogMode.REGION, c ->
+                                setBiome(c.player(), c.session(), c.editSession(), c.biome("biome"), c.flag('p'))))),
+                "p");
     }
+    // spotless:on
 
-    @Command(aliases = { "biomelist", "biomels" }, usage = "[page]", desc = "Gets all biomes available.", max = 1)
-    @CommandPermissions("worldedit.biome.list")
-    public void biomeList(Player player, CommandContext args) throws WorldEditException {
-        int page;
-        int offset;
+    private static void biomeList(Player player, int page) {
+        int offset = page < 2 ? 0 : (page - 1) * BIOMES_PER_PAGE;
         int count = 0;
-
-        if (args.argsLength() == 0 || (page = args.getInteger(0)) < 2) {
-            page = 1;
-            offset = 0;
-        } else {
-            offset = (page - 1) * 19;
-        }
+        page = Math.max(1, page);
 
         BiomeRegistry biomeRegistry = player.getWorld()
             .getWorldData()
             .getBiomeRegistry();
         List<BaseBiome> biomes = biomeRegistry.getBiomes();
-        int totalPages = biomes.size() / 19 + 1;
+        int totalPages = biomes.size() / BIOMES_PER_PAGE + 1;
         player.print("Available Biomes (page " + page + "/" + totalPages + ") :");
         for (BaseBiome biome : biomes) {
             if (offset > 0) {
@@ -95,7 +104,7 @@ public class BiomeCommands {
                 BiomeData data = biomeRegistry.getData(biome);
                 if (data != null) {
                     player.print(" " + data.getName());
-                    if (++count == 19) {
+                    if (++count == BIOMES_PER_PAGE) {
                         break;
                     }
                 } else {
@@ -105,41 +114,31 @@ public class BiomeCommands {
         }
     }
 
-    @Command(
-        aliases = { "biomeinfo" },
-        flags = "pt",
-        desc = "Get the biome of the targeted block.",
-        help = "Get the biome of the block.\n" + "By default use all the blocks contained in your selection.\n"
-            + "-t use the block you are looking at.\n"
-            + "-p use the block you are currently in",
-        max = 0)
-    @CommandPermissions("worldedit.biome.info")
-    public void biomeInfo(Player player, LocalSession session, CommandContext args) throws WorldEditException {
+    private static void biomeInfo(Player player, LocalSession session, boolean lookingAt, boolean atPosition)
+        throws Exception {
         BiomeRegistry biomeRegistry = player.getWorld()
             .getWorldData()
             .getBiomeRegistry();
         Set<BaseBiome> biomes = new HashSet<BaseBiome>();
         String qualifier;
 
-        if (args.hasFlag('t')) {
+        if (lookingAt) {
             Vector blockPosition = player.getBlockTrace(300);
             if (blockPosition == null) {
                 player.printError("No block in sight!");
                 return;
             }
 
-            BaseBiome biome = player.getWorld()
-                .getBiome(blockPosition.toVector2D());
-            biomes.add(biome);
-
+            biomes.add(
+                player.getWorld()
+                    .getBiome(blockPosition.toVector2D()));
             qualifier = "at line of sight point";
-        } else if (args.hasFlag('p')) {
-            BaseBiome biome = player.getWorld()
-                .getBiome(
-                    player.getPosition()
-                        .toVector2D());
-            biomes.add(biome);
-
+        } else if (atPosition) {
+            biomes.add(
+                player.getWorld()
+                    .getBiome(
+                        player.getPosition()
+                            .toVector2D()));
             qualifier = "at your position";
         } else {
             World world = player.getWorld();
@@ -169,17 +168,8 @@ public class BiomeCommands {
         }
     }
 
-    @Command(
-        aliases = { "/setbiome" },
-        usage = "<biome>",
-        flags = "p",
-        desc = "Sets the biome of the player's current block or region.",
-        help = "Set the biome of the region.\n" + "By default use all the blocks contained in your selection.\n"
-            + "-p use the block you are currently in")
-    @Logging(REGION)
-    @CommandPermissions("worldedit.biome.set")
-    public void setBiome(Player player, LocalSession session, EditSession editSession, BaseBiome target,
-        @Switch('p') boolean atPosition) throws WorldEditException {
+    private static void setBiome(Player player, LocalSession session, EditSession editSession, BaseBiome target,
+        boolean atPosition) throws Exception {
         World world = player.getWorld();
         Region region;
         Mask mask = editSession.getMask();
@@ -202,5 +192,4 @@ public class BiomeCommands {
             "Biomes were changed in " + visitor.getAffected()
                 + " columns. You may have to rejoin your game (or close and reopen your world) to see a change.");
     }
-
 }

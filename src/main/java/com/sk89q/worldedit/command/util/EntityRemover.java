@@ -22,8 +22,8 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.sk89q.minecraft.util.commands.CommandException;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.CommandFailure;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.entity.metadata.EntityType;
 import com.sk89q.worldedit.function.EntityFunction;
@@ -139,12 +139,12 @@ public class EntityRemover {
 
     private Type type;
 
-    public void fromString(String str) throws CommandException {
+    public void fromString(String str) throws CommandFailure {
         Type type = Type.findByPattern(str);
         if (type != null) {
             this.type = type;
         } else {
-            throw new CommandException(
+            throw new CommandFailure(
                 "Acceptable types: projectiles, items, paintings, itemframes, boats, minecarts, tnt, xp, or all");
         }
     }

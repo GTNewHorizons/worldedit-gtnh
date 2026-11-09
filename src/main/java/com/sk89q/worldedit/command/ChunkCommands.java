@@ -16,43 +16,45 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
 
 import java.util.Set;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.LocalSession;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.world.storage.McRegionChunkStore;
 
 /**
  * Commands for working with chunks.
+ *
+ * <ul>
+ * <li>{@code //chunkinfo}: get information about the chunk that you are inside</li>
+ * <li>{@code //listchunks}: list the chunks that your selection includes</li>
+ * </ul>
  */
-public class ChunkCommands {
+public final class ChunkCommands {
 
-    private final WorldEdit worldEdit;
+    private ChunkCommands() {}
 
-    public ChunkCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("chunkinfo")
+                .executes(run("worldedit.chunkinfo", ChunkCommands::chunkInfo)));
+
+        Nodes.register(dispatcher, literal("listchunks")
+                .executes(run("worldedit.listchunks", ChunkCommands::listChunks)));
     }
+    // spotless:on
 
-    @Command(
-        aliases = { "chunkinfo" },
-        usage = "",
-        desc = "Get information about the chunk that you are inside",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.chunkinfo")
-    public void chunkInfo(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
+    private static void chunkInfo(CommandCall call) {
+        Player player = call.player();
         Vector pos = player.getBlockIn();
         int chunkX = (int) Math.floor(pos.getBlockX() / 16.0);
         int chunkZ = (int) Math.floor(pos.getBlockZ() / 16.0);
@@ -61,16 +63,9 @@ public class ChunkCommands {
         player.print("Region file: region/" + McRegionChunkStore.getFilename(new Vector2D(chunkX, chunkZ)));
     }
 
-    @Command(
-        aliases = { "listchunks" },
-        usage = "",
-        desc = "List chunks that your selection includes",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.listchunks")
-    public void listChunks(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-        Set<Vector2D> chunks = session.getSelection(player.getWorld())
+    private static void listChunks(CommandCall call) throws Exception {
+        Player player = call.player();
+        Set<Vector2D> chunks = call.region()
             .getChunks();
 
         for (Vector2D chunk : chunks) {
@@ -78,5 +73,4 @@ public class ChunkCommands {
                 chunk.getBlockX() + ", " + chunk.getBlockZ() + " in region/" + McRegionChunkStore.getFilename(chunk));
         }
     }
-
 }

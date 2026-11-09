@@ -16,79 +16,136 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.ALL;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.PLACEMENT;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.POSITION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.decimal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.text;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.pattern.Pattern;
-import com.sk89q.worldedit.internal.annotation.Selection;
 import com.sk89q.worldedit.internal.expression.ExpressionException;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.TreeGenerator;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
-import com.sk89q.worldedit.util.command.binding.Range;
-import com.sk89q.worldedit.util.command.binding.Switch;
-import com.sk89q.worldedit.util.command.binding.Text;
-import com.sk89q.worldedit.util.command.parametric.Optional;
 import com.sk89q.worldedit.world.biome.BaseBiome;
 
 /**
  * Commands for the generation of shapes and other objects.
  */
-public class GenerationCommands {
+public final class GenerationCommands {
 
-    private final WorldEdit worldEdit;
+    private GenerationCommands() {}
 
-    /**
-     * Create a new instance.
-     *
-     * @param worldEdit reference to WorldEdit
-     */
-    public GenerationCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("/hcyl", "Generates a hollow cylinder").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(word("radius")
+                                .executes(run("worldedit.generation.cylinder", LogMode.PLACEMENT, c ->
+                                        hcyl(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), 1)))
+                                .then(integer("height")
+                                        .executes(run("worldedit.generation.cylinder", LogMode.PLACEMENT, c ->
+                                                hcyl(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), c.integer("height"))))))));
+
+        Nodes.registerWithFlags(dispatcher, literal("/cyl", "Generates a cylinder").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(word("radius")
+                                .executes(run("worldedit.generation.cylinder", LogMode.PLACEMENT, c ->
+                                        cyl(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), 1, c.flag('h'))))
+                                .then(integer("height")
+                                        .executes(run("worldedit.generation.cylinder", LogMode.PLACEMENT, c ->
+                                                cyl(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), c.integer("height"), c.flag('h'))))))),
+                "h");
+
+        Nodes.register(dispatcher, literal("/hsphere", "Generates a hollow sphere").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(word("radius")
+                                .executes(run("worldedit.generation.sphere", LogMode.PLACEMENT, c ->
+                                        hsphere(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), false)))
+                                .then(word("raised", "yes", "no")
+                                        .executes(run("worldedit.generation.sphere", LogMode.PLACEMENT, c ->
+                                                hsphere(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), c.yesNo("raised"))))))));
+
+        Nodes.registerWithFlags(dispatcher, literal("/sphere", "Generates a filled sphere").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(word("radius")
+                                .executes(run("worldedit.generation.sphere", LogMode.PLACEMENT, c ->
+                                        sphere(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), false, c.flag('h'))))
+                                .then(word("raised", "yes", "no")
+                                        .executes(run("worldedit.generation.sphere", LogMode.PLACEMENT, c ->
+                                                sphere(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), c.yesNo("raised"), c.flag('h'))))))),
+                "h");
+
+        Nodes.register(dispatcher, literal("forestgen", "Generate a forest")
+                .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
+                        forestGen(c.player(), c.session(), c.editSession(), 10, TreeType.TREE, 5)))
+                .then(integer("size")
+                        .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
+                                forestGen(c.player(), c.session(), c.editSession(), c.integer("size"), TreeType.TREE, 5)))
+                        .then(word("type")
+                                .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
+                                        forestGen(c.player(), c.session(), c.editSession(), c.integer("size"), c.treeType("type"), 5)))
+                                .then(decimal("density")
+                                        .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
+                                                forestGen(c.player(), c.session(), c.editSession(), c.integer("size"), c.treeType("type"), c.decimal("density"))))))));
+
+        Nodes.register(dispatcher, literal("pumpkins", "Generate pumpkin patches")
+                .executes(run("worldedit.generation.pumpkins", LogMode.POSITION, c ->
+                        pumpkins(c.player(), c.session(), c.editSession(), 10)))
+                .then(integer("size")
+                        .executes(run("worldedit.generation.pumpkins", LogMode.POSITION, c ->
+                                pumpkins(c.player(), c.session(), c.editSession(), c.integer("size"))))));
+
+        Nodes.register(dispatcher, literal("/hpyramid", "Generate a hollow pyramid").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(integer("size", 1)
+                                .executes(run("worldedit.generation.pyramid", LogMode.PLACEMENT, c ->
+                                        hollowPyramid(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.integer("size")))))));
+
+        Nodes.registerWithFlags(dispatcher, literal("/pyramid", "Generate a filled pyramid").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(integer("size", 1)
+                                .executes(run("worldedit.generation.pyramid", LogMode.PLACEMENT, c ->
+                                        pyramid(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.integer("size"), c.flag('h')))))),
+                "h");
+
+        Nodes.registerWithFlags(dispatcher, literal("/generate", "Generates a shape according to a formula").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(text("expression")
+                                .executes(run("worldedit.generation.shape", LogMode.ALL, c ->
+                                        generate(c.player(), c.session(), c.editSession(), c.region(), c.pattern("pattern"), c.string("expression"),
+                                                c.flag('h'), c.flag('r'), c.flag('o'), c.flag('c')))))),
+                "hroc", "/gen", "/g");
+
+        Nodes.registerWithFlags(dispatcher, literal("/generatebiome", "Sets biome according to a formula").executes(Nodes.USAGE)
+                .then(word("biome").executes(Nodes.USAGE)
+                        .then(text("expression")
+                                .executes(run("worldedit.generation.shape|worldedit.biome.set", LogMode.ALL, c ->
+                                        generateBiome(c.player(), c.session(), c.editSession(), c.region(), c.biome("biome"), c.string("expression"),
+                                                c.flag('h'), c.flag('r'), c.flag('o'), c.flag('c')))))),
+                "hroc", "/genbiome", "/gb");
     }
+    // spotless:on
 
-    @Command(
-        aliases = { "/hcyl" },
-        usage = "<pattern> <radius>[,<radius>] [height]",
-        desc = "Generates a hollow cylinder.",
-        help = "Generates a hollow cylinder.\n" + "By specifying 2 radii, separated by a comma,\n"
-            + "you can generate elliptical cylinders.\n"
-            + "The 1st radius is north/south, the 2nd radius is east/west.",
-        min = 2,
-        max = 3)
-    @CommandPermissions("worldedit.generation.cylinder")
-    @Logging(PLACEMENT)
-    public void hcyl(Player player, LocalSession session, EditSession editSession, Pattern pattern, String radiusString,
-        @Optional("1") int height) throws WorldEditException {
+    private static void hcyl(Player player, LocalSession session, EditSession editSession, Pattern pattern,
+        String radiusString, int height) throws WorldEditException {
         cyl(player, session, editSession, pattern, radiusString, height, true);
     }
 
-    @Command(
-        aliases = { "/cyl" },
-        usage = "<block> <radius>[,<radius>] [height]",
-        flags = "h",
-        desc = "Generates a cylinder.",
-        help = "Generates a cylinder.\n" + "By specifying 2 radii, separated by a comma,\n"
-            + "you can generate elliptical cylinders.\n"
-            + "The 1st radius is north/south, the 2nd radius is east/west.",
-        min = 2,
-        max = 3)
-    @CommandPermissions("worldedit.generation.cylinder")
-    @Logging(PLACEMENT)
-    public void cyl(Player player, LocalSession session, EditSession editSession, Pattern pattern, String radiusString,
-        @Optional("1") int height, @Switch('h') boolean hollow) throws WorldEditException {
+    private static void cyl(Player player, LocalSession session, EditSession editSession, Pattern pattern,
+        String radiusString, int height, boolean hollow) throws WorldEditException {
         String[] radii = radiusString.split(",");
         final double radiusX, radiusZ;
         switch (radii.length) {
@@ -106,45 +163,25 @@ public class GenerationCommands {
                 return;
         }
 
-        worldEdit.checkMaxRadius(radiusX);
-        worldEdit.checkMaxRadius(radiusZ);
-        worldEdit.checkMaxRadius(height);
+        WorldEdit.getInstance()
+            .checkMaxRadius(radiusX);
+        WorldEdit.getInstance()
+            .checkMaxRadius(radiusZ);
+        WorldEdit.getInstance()
+            .checkMaxRadius(height);
 
         Vector pos = session.getPlacementPosition(player);
         int affected = editSession.makeCylinder(pos, pattern, radiusX, radiusZ, height, !hollow);
         player.print(affected + " block(s) have been created.");
     }
 
-    @Command(
-        aliases = { "/hsphere" },
-        usage = "<block> <radius>[,<radius>,<radius>] [raised?]",
-        desc = "Generates a hollow sphere.",
-        help = "Generates a hollow sphere.\n" + "By specifying 3 radii, separated by commas,\n"
-            + "you can generate an ellipsoid. The order of the ellipsoid radii\n"
-            + "is north/south, up/down, east/west.",
-        min = 2,
-        max = 3)
-    @CommandPermissions("worldedit.generation.sphere")
-    @Logging(PLACEMENT)
-    public void hsphere(Player player, LocalSession session, EditSession editSession, Pattern pattern,
-        String radiusString, @Optional("false") boolean raised) throws WorldEditException {
+    private static void hsphere(Player player, LocalSession session, EditSession editSession, Pattern pattern,
+        String radiusString, boolean raised) throws WorldEditException {
         sphere(player, session, editSession, pattern, radiusString, raised, true);
     }
 
-    @Command(
-        aliases = { "/sphere" },
-        usage = "<block> <radius>[,<radius>,<radius>] [raised?]",
-        flags = "h",
-        desc = "Generates a filled sphere.",
-        help = "Generates a filled sphere.\n" + "By specifying 3 radii, separated by commas,\n"
-            + "you can generate an ellipsoid. The order of the ellipsoid radii\n"
-            + "is north/south, up/down, east/west.",
-        min = 2,
-        max = 3)
-    @CommandPermissions("worldedit.generation.sphere")
-    @Logging(PLACEMENT)
-    public void sphere(Player player, LocalSession session, EditSession editSession, Pattern pattern,
-        String radiusString, @Optional("false") boolean raised, @Switch('h') boolean hollow) throws WorldEditException {
+    private static void sphere(Player player, LocalSession session, EditSession editSession, Pattern pattern,
+        String radiusString, boolean raised, boolean hollow) throws WorldEditException {
         String[] radii = radiusString.split(",");
         final double radiusX, radiusY, radiusZ;
         switch (radii.length) {
@@ -163,9 +200,12 @@ public class GenerationCommands {
                 return;
         }
 
-        worldEdit.checkMaxRadius(radiusX);
-        worldEdit.checkMaxRadius(radiusY);
-        worldEdit.checkMaxRadius(radiusZ);
+        WorldEdit.getInstance()
+            .checkMaxRadius(radiusX);
+        WorldEdit.getInstance()
+            .checkMaxRadius(radiusY);
+        WorldEdit.getInstance()
+            .checkMaxRadius(radiusZ);
 
         Vector pos = session.getPlacementPosition(player);
         if (raised) {
@@ -177,75 +217,39 @@ public class GenerationCommands {
         player.print(affected + " block(s) have been created.");
     }
 
-    @Command(aliases = { "forestgen" }, usage = "[size] [type] [density]", desc = "Generate a forest", min = 0, max = 3)
-    @CommandPermissions("worldedit.generation.forest")
-    @Logging(POSITION)
     @SuppressWarnings("deprecation")
-    public void forestGen(Player player, LocalSession session, EditSession editSession, @Optional("10") int size,
-        @Optional("tree") TreeType type, @Optional("5") double density) throws WorldEditException {
+    private static void forestGen(Player player, LocalSession session, EditSession editSession, int size, TreeType type,
+        double density) throws WorldEditException {
         density = density / 100;
         int affected = editSession
             .makeForest(session.getPlacementPosition(player), size, density, new TreeGenerator(type));
         player.print(affected + " trees created.");
     }
 
-    @Command(aliases = { "pumpkins" }, usage = "[size]", desc = "Generate pumpkin patches", min = 0, max = 1)
-    @CommandPermissions("worldedit.generation.pumpkins")
-    @Logging(POSITION)
-    public void pumpkins(Player player, LocalSession session, EditSession editSession, @Optional("10") int apothem)
+    private static void pumpkins(Player player, LocalSession session, EditSession editSession, int apothem)
         throws WorldEditException {
         int affected = editSession.makePumpkinPatches(session.getPlacementPosition(player), apothem);
         player.print(affected + " pumpkin patches created.");
     }
 
-    @Command(aliases = { "/hpyramid" }, usage = "<block> <size>", desc = "Generate a hollow pyramid", min = 2, max = 2)
-    @CommandPermissions("worldedit.generation.pyramid")
-    @Logging(PLACEMENT)
-    public void hollowPyramid(Player player, LocalSession session, EditSession editSession, Pattern pattern,
-        @Range(min = 1) int size) throws WorldEditException {
+    private static void hollowPyramid(Player player, LocalSession session, EditSession editSession, Pattern pattern,
+        int size) throws WorldEditException {
         pyramid(player, session, editSession, pattern, size, true);
     }
 
-    @Command(
-        aliases = { "/pyramid" },
-        usage = "<block> <size>",
-        flags = "h",
-        desc = "Generate a filled pyramid",
-        min = 2,
-        max = 2)
-    @CommandPermissions("worldedit.generation.pyramid")
-    @Logging(PLACEMENT)
-    public void pyramid(Player player, LocalSession session, EditSession editSession, Pattern pattern,
-        @Range(min = 1) int size, @Switch('h') boolean hollow) throws WorldEditException {
+    private static void pyramid(Player player, LocalSession session, EditSession editSession, Pattern pattern, int size,
+        boolean hollow) throws WorldEditException {
         Vector pos = session.getPlacementPosition(player);
-        worldEdit.checkMaxRadius(size);
+        WorldEdit.getInstance()
+            .checkMaxRadius(size);
         int affected = editSession.makePyramid(pos, pattern, size, !hollow);
         player.findFreePosition();
         player.print(affected + " block(s) have been created.");
     }
 
-    @Command(
-        aliases = { "/generate", "/gen", "/g" },
-        usage = "<block> <expression>",
-        desc = "Generates a shape according to a formula.",
-        help = "Generates a shape according to a formula that is expected to\n"
-            + "return positive numbers (true) if the point is inside the shape\n"
-            + "Optionally set type/data to the desired block.\n"
-            + "Flags:\n"
-            + "  -h to generate a hollow shape\n"
-            + "  -r to use raw minecraft coordinates\n"
-            + "  -o is like -r, except offset from placement.\n"
-            + "  -c is like -r, except offset selection center.\n"
-            + "If neither -r nor -o is given, the selection is mapped to -1..1\n"
-            + "See also tinyurl.com/wesyntax.",
-        flags = "hroc",
-        min = 2,
-        max = -1)
-    @CommandPermissions("worldedit.generation.shape")
-    @Logging(ALL)
-    public void generate(Player player, LocalSession session, EditSession editSession, @Selection Region region,
-        Pattern pattern, @Text String expression, @Switch('h') boolean hollow, @Switch('r') boolean useRawCoords,
-        @Switch('o') boolean offset, @Switch('c') boolean offsetCenter) throws WorldEditException {
+    private static void generate(Player player, LocalSession session, EditSession editSession, Region region,
+        Pattern pattern, String expression, boolean hollow, boolean useRawCoords, boolean offset, boolean offsetCenter)
+        throws WorldEditException {
 
         final Vector zero;
         Vector unit;
@@ -285,28 +289,9 @@ public class GenerationCommands {
         }
     }
 
-    @Command(
-        aliases = { "/generatebiome", "/genbiome", "/gb" },
-        usage = "<block> <expression>",
-        desc = "Sets biome according to a formula.",
-        help = "Generates a shape according to a formula that is expected to\n"
-            + "return positive numbers (true) if the point is inside the shape\n"
-            + "Optionally set type/data to the desired block.\n"
-            + "Flags:\n"
-            + "  -h to generate a hollow shape\n"
-            + "  -r to use raw minecraft coordinates\n"
-            + "  -o is like -r, except offset from placement.\n"
-            + "  -c is like -r, except offset selection center.\n"
-            + "If neither -r nor -o is given, the selection is mapped to -1..1\n"
-            + "See also tinyurl.com/wesyntax.",
-        flags = "hroc",
-        min = 2,
-        max = -1)
-    @CommandPermissions({ "worldedit.generation.shape", "worldedit.biome.set" })
-    @Logging(ALL)
-    public void generateBiome(Player player, LocalSession session, EditSession editSession, @Selection Region region,
-        BaseBiome target, @Text String expression, @Switch('h') boolean hollow, @Switch('r') boolean useRawCoords,
-        @Switch('o') boolean offset, @Switch('c') boolean offsetCenter) throws WorldEditException {
+    private static void generateBiome(Player player, LocalSession session, EditSession editSession, Region region,
+        BaseBiome target, String expression, boolean hollow, boolean useRawCoords, boolean offset, boolean offsetCenter)
+        throws WorldEditException {
         final Vector zero;
         Vector unit;
 

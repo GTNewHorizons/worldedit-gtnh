@@ -16,50 +16,78 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.util.List;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.ItemType;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.mask.Mask;
-import com.sk89q.worldedit.util.command.parametric.Optional;
 
 /**
  * General WorldEdit commands.
+ *
+ * <ul>
+ * <li>{@code //limit <limit>}: modify the block change limit</li>
+ * <li>{@code //cancel}: cancel your running and queued edits</li>
+ * <li>{@code //fast [on|off]}: toggle fast mode</li>
+ * <li>{@code //gmask [mask]}: set or clear the global mask</li>
+ * <li>{@code //toggleplace}: switch between your position and pos1 for placement</li>
+ * <li>{@code //searchitem [-bi] <query>}: search for a block or item</li>
+ * </ul>
  */
-public class GeneralCommands {
+public final class GeneralCommands {
 
-    private final WorldEdit worldEdit;
+    private GeneralCommands() {}
 
-    /**
-     * Create a new instance.
-     *
-     * @param worldEdit reference to WorldEdit
-     */
-    public GeneralCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("/limit").executes(Nodes.USAGE)
+                .then(integer("limit")
+                        .executes(run("worldedit.limit", c -> limit(c.worldEdit(), c.player(), c.session(), c.integer("limit"))))));
+
+        Nodes.register(dispatcher, literal("/cancel")
+                .executes(run("worldedit.cancel", c -> cancel(c.worldEdit(), c.player()))));
+
+        Nodes.register(dispatcher, literal("/fast")
+                .executes(run("worldedit.fast", c -> fast(c.player(), c.session(), null)))
+                .then(word("state", "on", "off")
+                        .executes(run("worldedit.fast", c -> fast(c.player(), c.session(), c.string("state"))))));
+
+        Nodes.register(dispatcher, literal("/gmask")
+                .executes(run("worldedit.global-mask", c -> gmask(c.player(), c.session(), null)))
+                .then(word("mask")
+                        .executes(run("worldedit.global-mask", c -> gmask(c.player(), c.session(), c.mask("mask"))))),
+                "gmask");
+
+        Nodes.register(dispatcher, literal("/toggleplace")
+                .executes(run(null, c -> togglePlace(c.player(), c.session()))),
+                "toggleplace");
+
+        Nodes.registerWithFlags(dispatcher, literal("/searchitem").executes(Nodes.USAGE)
+                .then(word("query")
+                        .executes(run(null, c -> searchItem(c.actor(), c.string("query"), c.flag('b'), c.flag('i'))))),
+                "bi", "/l", "/search", "searchitem");
     }
+    // spotless:on
 
-    @Command(aliases = { "/limit" }, usage = "<limit>", desc = "Modify block change limit", min = 1, max = 1)
-    @CommandPermissions("worldedit.limit")
-    public void limit(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
+    private static void limit(WorldEdit worldEdit, Player player, LocalSession session, int requested) {
         LocalConfiguration config = worldEdit.getConfiguration();
         boolean mayDisable = player.hasPermission("worldedit.limit.unrestricted");
 
-        int limit = Math.max(-1, args.getInteger(0));
+        int limit = Math.max(-1, requested);
         if (!mayDisable && config.maxChangeLimit > -1) {
             if (limit > config.maxChangeLimit) {
                 player.printError("Your maximum allowable limit is " + config.maxChangeLimit + ".");
@@ -76,16 +104,7 @@ public class GeneralCommands {
         }
     }
 
-    @Command(
-        aliases = { "/cancel" },
-        usage = "",
-        desc = "Cancel your running and queued edits",
-        help = "Stops your large edits that are still running or waiting to run.\n"
-            + "Blocks already changed stay changed, and //undo reverts them.",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.cancel")
-    public void cancel(Player player) throws WorldEditException {
+    private static void cancel(WorldEdit worldEdit, Player player) {
         List<EditSession> cancelled = worldEdit.getOperationScheduler()
             .cancel(player.getUniqueId());
 
@@ -104,12 +123,7 @@ public class GeneralCommands {
         }
     }
 
-    @Command(aliases = { "/fast" }, usage = "[on|off]", desc = "Toggle fast mode", min = 0, max = 1)
-    @CommandPermissions("worldedit.fast")
-    public void fast(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        String newState = args.getString(0, null);
+    private static void fast(Player player, LocalSession session, String newState) {
         if (session.hasFastMode()) {
             if ("on".equals(newState)) {
                 player.printError("Fast mode already enabled.");
@@ -130,10 +144,7 @@ public class GeneralCommands {
         }
     }
 
-    @Command(aliases = { "/gmask", "gmask" }, usage = "[mask]", desc = "Set the global mask", min = 0, max = -1)
-    @CommandPermissions("worldedit.global-mask")
-    public void gmask(Player player, LocalSession session, EditSession editSession, @Optional Mask mask)
-        throws WorldEditException {
+    private static void gmask(Player player, LocalSession session, Mask mask) {
         if (mask == null) {
             session.setMask((Mask) null);
             player.print("Global mask disabled.");
@@ -143,15 +154,7 @@ public class GeneralCommands {
         }
     }
 
-    @Command(
-        aliases = { "/toggleplace", "toggleplace" },
-        usage = "",
-        desc = "Switch between your position and pos1 for placement",
-        min = 0,
-        max = 0)
-    public void togglePlace(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
+    private static void togglePlace(Player player, LocalSession session) {
         if (session.togglePlacementPosition()) {
             player.print("Now placing at pos #1.");
         } else {
@@ -159,21 +162,9 @@ public class GeneralCommands {
         }
     }
 
-    @Command(
-        aliases = { "/searchitem", "/l", "/search", "searchitem" },
-        usage = "<query>",
-        flags = "bi",
-        desc = "Search for an item",
-        help = "Searches for an item.\n" + "Flags:\n" + "  -b only search for blocks\n" + "  -i only search for items",
-        min = 1,
-        max = 1)
-    public void searchItem(Actor actor, CommandContext args) throws WorldEditException {
-
-        String query = args.getString(0)
-            .trim()
+    private static void searchItem(Actor actor, String rawQuery, boolean blocksOnly, boolean itemsOnly) {
+        String query = rawQuery.trim()
             .toLowerCase();
-        boolean blocksOnly = args.hasFlag('b');
-        boolean itemsOnly = args.hasFlag('i');
 
         try {
             int id = Integer.parseInt(query);
@@ -234,5 +225,4 @@ public class GeneralCommands {
             actor.printError("No items found.");
         }
     }
-
 }

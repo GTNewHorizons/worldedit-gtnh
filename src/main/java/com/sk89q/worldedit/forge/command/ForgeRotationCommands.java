@@ -1,35 +1,39 @@
 package com.sk89q.worldedit.forge.command;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.extension.platform.Actor;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
 import com.sk89q.worldedit.forge.ForgeWorldEdit;
 import com.sk89q.worldedit.forge.compat.ModRotationBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.rotation.RotationMappings;
 
 /**
- * Forge-specific commands.
+ * {@code //we reloadmappings}: reload the rotation mappings of modded blocks from disk.
  */
-public class ForgeRotationCommands {
+public final class ForgeRotationCommands {
 
-    private final WorldEdit we;
+    private ForgeRotationCommands() {}
 
-    public ForgeRotationCommands(WorldEdit we) {
-        this.we = we;
+    /**
+     * The command, to be registered under {@code //worldedit}.
+     */
+    public static LiteralCommandNode<ICommandSender> node() {
+        return literal("reloadmappings", "Reload rotation mappings")
+            .executes(run("worldedit.reload", ForgeRotationCommands::reloadMappings))
+            .build();
     }
 
-    /** Reload rotation mappings from disk. */
-    @Command(aliases = { "reloadmappings" }, usage = "", desc = "Reload rotation mappings", min = 0, max = 0)
-    @CommandPermissions("worldedit.reload")
-    public void reloadMappings(Actor actor, CommandContext args) throws WorldEditException {
+    private static void reloadMappings(CommandCall call) {
         RotationMappings.init(ForgeWorldEdit.inst.getWorkingDir());
         ModRotationBlockTransformHook hook = ForgeWorldEdit.inst.getModRotationHook();
         if (hook != null) {
             hook.clearCache();
         }
-        actor.print("Rotation mappings reloaded!");
+        call.actor()
+            .print("Rotation mappings reloaded!");
     }
 }

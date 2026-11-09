@@ -245,7 +245,7 @@ public class ScheduledHistoryTest {
         when(worldEdit.getOperationScheduler()).thenReturn(scheduler);
 
         EditSession writer = newSession();
-        new ClipboardCommands(worldEdit).paste(player, session, writer, false, false, true);
+        ClipboardCommands.paste(worldEdit, player, session, writer, false, false, true);
 
         assertNotEquals(5, get(new Vector(10, 0, 10)).getType());
         verify(player, never()).print(anyString());

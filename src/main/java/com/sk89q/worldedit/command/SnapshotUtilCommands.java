@@ -16,21 +16,24 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.REGION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.world.DataException;
@@ -40,28 +43,29 @@ import com.sk89q.worldedit.world.snapshot.SnapshotRestore;
 import com.sk89q.worldedit.world.storage.ChunkStore;
 import com.sk89q.worldedit.world.storage.MissingWorldException;
 
-public class SnapshotUtilCommands {
+public final class SnapshotUtilCommands {
+
+    private SnapshotUtilCommands() {}
+
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("restore", "Restore the selection from a snapshot")
+                .executes(run("worldedit.snapshots.restore", LogMode.REGION,
+                        c -> restore(c.player(), c.session(), c.editSession(), null)))
+                .then(word("snapshot")
+                        .executes(run("worldedit.snapshots.restore", LogMode.REGION,
+                                c -> restore(c.player(), c.session(), c.editSession(), c.string("snapshot"))))),
+                "/restore");
+    }
+    // spotless:on
 
     private static final Logger logger = Logger.getLogger("Minecraft.WorldEdit");
 
-    private final WorldEdit we;
-
-    public SnapshotUtilCommands(WorldEdit we) {
-        this.we = we;
-    }
-
-    @Command(
-        aliases = { "restore", "/restore" },
-        usage = "[snapshot]",
-        desc = "Restore the selection from a snapshot",
-        min = 0,
-        max = 1)
-    @Logging(REGION)
-    @CommandPermissions("worldedit.snapshots.restore")
-    public void restore(Player player, LocalSession session, EditSession editSession, CommandContext args)
+    private static void restore(Player player, LocalSession session, EditSession editSession, String snapshotName)
         throws WorldEditException {
 
-        LocalConfiguration config = we.getConfiguration();
+        LocalConfiguration config = WorldEdit.getInstance()
+            .getConfiguration();
 
         if (config.snapshotRepo == null) {
             player.printError("Snapshot/backup restore is not configured.");
@@ -71,9 +75,9 @@ public class SnapshotUtilCommands {
         Region region = session.getSelection(player.getWorld());
         Snapshot snapshot;
 
-        if (args.argsLength() > 0) {
+        if (snapshotName != null) {
             try {
-                snapshot = config.snapshotRepo.getSnapshot(args.getString(0));
+                snapshot = config.snapshotRepo.getSnapshot(snapshotName);
             } catch (InvalidSnapshotException e) {
                 player.printError("That snapshot does not exist or is not available.");
                 return;

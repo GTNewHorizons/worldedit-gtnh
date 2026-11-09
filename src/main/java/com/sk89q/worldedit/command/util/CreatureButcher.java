@@ -16,8 +16,8 @@
 
 package com.sk89q.worldedit.command.util;
 
-import com.sk89q.minecraft.util.commands.CommandContext;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.entity.metadata.EntityType;
 import com.sk89q.worldedit.extension.platform.Actor;
@@ -64,18 +64,18 @@ public class CreatureButcher {
         }
     }
 
-    public void fromCommand(CommandContext args) {
-        or(Flags.FRIENDLY, args.hasFlag('f')); // No permission check here. Flags will instead be filtered by the
-                                               // subsequent calls.
-        or(Flags.PETS, args.hasFlag('p'), "worldedit.butcher.pets");
-        or(Flags.NPCS, args.hasFlag('n'), "worldedit.butcher.npcs");
-        or(Flags.GOLEMS, args.hasFlag('g'), "worldedit.butcher.golems");
-        or(Flags.ANIMALS, args.hasFlag('a'), "worldedit.butcher.animals");
-        or(Flags.AMBIENT, args.hasFlag('b'), "worldedit.butcher.ambient");
-        or(Flags.TAGGED, args.hasFlag('t'), "worldedit.butcher.tagged");
-        or(Flags.ARMOR_STAND, args.hasFlag('r'), "worldedit.butcher.armorstands");
+    public void fromCommand(CommandCall args) {
+        or(Flags.FRIENDLY, args.flag('f')); // No permission check here. Flags will instead be filtered by the
+                                            // subsequent calls.
+        or(Flags.PETS, args.flag('p'), "worldedit.butcher.pets");
+        or(Flags.NPCS, args.flag('n'), "worldedit.butcher.npcs");
+        or(Flags.GOLEMS, args.flag('g'), "worldedit.butcher.golems");
+        or(Flags.ANIMALS, args.flag('a'), "worldedit.butcher.animals");
+        or(Flags.AMBIENT, args.flag('b'), "worldedit.butcher.ambient");
+        or(Flags.TAGGED, args.flag('t'), "worldedit.butcher.tagged");
+        or(Flags.ARMOR_STAND, args.flag('r'), "worldedit.butcher.armorstands");
 
-        or(Flags.WITH_LIGHTNING, args.hasFlag('l'), "worldedit.butcher.lightning");
+        or(Flags.WITH_LIGHTNING, args.flag('l'), "worldedit.butcher.lightning");
     }
 
     public EntityFunction createFunction(final EntityRegistry entityRegistry) {

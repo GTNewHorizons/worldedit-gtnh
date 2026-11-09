@@ -28,12 +28,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Joiner;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WETags;
 import com.sk89q.worldedit.WorldEdit;
@@ -41,6 +39,7 @@ import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.BlockType;
+import com.sk89q.worldedit.command.brigadier.CommandRegistry;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
@@ -76,7 +75,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
     name = "WorldEdit",
     version = WETags.VERSION,
     acceptableRemoteVersions = "*",
-    dependencies = "after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
+    dependencies = "required-after:gtnhlib;after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
 public class ForgeWorldEdit {
 
     public static Logger logger;
@@ -171,6 +170,10 @@ public class ForgeWorldEdit {
             .register(platform);
         this.provider = new ForgePermissionsProvider.VanillaPermissionsProvider(platform);
 
+        // GTNHLib creates a new command dispatcher for each server, right before this. Not any later: on Thermos it
+        // wraps the registered commands when the server is starting.
+        CommandRegistry.registerAll(WorldEdit.getInstance(), config.noDoubleSlash);
+
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
         BlockType.setPlacementRules(new ForgeBlockPlacementRules(config.placeLastBlocks, config.placeNormallyBlocks));
@@ -224,23 +227,6 @@ public class ForgeWorldEdit {
         WorldEdit.getInstance()
             .getEventBus()
             .post(new PlatformReadyEvent());
-    }
-
-    @SubscribeEvent
-    public void onCommandEvent(CommandEvent event) {
-        if ((event.sender instanceof EntityPlayerMP)) {
-            if (((EntityPlayerMP) event.sender).worldObj.isRemote) return;
-            String[] split = new String[event.parameters.length + 1];
-            System.arraycopy(event.parameters, 0, split, 1, event.parameters.length);
-            split[0] = event.command.getCommandName();
-            com.sk89q.worldedit.event.platform.CommandEvent weEvent = new com.sk89q.worldedit.event.platform.CommandEvent(
-                wrap((EntityPlayerMP) event.sender),
-                Joiner.on(" ")
-                    .join(split));
-            WorldEdit.getInstance()
-                .getEventBus()
-                .post(weEvent);
-        }
     }
 
     @SubscribeEvent

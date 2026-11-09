@@ -16,16 +16,21 @@
 
 package com.sk89q.worldedit.command;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.worldedit.EditSession;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
+
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.ItemType;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.command.tool.BlockDataCyler;
 import com.sk89q.worldedit.command.tool.BlockReplacer;
 import com.sk89q.worldedit.command.tool.DistanceWand;
@@ -33,127 +38,161 @@ import com.sk89q.worldedit.command.tool.FloatingTreeRemover;
 import com.sk89q.worldedit.command.tool.FloodFillTool;
 import com.sk89q.worldedit.command.tool.LongRangeBuildTool;
 import com.sk89q.worldedit.command.tool.QueryTool;
+import com.sk89q.worldedit.command.tool.Tool;
 import com.sk89q.worldedit.command.tool.TreePlanter;
 import com.sk89q.worldedit.command.util.CommandInput;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.util.TreeGenerator;
 
-public class ToolCommands {
+/**
+ * Commands that bind a tool to the item in your hand.
+ *
+ * <p>
+ * Every tool command can be typed on its own ({@code //info}) and as a part of the group ({@code //tool info}).
+ * </p>
+ *
+ * <ul>
+ * <li>{@code none}: unbind the tool from the item in your hand</li>
+ * <li>{@code info}, {@code tree [type]}, {@code repl <block>}, {@code cycler}, {@code floodfill <pattern> <range>},
+ * {@code deltree}, {@code farwand}, {@code lrbuild <leftclick block> <rightclick block>}</li>
+ * </ul>
+ */
+public final class ToolCommands {
 
-    private final WorldEdit we;
+    private ToolCommands() {}
 
-    public ToolCommands(WorldEdit we) {
-        this.we = we;
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        LiteralCommandNode<ICommandSender> none = literal("none", "Unbind a bound tool from your current item")
+                .executes(run(null, ToolCommands::none)).build();
+
+        LiteralCommandNode<ICommandSender> info = literal("info", "Block information tool")
+                .executes(run("worldedit.tool.info", ToolCommands::info)).build();
+
+        LiteralCommandNode<ICommandSender> tree = literal("tree", "Tree generator tool")
+                .executes(run("worldedit.tool.tree", c -> tree(c, null)))
+                .then(word("type")
+                        .executes(run("worldedit.tool.tree", c -> tree(c, c.string("type")))))
+                .build();
+
+        LiteralCommandNode<ICommandSender> repl = literal("repl", "Block replacer tool").executes(Nodes.USAGE)
+                .then(word("block")
+                        .executes(run("worldedit.tool.replacer", ToolCommands::repl)))
+                .build();
+
+        LiteralCommandNode<ICommandSender> cycler = literal("cycler", "Block data cycler tool")
+                .executes(run("worldedit.tool.data-cycler", ToolCommands::cycler)).build();
+
+        LiteralCommandNode<ICommandSender> floodFill = literal("floodfill", "Flood fill tool").executes(Nodes.USAGE)
+                .then(word("pattern").executes(Nodes.USAGE)
+                        .then(integer("range")
+                                .executes(run("worldedit.tool.flood-fill", ToolCommands::floodFill))))
+                .build();
+
+        LiteralCommandNode<ICommandSender> delTree = literal("deltree", "Floating tree remover tool")
+                .executes(run("worldedit.tool.deltree", ToolCommands::delTree)).build();
+
+        LiteralCommandNode<ICommandSender> farWand = literal("farwand", "Wand at a distance tool")
+                .executes(run("worldedit.tool.farwand", ToolCommands::farWand)).build();
+
+        LiteralCommandNode<ICommandSender> longRangeBuild = literal("lrbuild", "Long-range building tool")
+                .executes(Nodes.USAGE)
+                .then(word("leftclick").executes(Nodes.USAGE)
+                        .then(word("rightclick")
+                                .executes(run("worldedit.tool.lrbuild", ToolCommands::longRangeBuild))))
+                .build();
+
+        // The same tools can be bound without the group, as //info or //none
+        Nodes.register(dispatcher, none);
+        Nodes.register(dispatcher, info);
+        Nodes.register(dispatcher, tree);
+        Nodes.register(dispatcher, repl);
+        Nodes.register(dispatcher, cycler);
+        Nodes.register(dispatcher, floodFill, "flood");
+        Nodes.register(dispatcher, delTree);
+        Nodes.register(dispatcher, farWand);
+        Nodes.register(dispatcher, longRangeBuild, "/lrbuild");
+
+        Nodes.register(dispatcher, literal("tool", "Bind functions to held items").executes(Nodes.USAGE)
+                .then(none)
+                .then(info)
+                .then(tree)
+                .then(repl)
+                .then(cycler)
+                .then(floodFill)
+                .then(Nodes.alias("flood", floodFill))
+                .then(delTree)
+                .then(farWand)
+                .then(longRangeBuild)
+                .then(Nodes.alias("/lrbuild", longRangeBuild)));
+    }
+    // spotless:on
+
+    private static void bind(CommandCall call, Tool tool, String message) throws Exception {
+        Player player = call.player();
+        call.session()
+            .setTool(player.getItemInHand(), tool);
+        player.print(message + " bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
     }
 
-    @Command(aliases = { "none" }, usage = "", desc = "Unbind a bound tool from your current item", min = 0, max = 0)
-    public void none(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        session.setTool(player.getItemInHand(), null);
+    private static void none(CommandCall call) throws Exception {
+        Player player = call.player();
+        call.session()
+            .setTool(player.getItemInHand(), null);
         player.print("Tool unbound from your current item.");
     }
 
-    @Command(aliases = { "info" }, usage = "", desc = "Block information tool", min = 0, max = 0)
-    @CommandPermissions("worldedit.tool.info")
-    public void info(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        session.setTool(player.getItemInHand(), new QueryTool());
-        player.print("Info tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+    private static void info(CommandCall call) throws Exception {
+        bind(call, new QueryTool(), "Info tool");
     }
 
-    @Command(aliases = { "tree" }, usage = "[type]", desc = "Tree generator tool", min = 0, max = 1)
-    @CommandPermissions("worldedit.tool.tree")
     @SuppressWarnings("deprecation")
-    public void tree(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        TreeGenerator.TreeType type = args.argsLength() > 0 ? type = TreeGenerator.lookup(args.getString(0))
-            : TreeGenerator.TreeType.TREE;
-
+    private static void tree(CommandCall call, String typeName) throws Exception {
+        Player player = call.player();
+        TreeGenerator.TreeType type = typeName != null ? TreeGenerator.lookup(typeName) : TreeGenerator.TreeType.TREE;
         if (type == null) {
-            player.printError("Tree type '" + args.getString(0) + "' is unknown.");
+            player.printError("Tree type '" + typeName + "' is unknown.");
             return;
         }
-
-        session.setTool(player.getItemInHand(), new TreePlanter(new TreeGenerator(type)));
-        player.print("Tree tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+        bind(call, new TreePlanter(new TreeGenerator(type)), "Tree tool");
     }
 
-    @Command(aliases = { "repl" }, usage = "<block>", desc = "Block replacer tool", min = 1, max = 1)
-    @CommandPermissions("worldedit.tool.replacer")
-    public void repl(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        BaseBlock targetBlock = CommandInput.block(player, args.getString(0), false, false);
-        session.setTool(player.getItemInHand(), new BlockReplacer(targetBlock));
-        player.print("Block replacer tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+    private static void repl(CommandCall call) throws Exception {
+        BaseBlock targetBlock = CommandInput.block(call.player(), call.string("block"), false, false);
+        bind(call, new BlockReplacer(targetBlock), "Block replacer tool");
     }
 
-    @Command(aliases = { "cycler" }, usage = "", desc = "Block data cycler tool", min = 0, max = 0)
-    @CommandPermissions("worldedit.tool.data-cycler")
-    public void cycler(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        session.setTool(player.getItemInHand(), new BlockDataCyler());
-        player.print("Block data cycler tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+    private static void cycler(CommandCall call) throws Exception {
+        bind(call, new BlockDataCyler(), "Block data cycler tool");
     }
 
-    @Command(
-        aliases = { "floodfill", "flood" },
-        usage = "<pattern> <range>",
-        desc = "Flood fill tool",
-        min = 2,
-        max = 2)
-    @CommandPermissions("worldedit.tool.flood-fill")
-    public void floodFill(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        LocalConfiguration config = we.getConfiguration();
-        int range = args.getInteger(1);
-
+    private static void floodFill(CommandCall call) throws Exception {
+        Player player = call.player();
+        LocalConfiguration config = call.worldEdit()
+            .getConfiguration();
+        int range = call.integer("range");
         if (range > config.maxSuperPickaxeSize) {
             player.printError("Maximum range: " + config.maxSuperPickaxeSize);
             return;
         }
-
-        Pattern pattern = CommandInput.pattern(player, args.getString(0));
-        session.setTool(player.getItemInHand(), new FloodFillTool(range, pattern));
-        player.print("Block flood fill tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+        Pattern pattern = CommandInput.pattern(player, call.string("pattern"));
+        bind(call, new FloodFillTool(range, pattern), "Block flood fill tool");
     }
 
-    @Command(aliases = { "deltree" }, usage = "", desc = "Floating tree remover tool", min = 0, max = 0)
-    @CommandPermissions("worldedit.tool.deltree")
-    public void deltree(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        session.setTool(player.getItemInHand(), new FloatingTreeRemover());
-        player.print("Floating tree remover tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+    private static void delTree(CommandCall call) throws Exception {
+        bind(call, new FloatingTreeRemover(), "Floating tree remover tool");
     }
 
-    @Command(aliases = { "farwand" }, usage = "", desc = "Wand at a distance tool", min = 0, max = 0)
-    @CommandPermissions("worldedit.tool.farwand")
-    public void farwand(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        session.setTool(player.getItemInHand(), new DistanceWand());
-        player.print("Far wand tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
+    private static void farWand(CommandCall call) throws Exception {
+        bind(call, new DistanceWand(), "Far wand tool");
     }
 
-    @Command(
-        aliases = { "lrbuild", "/lrbuild" },
-        usage = "<leftclick block> <rightclick block>",
-        desc = "Long-range building tool",
-        min = 2,
-        max = 2)
-    @CommandPermissions("worldedit.tool.lrbuild")
-    public void longrangebuildtool(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        BaseBlock secondary = CommandInput.block(player, args.getString(0), false, false);
-        BaseBlock primary = CommandInput.block(player, args.getString(1), false, false);
+    private static void longRangeBuild(CommandCall call) throws Exception {
+        Player player = call.player();
+        LocalSession session = call.session();
+        BaseBlock secondary = CommandInput.block(player, call.string("leftclick"), false, false);
+        BaseBlock primary = CommandInput.block(player, call.string("rightclick"), false, false);
         session.setTool(player.getItemInHand(), new LongRangeBuildTool(primary, secondary));
         player.print("Long-range building tool bound to " + ItemType.toHeldName(player.getItemInHand()) + ".");
         player.print(

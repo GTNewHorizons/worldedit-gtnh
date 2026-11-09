@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.util.command.Dispatcher;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -100,13 +99,6 @@ public interface Platform {
      */
     @Nullable
     World matchWorld(World world);
-
-    /**
-     * Register the commands contained within the given command dispatcher.
-     *
-     * @param dispatcher the dispatcher
-     */
-    void registerCommands(Dispatcher dispatcher);
 
     /**
      * Register game hooks.

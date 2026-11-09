@@ -16,55 +16,81 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.POSITION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
-import com.sk89q.worldedit.EditSession;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.LocalConfiguration;
-import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.WorldVector;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.util.command.parametric.Optional;
 
 /**
  * Commands for moving the player around.
+ *
+ * <ul>
+ * <li>{@code unstuck} (alias {@code !}): escape from being stuck inside a block</li>
+ * <li>{@code ascend [levels]} (alias {@code asc}), {@code descend [levels]} (alias {@code desc})</li>
+ * <li>{@code ceil [-fg] [clearance]}, {@code up [-fg] <distance>}</li>
+ * <li>{@code thru}: pass through a wall</li>
+ * <li>{@code jumpto} (alias {@code j}): teleport to the block you look at</li>
+ * </ul>
  */
-public class NavigationCommands {
+public final class NavigationCommands {
 
-    @SuppressWarnings("unused")
-    private final WorldEdit worldEdit;
+    private NavigationCommands() {}
 
-    /**
-     * Create a new instance.
-     *
-     * @param worldEdit reference to WorldEdit
-     */
-    public NavigationCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("unstuck")
+                .executes(run("worldedit.navigation.unstuck", NavigationCommands::unstuck)),
+                "!");
+
+        Nodes.register(dispatcher, literal("ascend")
+                .executes(run("worldedit.navigation.ascend", c -> ascend(c.player(), 1)))
+                .then(integer("levels")
+                        .executes(run("worldedit.navigation.ascend", c -> ascend(c.player(), c.integer("levels"))))),
+                "asc");
+
+        Nodes.register(dispatcher, literal("descend")
+                .executes(run("worldedit.navigation.descend", c -> descend(c.player(), 1)))
+                .then(integer("levels")
+                        .executes(run("worldedit.navigation.descend", c -> descend(c.player(), c.integer("levels"))))),
+                "desc");
+
+        Nodes.registerWithFlags(dispatcher, literal("ceil")
+                .executes(run("worldedit.navigation.ceiling", LogMode.POSITION, c -> ceiling(c, 0)))
+                .then(integer("clearance", 0)
+                        .executes(run("worldedit.navigation.ceiling", LogMode.POSITION,
+                                c -> ceiling(c, c.integer("clearance"))))),
+                "fg");
+
+        Nodes.register(dispatcher, literal("thru")
+                .executes(run("worldedit.navigation.thru.command", NavigationCommands::thru)));
+
+        Nodes.register(dispatcher, literal("jumpto")
+                .executes(run("worldedit.navigation.jumpto.command", NavigationCommands::jumpTo)),
+                "j");
+
+        Nodes.registerWithFlags(dispatcher, literal("up").executes(Nodes.USAGE)
+                .then(integer("distance")
+                        .executes(run("worldedit.navigation.up", LogMode.POSITION, NavigationCommands::up))),
+                "fg");
     }
+    // spotless:on
 
-    @Command(
-        aliases = { "unstuck", "!" },
-        usage = "",
-        desc = "Escape from being stuck inside a block",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.navigation.unstuck")
-    public void unstuck(Player player) throws WorldEditException {
+    private static void unstuck(CommandCall call) {
+        Player player = call.player();
         player.print("There you go!");
         player.findFreePosition();
     }
 
-    @Command(aliases = { "ascend", "asc" }, usage = "[# of levels]", desc = "Go up a floor", min = 0, max = 1)
-    @CommandPermissions("worldedit.navigation.ascend")
-    public void ascend(Player player, @Optional("1") int levelsToAscend) throws WorldEditException {
+    private static void ascend(Player player, int levelsToAscend) {
         int ascentLevels = 1;
         while (player.ascendLevel() && levelsToAscend != ascentLevels) {
             ++ascentLevels;
@@ -72,14 +98,11 @@ public class NavigationCommands {
         if (ascentLevels == 0) {
             player.printError("No free spot above you found.");
         } else {
-            player.print(
-                (ascentLevels != 1) ? "Ascended " + Integer.toString(ascentLevels) + " levels." : "Ascended a level.");
+            player.print((ascentLevels != 1) ? "Ascended " + ascentLevels + " levels." : "Ascended a level.");
         }
     }
 
-    @Command(aliases = { "descend", "desc" }, usage = "[# of floors]", desc = "Go down a floor", min = 0, max = 1)
-    @CommandPermissions("worldedit.navigation.descend")
-    public void descend(Player player, @Optional("1") int levelsToDescend) throws WorldEditException {
+    private static void descend(Player player, int levelsToDescend) {
         int descentLevels = 1;
         while (player.descendLevel() && levelsToDescend != descentLevels) {
             ++descentLevels;
@@ -87,32 +110,21 @@ public class NavigationCommands {
         if (descentLevels == 0) {
             player.printError("No free spot above you found.");
         } else {
-            player.print(
-                (descentLevels != 1) ? "Descended " + Integer.toString(descentLevels) + " levels."
-                    : "Descended a level.");
+            player.print((descentLevels != 1) ? "Descended " + descentLevels + " levels." : "Descended a level.");
         }
     }
 
-    @Command(aliases = { "ceil" }, usage = "[clearance]", desc = "Go to the celing", flags = "fg", min = 0, max = 1)
-    @CommandPermissions("worldedit.navigation.ceiling")
-    @Logging(POSITION)
-    public void ceiling(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        final int clearance = args.argsLength() > 0 ? Math.max(0, args.getInteger(0)) : 0;
-
-        final boolean alwaysGlass = getAlwaysGlass(args);
-        if (player.ascendToCeiling(clearance, alwaysGlass)) {
+    private static void ceiling(CommandCall call, int clearance) {
+        Player player = call.player();
+        if (player.ascendToCeiling(clearance, alwaysGlass(call))) {
             player.print("Whoosh!");
         } else {
             player.printError("No free spot above you found.");
         }
     }
 
-    @Command(aliases = { "thru" }, usage = "", desc = "Passthrough walls", min = 0, max = 0)
-    @CommandPermissions("worldedit.navigation.thru.command")
-    public void thru(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
+    private static void thru(CommandCall call) {
+        Player player = call.player();
         if (player.passThroughForwardWall(6)) {
             player.print("Whoosh!");
         } else {
@@ -120,11 +132,8 @@ public class NavigationCommands {
         }
     }
 
-    @Command(aliases = { "jumpto", "j" }, usage = "", desc = "Teleport to a location", min = 0, max = 0)
-    @CommandPermissions("worldedit.navigation.jumpto.command")
-    public void jumpTo(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
+    private static void jumpTo(CommandCall call) {
+        Player player = call.player();
         WorldVector pos = player.getSolidBlockTrace(300);
         if (pos != null) {
             player.findFreePosition(pos);
@@ -134,15 +143,9 @@ public class NavigationCommands {
         }
     }
 
-    @Command(aliases = { "up" }, usage = "<block>", desc = "Go upwards some distance", flags = "fg", min = 1, max = 1)
-    @CommandPermissions("worldedit.navigation.up")
-    @Logging(POSITION)
-    public void up(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-        final int distance = args.getInteger(0);
-
-        final boolean alwaysGlass = getAlwaysGlass(args);
-        if (player.ascendUpwards(distance, alwaysGlass)) {
+    private static void up(CommandCall call) {
+        Player player = call.player();
+        if (player.ascendUpwards(call.integer("distance"), alwaysGlass(call))) {
             player.print("Whoosh!");
         } else {
             player.printError("You would hit something above you.");
@@ -150,17 +153,13 @@ public class NavigationCommands {
     }
 
     /**
-     * Helper function for /up and /ceil.
+     * Flags of {@code up} and {@code ceil}: -g always puts glass under the player, -f never does.
      *
-     * @param args The {@link CommandContext} to extract the flags from.
-     * @return true, if glass should always be put under the player
+     * @return true if glass should always be put under the player
      */
-    private boolean getAlwaysGlass(CommandContext args) {
-        final LocalConfiguration config = worldEdit.getConfiguration();
-
-        final boolean forceFlight = args.hasFlag('f');
-        final boolean forceGlass = args.hasFlag('g');
-
-        return forceGlass || (config.navigationUseGlass && !forceFlight);
+    private static boolean alwaysGlass(CommandCall call) {
+        LocalConfiguration config = call.worldEdit()
+            .getConfiguration();
+        return call.flag('g') || (config.navigationUseGlass && !call.flag('f'));
     }
 }

@@ -1,0 +1,23 @@
+# `/clearclipboard`
+
+Empty your clipboard.
+
+Frees the memory of a big copy.
+
+## Usage
+
+```
+/clearclipboard
+```
+
+## Examples
+
+| Command | What it does |
+|---|---|
+| `/clearclipboard` | Forget the clipboard. |
+
+## Permission
+
+`worldedit.clipboard.clear`
+
+[All commands](../README.md)

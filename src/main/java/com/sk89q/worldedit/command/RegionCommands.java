@@ -16,10 +16,12 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.ALL;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.ORIENTATION_REGION;
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.REGION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.decimal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.text;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 import static com.sk89q.worldedit.regions.Regions.asFlatRegion;
 import static com.sk89q.worldedit.regions.Regions.maximumBlockY;
 import static com.sk89q.worldedit.regions.Regions.minimumBlockY;
@@ -28,9 +30,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.IncompleteRegionException;
@@ -40,8 +42,16 @@ import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
+import com.sk89q.worldedit.function.Contextual;
+import com.sk89q.worldedit.function.EditContext;
 import com.sk89q.worldedit.function.GroundFunction;
+import com.sk89q.worldedit.function.RegionFunction;
+import com.sk89q.worldedit.function.block.BlockReplace;
+import com.sk89q.worldedit.function.factory.Apply;
 import com.sk89q.worldedit.function.generator.FloraGenerator;
 import com.sk89q.worldedit.function.generator.ForestGenerator;
 import com.sk89q.worldedit.function.mask.ExistingBlockMask;
@@ -55,8 +65,6 @@ import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.function.visitor.LayerVisitor;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
-import com.sk89q.worldedit.internal.annotation.Direction;
-import com.sk89q.worldedit.internal.annotation.Selection;
 import com.sk89q.worldedit.internal.expression.ExpressionException;
 import com.sk89q.worldedit.math.convolution.GaussianKernel;
 import com.sk89q.worldedit.math.convolution.HeightMap;
@@ -68,10 +76,6 @@ import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.RegionOperationException;
 import com.sk89q.worldedit.util.TreeGenerator;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
-import com.sk89q.worldedit.util.command.binding.Range;
-import com.sk89q.worldedit.util.command.binding.Switch;
-import com.sk89q.worldedit.util.command.binding.Text;
-import com.sk89q.worldedit.util.command.parametric.Optional;
 import com.sk89q.worldedit.util.lighting.LightingScheduler;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
@@ -80,18 +84,213 @@ import com.sk89q.worldedit.world.World;
 /**
  * Commands that operate on regions.
  */
-public class RegionCommands {
+public final class RegionCommands {
 
-    private final WorldEdit worldEdit;
+    private RegionCommands() {}
+
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("/set", "Set all blocks within selection").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.set", RegionCommands::set))));
+
+        Nodes.registerWithFlags(dispatcher, literal("/line", "Draws a line segment between cuboid selection corners").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.line", LogMode.REGION, c ->
+                                line(c.player(), c.editSession(), c.region(), c.pattern("pattern"), 0, c.flag('h'))))
+                        .then(integer("thickness", 0)
+                                .executes(run("worldedit.region.line", LogMode.REGION, c ->
+                                        line(c.player(), c.editSession(), c.region(), c.pattern("pattern"), c.integer("thickness"), c.flag('h')))))),
+                "h");
+
+        Nodes.registerWithFlags(dispatcher, literal("/curve", "Draws a spline through selected points").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.curve", LogMode.REGION, c ->
+                                curve(c.player(), c.editSession(), c.region(), c.pattern("pattern"), 0, c.flag('h'))))
+                        .then(integer("thickness", 0)
+                                .executes(run("worldedit.region.curve", LogMode.REGION, c ->
+                                        curve(c.player(), c.editSession(), c.region(), c.pattern("pattern"), c.integer("thickness"), c.flag('h')))))),
+                "h");
+
+        // //replace [from-mask] <to-pattern>: with one word that word is the target. Brigadier can not have an optional
+        // argument in front of a required one, so the words are told apart here.
+        Nodes.registerWithFlags(dispatcher, literal("/replace", "Replace all blocks in the selection with another").executes(Nodes.USAGE)
+                .then(word("from-or-to")
+                        .executes(run("worldedit.region.replace", LogMode.REGION, c ->
+                                replace(c.player(), c.editSession(), c.region(), null, c.pattern("from-or-to"))))
+                        .then(word("to")
+                                .executes(run("worldedit.region.replace", LogMode.REGION, c ->
+                                        replace(c.player(), c.editSession(), c.region(), c.mask("from-or-to"), c.pattern("to")))))),
+                "f", "/re", "/rep");
+
+        Nodes.register(dispatcher, literal("/overlay", "Set a block on top of blocks in the region").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.overlay", LogMode.REGION, c ->
+                                overlay(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))));
+
+        Nodes.register(dispatcher, literal("/center", "Set the center block(s)").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.center", LogMode.REGION, c ->
+                                center(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))),
+                "/middle");
+
+        Nodes.register(dispatcher, literal("/naturalize", "3 layers of dirt on top then rock below")
+                .executes(run("worldedit.region.naturalize", LogMode.REGION, c ->
+                        naturalize(c.player(), c.editSession(), c.region()))));
+
+        Nodes.register(dispatcher, literal("/walls", "Build the four sides of the selection").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.walls", LogMode.REGION, c ->
+                                walls(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))));
+
+        Nodes.register(dispatcher, literal("/faces", "Build the walls, ceiling, and floor of a selection").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.region.faces", LogMode.REGION, c ->
+                                faces(c.player(), c.editSession(), c.region(), c.pattern("pattern"))))),
+                "/outline");
+
+        Nodes.registerWithFlags(dispatcher, literal("/smooth", "Smooth the elevation in the selection")
+                .executes(run("worldedit.region.smooth", LogMode.REGION, c ->
+                        smooth(c.player(), c.editSession(), c.region(), 1, c.flag('n'))))
+                .then(integer("iterations")
+                        .executes(run("worldedit.region.smooth", LogMode.REGION, c ->
+                                smooth(c.player(), c.editSession(), c.region(), c.integer("iterations"), c.flag('n'))))),
+                "n");
+
+        Nodes.registerWithFlags(dispatcher, literal("/move", "Move the contents of the selection")
+                .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
+                        move(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'))))
+                .then(integer("count", 1)
+                        .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
+                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.parseBlock("air"), c.flag('s'))))
+                        .then(word("direction")
+                                .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
+                                        move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.parseBlock("air"), c.flag('s'))))
+                                .then(word("leave-block")
+                                        .executes(run("worldedit.region.move", LogMode.ORIENTATION_REGION, c ->
+                                                move(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.block("leave-block"), c.flag('s'))))))),
+                "s");
+
+        Nodes.registerWithFlags(dispatcher, literal("/stack", "Repeat the contents of the selection")
+                .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
+                        stack(c.player(), c.editSession(), c.session(), c.region(), 1, c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
+                .then(integer("count", 1)
+                        .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
+                                stack(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction", "me"), c.flag('s'), c.flag('a'))))
+                        .then(word("direction")
+                                .executes(run("worldedit.region.stack", LogMode.ORIENTATION_REGION, c ->
+                                        stack(c.player(), c.editSession(), c.session(), c.region(), c.integer("count"), c.direction("direction"), c.flag('s'), c.flag('a')))))),
+                "sa");
+
+        Nodes.register(dispatcher, literal("/regen", "Regenerates the contents of the selection")
+                .executes(run("worldedit.regen", LogMode.REGION, c ->
+                        regenerateChunk(c.player(), c.session(), c.editSession(), c.region()))));
+
+        Nodes.registerWithFlags(dispatcher, literal("/deform", "Deforms a selected region with an expression").executes(Nodes.USAGE)
+                .then(text("expression")
+                        .executes(run("worldedit.region.deform", LogMode.ALL, c ->
+                                deform(c.player(), c.session(), c.editSession(), c.region(), c.string("expression"), c.flag('r'), c.flag('o'))))),
+                "ro");
+
+        Nodes.register(dispatcher, literal("/hollow", "Hollows out the object contained in this selection")
+                .executes(run("worldedit.region.hollow", LogMode.REGION, c ->
+                        hollow(c.player(), c.editSession(), c.region(), 0, c.parsePattern("air"))))
+                .then(integer("thickness", 0)
+                        .executes(run("worldedit.region.hollow", LogMode.REGION, c ->
+                                hollow(c.player(), c.editSession(), c.region(), c.integer("thickness"), c.parsePattern("air"))))
+                        .then(word("pattern")
+                                .executes(run("worldedit.region.hollow", LogMode.REGION, c ->
+                                        hollow(c.player(), c.editSession(), c.region(), c.integer("thickness"), c.pattern("pattern")))))));
+
+        Nodes.register(dispatcher, literal("/forest", "Make a forest within the region")
+                .executes(run("worldedit.region.forest", LogMode.REGION, c ->
+                        forest(c.player(), c.editSession(), c.region(), TreeType.TREE, 5)))
+                .then(word("type")
+                        .executes(run("worldedit.region.forest", LogMode.REGION, c ->
+                                forest(c.player(), c.editSession(), c.region(), c.treeType("type"), 5)))
+                        .then(decimal("density", 0, 100)
+                                .executes(run("worldedit.region.forest", LogMode.REGION, c ->
+                                        forest(c.player(), c.editSession(), c.region(), c.treeType("type"), c.decimal("density")))))));
+
+        Nodes.register(dispatcher, literal("/flora", "Make flora within the region")
+                .executes(run("worldedit.region.flora", LogMode.REGION, c ->
+                        flora(c.player(), c.editSession(), c.region(), 10)))
+                .then(decimal("density", 0, 100)
+                        .executes(run("worldedit.region.flora", LogMode.REGION, c ->
+                                flora(c.player(), c.editSession(), c.region(), c.decimal("density"))))));
+
+        Nodes.register(dispatcher, literal("/fixlighting", "Fix lighting in a region or around you")
+                .executes(run("worldedit.light.fix", LogMode.REGION, c ->
+                        fixLighting(c.player(), c.session(), c.editSession()))));
+
+        Nodes.register(dispatcher, literal("/getlighting", "Get the emitted and sky light at your position")
+                .executes(run("worldedit.light.fix", c -> getLighting(c.player()))));
+
+        Nodes.register(dispatcher, literal("/removelight", "Remove lighting in a region or around you")
+                .executes(run("worldedit.light.remove", LogMode.REGION, c ->
+                        removeLighting(c.player(), c.session(), c.editSession()))),
+                "/removelighting");
+
+        Nodes.register(dispatcher, literal("/setblocklight", "Set block lighting in a selection").executes(Nodes.USAGE)
+                .then(integer("level", 0, 15)
+                        .executes(run("worldedit.light.set", LogMode.REGION, c ->
+                                setBlockLight(c.player(), c.editSession(), c.region(), c.integer("level"))))),
+                "/setlight");
+
+        Nodes.register(dispatcher, literal("/setskylight", "Set sky lighting in a selection").executes(Nodes.USAGE)
+                .then(integer("level", 0, 15)
+                        .executes(run("worldedit.light.set", LogMode.REGION, c ->
+                                setSkyLight(c.player(), c.editSession(), c.region(), c.integer("level"))))));
+    }
+    // spotless:on
 
     /**
-     * Create a new instance.
-     *
-     * @param worldEdit reference to WorldEdit
+     * {@code //set <pattern>}: the edit may run after the player has changed their selection, so it works on a copy.
      */
-    public RegionCommands(WorldEdit worldEdit) {
-        checkNotNull(worldEdit);
-        this.worldEdit = worldEdit;
+    private static void set(CommandCall call) throws Exception {
+        Player player = call.player();
+        Region selection = call.region();
+        Pattern pattern = call.pattern("pattern");
+        EditSession editSession = call.editSession();
+
+        EditContext editContext = new EditContext();
+        editContext.setDestination(editSession);
+        editContext.setRegion(selection.clone());
+        final Operation operation = new Apply(new Contextual<RegionFunction>() {
+
+            @Override
+            public RegionFunction createFromContext(EditContext context) {
+                return new BlockReplace(context.getDestination(), pattern);
+            }
+
+            @Override
+            public String toString() {
+                return "replace blocks";
+            }
+        }).createFromContext(editContext);
+
+        // Hand the work to the scheduler, which may spread it over several ticks. The status message has to wait until
+        // it is actually done.
+        WorldEdit.getInstance()
+            .getOperationScheduler()
+            .submit(player, editSession, operation, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {
+                    List<String> messages = new ArrayList<String>();
+                    operation.addStatusMessages(messages);
+                    if (messages.isEmpty()) {
+                        player.print("Operation completed.");
+                    } else {
+                        player.print("Operation completed (" + String.join(", ", messages) + ").");
+                    }
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    reportFailure(player, e);
+                }
+            });
     }
 
     /**
@@ -180,20 +379,8 @@ public class RegionCommands {
         player.printError(message != null ? message : "The operation could not be completed.");
     }
 
-    @Command(
-        aliases = { "/line" },
-        usage = "<block> [thickness]",
-        desc = "Draws a line segment between cuboid selection corners",
-        help = "Draws a line segment between cuboid selection corners.\n" + "Can only be used with cuboid selections.\n"
-            + "Flags:\n"
-            + "  -h generates only a shell",
-        flags = "h",
-        min = 1,
-        max = 2)
-    @CommandPermissions("worldedit.region.line")
-    @Logging(REGION)
-    public void line(Player player, EditSession editSession, @Selection Region region, Pattern pattern,
-        @Optional("0") @Range(min = 0) int thickness, @Switch('h') boolean shell) throws WorldEditException {
+    private static void line(Player player, EditSession editSession, Region region, Pattern pattern, int thickness,
+        boolean shell) throws WorldEditException {
 
         if (!(region instanceof CuboidRegion)) {
             player.printError("//line only works with cuboid selections");
@@ -208,20 +395,8 @@ public class RegionCommands {
         player.print(blocksChanged + " block(s) have been changed.");
     }
 
-    @Command(
-        aliases = { "/curve" },
-        usage = "<block> [thickness]",
-        desc = "Draws a spline through selected points",
-        help = "Draws a spline through selected points.\n" + "Can only be used with convex polyhedral selections.\n"
-            + "Flags:\n"
-            + "  -h generates only a shell",
-        flags = "h",
-        min = 1,
-        max = 2)
-    @CommandPermissions("worldedit.region.curve")
-    @Logging(REGION)
-    public void curve(Player player, EditSession editSession, @Selection Region region, Pattern pattern,
-        @Optional("0") @Range(min = 0) int thickness, @Switch('h') boolean shell) throws WorldEditException {
+    private static void curve(Player player, EditSession editSession, Region region, Pattern pattern, int thickness,
+        boolean shell) throws WorldEditException {
         if (!(region instanceof ConvexPolyhedralRegion)) {
             player.printError("//line only works with convex polyhedral selections");
             return;
@@ -235,17 +410,8 @@ public class RegionCommands {
         player.print(blocksChanged + " block(s) have been changed.");
     }
 
-    @Command(
-        aliases = { "/replace", "/re", "/rep" },
-        usage = "[from-block] <to-block>",
-        desc = "Replace all blocks in the selection with another",
-        flags = "f",
-        min = 1,
-        max = 2)
-    @CommandPermissions("worldedit.region.replace")
-    @Logging(REGION)
-    public void replace(Player player, EditSession editSession, @Selection Region region, @Optional Mask from,
-        Pattern to) throws WorldEditException {
+    private static void replace(Player player, EditSession editSession, Region region, Mask from, Pattern to)
+        throws WorldEditException {
         if (from == null) {
             from = new ExistingBlockMask(editSession);
         }
@@ -256,51 +422,24 @@ public class RegionCommands {
             " block(s) have been replaced.");
     }
 
-    @Command(
-        aliases = { "/overlay" },
-        usage = "<block>",
-        desc = "Set a block on top of blocks in the region",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.region.overlay")
-    @Logging(REGION)
-    public void overlay(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
+    private static void overlay(Player player, EditSession editSession, Region region, Pattern pattern)
         throws WorldEditException {
         CountedOperation operation = editSession.overlayCuboidBlocksOperation(region, pattern);
         schedule(editSession, operation, operation, player, "", " block(s) have been overlaid.");
     }
 
-    @Command(aliases = { "/center", "/middle" }, usage = "<block>", desc = "Set the center block(s)", min = 1, max = 1)
-    @Logging(REGION)
-    @CommandPermissions("worldedit.region.center")
-    public void center(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
+    private static void center(Player player, EditSession editSession, Region region, Pattern pattern)
         throws WorldEditException {
         int affected = editSession.center(region, pattern);
         player.print("Center set (" + affected + " blocks changed)");
     }
 
-    @Command(
-        aliases = { "/naturalize" },
-        usage = "",
-        desc = "3 layers of dirt on top then rock below",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.region.naturalize")
-    @Logging(REGION)
-    public void naturalize(Player player, EditSession editSession, @Selection Region region) throws WorldEditException {
+    private static void naturalize(Player player, EditSession editSession, Region region) throws WorldEditException {
         int affected = editSession.naturalizeCuboidBlocks(region);
         player.print(affected + " block(s) have been made to look more natural.");
     }
 
-    @Command(
-        aliases = { "/walls" },
-        usage = "<block>",
-        desc = "Build the four sides of the selection",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.region.walls")
-    @Logging(REGION)
-    public void walls(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
+    private static void walls(Player player, EditSession editSession, Region region, Pattern pattern)
         throws WorldEditException {
         schedule(
             editSession,
@@ -309,15 +448,7 @@ public class RegionCommands {
             " block(s) have been changed.");
     }
 
-    @Command(
-        aliases = { "/faces", "/outline" },
-        usage = "<block>",
-        desc = "Build the walls, ceiling, and floor of a selection",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.region.faces")
-    @Logging(REGION)
-    public void faces(Player player, EditSession editSession, @Selection Region region, Pattern pattern)
+    private static void faces(Player player, EditSession editSession, Region region, Pattern pattern)
         throws WorldEditException {
         schedule(
             editSession,
@@ -326,39 +457,16 @@ public class RegionCommands {
             " block(s) have been changed.");
     }
 
-    @Command(
-        aliases = { "/smooth" },
-        usage = "[iterations]",
-        flags = "n",
-        desc = "Smooth the elevation in the selection",
-        help = "Smooths the elevation in the selection.\n"
-            + "The -n flag makes it only consider naturally occuring blocks.",
-        min = 0,
-        max = 1)
-    @CommandPermissions("worldedit.region.smooth")
-    @Logging(REGION)
-    public void smooth(Player player, EditSession editSession, @Selection Region region, @Optional("1") int iterations,
-        @Switch('n') boolean affectNatural) throws WorldEditException {
+    private static void smooth(Player player, EditSession editSession, Region region, int iterations,
+        boolean affectNatural) throws WorldEditException {
         HeightMap heightMap = new HeightMap(editSession, region, affectNatural);
         HeightMapFilter filter = new HeightMapFilter(new GaussianKernel(5, 1.0));
         HeightMap.Applier applier = heightMap.applyFilterOperation(filter, iterations);
         schedule(editSession, applier, applier, player, "Terrain's height map smoothed. ", " block(s) changed.");
     }
 
-    @Command(
-        aliases = { "/move" },
-        usage = "[count] [direction] [leave-id]",
-        flags = "s",
-        desc = "Move the contents of the selection",
-        help = "Moves the contents of the selection.\n" + "The -s flag shifts the selection to the target location.\n"
-            + "Optionally fills the old location with <leave-id>.",
-        min = 0,
-        max = 3)
-    @CommandPermissions("worldedit.region.move")
-    @Logging(ORIENTATION_REGION)
-    public void move(Player player, EditSession editSession, LocalSession session, @Selection Region region,
-        @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
-        @Optional("air") BaseBlock replace, @Switch('s') boolean moveSelection) throws WorldEditException {
+    private static void move(Player player, EditSession editSession, LocalSession session, Region region, int count,
+        Vector direction, BaseBlock replace, boolean moveSelection) throws WorldEditException {
 
         final Region snapshot = region.clone();
         final Vector shift = direction.multiply(count);
@@ -385,21 +493,8 @@ public class RegionCommands {
             });
     }
 
-    @Command(
-        aliases = { "/stack" },
-        usage = "[count] [direction]",
-        flags = "sa",
-        desc = "Repeat the contents of the selection",
-        help = "Repeats the contents of the selection.\n" + "Flags:\n"
-            + "  -s shifts the selection to the last stacked copy\n"
-            + "  -a skips air blocks",
-        min = 0,
-        max = 2)
-    @CommandPermissions("worldedit.region.stack")
-    @Logging(ORIENTATION_REGION)
-    public void stack(Player player, EditSession editSession, LocalSession session, @Selection Region region,
-        @Optional("1") @Range(min = 1) int count, @Optional(Direction.AIM) @Direction Vector direction,
-        @Switch('s') boolean moveSelection, @Switch('a') boolean ignoreAirBlocks) throws WorldEditException {
+    private static void stack(Player player, EditSession editSession, LocalSession session, Region region, int count,
+        Vector direction, boolean moveSelection, boolean ignoreAirBlocks) throws WorldEditException {
         final Region snapshot = region.clone();
         final Vector size = region.getMaximumPoint()
             .subtract(region.getMinimumPoint());
@@ -428,18 +523,7 @@ public class RegionCommands {
             });
     }
 
-    @Command(
-        aliases = { "/regen" },
-        usage = "",
-        desc = "Regenerates the contents of the selection",
-        help = "Regenerates the contents of the current selection.\n"
-            + "Blocks outside the selection are kept, but mobs and other\n"
-            + "entities in the affected chunks are removed.",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.regen")
-    @Logging(REGION)
-    public void regenerateChunk(Player player, LocalSession session, EditSession editSession, @Selection Region region)
+    private static void regenerateChunk(Player player, LocalSession session, EditSession editSession, Region region)
         throws WorldEditException {
         Operation operation = player.getWorld()
             .regenerate(region, editSession);
@@ -464,22 +548,8 @@ public class RegionCommands {
             });
     }
 
-    @Command(
-        aliases = { "/deform" },
-        usage = "<expression>",
-        desc = "Deforms a selected region with an expression",
-        help = "Deforms a selected region with an expression\n"
-            + "The expression is executed for each block and is expected\n"
-            + "to modify the variables x, y and z to point to a new block\n"
-            + "to fetch. See also tinyurl.com/wesyntax.",
-        flags = "ro",
-        min = 1,
-        max = -1)
-    @CommandPermissions("worldedit.region.deform")
-    @Logging(ALL)
-    public void deform(Player player, LocalSession session, EditSession editSession, @Selection Region region,
-        @Text String expression, @Switch('r') boolean useRawCoords, @Switch('o') boolean offset)
-        throws WorldEditException {
+    private static void deform(Player player, LocalSession session, EditSession editSession, Region region,
+        String expression, boolean useRawCoords, boolean offset) throws WorldEditException {
         final Vector zero;
         Vector unit;
 
@@ -511,34 +581,14 @@ public class RegionCommands {
         }
     }
 
-    @Command(
-        aliases = { "/hollow" },
-        usage = "[<thickness>[ <block>]]",
-        desc = "Hollows out the object contained in this selection",
-        help = "Hollows out the object contained in this selection.\n"
-            + "Optionally fills the hollowed out part with the given block.\n"
-            + "Thickness is measured in manhattan distance.",
-        min = 0,
-        max = 2)
-    @CommandPermissions("worldedit.region.hollow")
-    @Logging(REGION)
-    public void hollow(Player player, EditSession editSession, @Selection Region region,
-        @Optional("0") @Range(min = 0) int thickness, @Optional("air") Pattern pattern) throws WorldEditException {
+    private static void hollow(Player player, EditSession editSession, Region region, int thickness, Pattern pattern)
+        throws WorldEditException {
 
         int affected = editSession.hollowOutRegion(region, thickness, pattern);
         player.print(affected + " block(s) have been changed.");
     }
 
-    @Command(
-        aliases = { "/forest" },
-        usage = "[type] [density]",
-        desc = "Make a forest within the region",
-        min = 0,
-        max = 2)
-    @CommandPermissions("worldedit.region.forest")
-    @Logging(REGION)
-    public void forest(Player player, EditSession editSession, @Selection Region region,
-        @Optional("tree") TreeType type, @Optional("5") @Range(min = 0, max = 100) double density)
+    private static void forest(Player player, EditSession editSession, Region region, TreeType type, double density)
         throws WorldEditException {
         density = density / 100;
         ForestGenerator generator = new ForestGenerator(editSession, new TreeGenerator(type));
@@ -554,11 +604,8 @@ public class RegionCommands {
         player.print(ground.getAffected() + " trees created.");
     }
 
-    @Command(aliases = { "/flora" }, usage = "[density]", desc = "Make flora within the region", min = 0, max = 1)
-    @CommandPermissions("worldedit.region.flora")
-    @Logging(REGION)
-    public void flora(Player player, EditSession editSession, @Selection Region region,
-        @Optional("10") @Range(min = 0, max = 100) double density) throws WorldEditException {
+    private static void flora(Player player, EditSession editSession, Region region, double density)
+        throws WorldEditException {
         density = density / 100;
         FloraGenerator generator = new FloraGenerator(editSession);
         GroundFunction ground = new GroundFunction(new ExistingBlockMask(editSession), generator);
@@ -573,15 +620,8 @@ public class RegionCommands {
         player.print(ground.getAffected() + " flora created.");
     }
 
-    @Command(
-        aliases = { "/fixlighting" },
-        usage = "",
-        desc = "Fix lighting in a region or around you",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.light.fix")
-    @Logging(REGION)
-    public void fixLighting(Player player, LocalSession session, EditSession editSession) throws WorldEditException {
+    private static void fixLighting(Player player, LocalSession session, EditSession editSession)
+        throws WorldEditException {
         World world = player.getWorld();
         Region region;
         try {
@@ -621,14 +661,7 @@ public class RegionCommands {
         }
     }
 
-    @Command(
-        aliases = { "/getlighting" },
-        usage = "",
-        desc = "Get the emitted and sky light at your position",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.light.fix")
-    public void getLighting(Player player) {
+    private static void getLighting(Player player) {
         Vector pos = player.getPosition();
         World world = player.getWorld();
         int block = world.getEmittedLightLevel(pos);
@@ -636,15 +669,8 @@ public class RegionCommands {
         player.print("Light: " + block + " | " + sky);
     }
 
-    @Command(
-        aliases = { "/removelight", "/removelighting" },
-        usage = "",
-        desc = "Remove lighting in a region or around you",
-        min = 0,
-        max = 0)
-    @CommandPermissions("worldedit.light.remove")
-    @Logging(REGION)
-    public void removeLighting(Player player, LocalSession session, EditSession editSession) throws WorldEditException {
+    private static void removeLighting(Player player, LocalSession session, EditSession editSession)
+        throws WorldEditException {
         World world = player.getWorld();
         Region region;
         try {
@@ -666,16 +692,7 @@ public class RegionCommands {
         player.print(chunkVectors.size() + " chunk(s) updated.");
     }
 
-    @Command(
-        aliases = { "/setblocklight", "/setlight" },
-        usage = "<level>",
-        desc = "Set block lighting in a selection",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.light.set")
-    @Logging(REGION)
-    public void setBlockLight(Player player, EditSession editSession, @Selection Region region,
-        @Range(min = 0, max = 15) int level) {
+    private static void setBlockLight(Player player, EditSession editSession, Region region, int level) {
         World world = player.getWorld();
         Set<Vector2D> chunkVectors = region.getChunks();
         for (Vector pt : region) {
@@ -684,16 +701,7 @@ public class RegionCommands {
         player.print(chunkVectors.size() + " chunk(s) updated.");
     }
 
-    @Command(
-        aliases = { "/setskylight" },
-        usage = "<level>",
-        desc = "Set sky lighting in a selection",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.light.set")
-    @Logging(REGION)
-    public void setSkyLight(Player player, EditSession editSession, @Selection Region region,
-        @Range(min = 0, max = 15) int level) {
+    private static void setSkyLight(Player player, EditSession editSession, Region region, int level) {
         World world = player.getWorld();
         Set<Vector2D> chunkVectors = region.getChunks();
         for (Vector pt : region) {

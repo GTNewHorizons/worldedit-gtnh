@@ -17,16 +17,21 @@
 package com.sk89q.worldedit.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import javax.annotation.Nullable;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
@@ -34,6 +39,12 @@ import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 /**
  * Commands to undo, redo, and clear history.
+ *
+ * <ul>
+ * <li>{@code //undo [times] [player]}</li>
+ * <li>{@code //redo [times] [player]}</li>
+ * <li>{@code //clearhistory}</li>
+ * </ul>
  */
 public class HistoryCommands {
 
@@ -49,13 +60,39 @@ public class HistoryCommands {
         this.worldEdit = worldEdit;
     }
 
+    // spotless:off
+    public void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("/undo")
+                .executes(run("worldedit.history.undo", c -> undo(c.player(), c.session(), 1, null)))
+                .then(integer("times")
+                        .executes(run("worldedit.history.undo", c -> undo(c.player(), c.session(), c.integer("times"), null)))
+                        .then(word("player")
+                                .executes(run("worldedit.history.undo", c ->
+                                        undo(c.player(), c.session(), c.integer("times"), c.string("player")))))),
+                "undo");
+
+        Nodes.register(dispatcher, literal("/redo")
+                .executes(run("worldedit.history.redo", c -> redo(c.player(), c.session(), 1, null)))
+                .then(integer("times")
+                        .executes(run("worldedit.history.redo", c -> redo(c.player(), c.session(), c.integer("times"), null)))
+                        .then(word("player")
+                                .executes(run("worldedit.history.redo", c ->
+                                        redo(c.player(), c.session(), c.integer("times"), c.string("player")))))),
+                "redo");
+
+        Nodes.register(dispatcher, literal("/clearhistory")
+                .executes(run("worldedit.history.clear", c -> clearHistory(c.player(), c.session()))),
+                "clearhistory");
+    }
+    // spotless:on
+
     @Nullable
-    private LocalSession findOther(Player player, CommandContext args, String action) throws WorldEditException {
+    private LocalSession findOther(Player player, String name, String action) throws WorldEditException {
         player.checkPermission("worldedit.history." + action + ".other");
         LocalSession other = worldEdit.getSessionManager()
-            .findByName(args.getString(1));
+            .findByName(name);
         if (other == null) {
-            player.printError("Unable to find session for " + args.getString(1));
+            player.printError("Unable to find session for " + name);
         }
         return other;
     }
@@ -88,8 +125,8 @@ public class HistoryCommands {
     }
 
     /**
-     * Undoing during an edit would revert the edit before it, because the running one isn't in the
-     * history until it finishes.
+     * Undoing during an edit would revert the edit before it, because the running one isn't in the history until it
+     * finishes.
      */
     private boolean editStillRunning(Player player) {
         if (worldEdit.getOperationScheduler()
@@ -100,22 +137,18 @@ public class HistoryCommands {
         return false;
     }
 
-    @Command(
-        aliases = { "/undo", "undo" },
-        usage = "[times] [player]",
-        desc = "Undoes the last action",
-        min = 0,
-        max = 2)
-    @CommandPermissions("worldedit.history.undo")
-    public void undo(Player player, LocalSession session, EditSession editSession, CommandContext args)
+    /**
+     * @param other the name of another player whose history to undo, or null for your own
+     */
+    void undo(Player player, LocalSession session, int requestedTimes, @Nullable String other)
         throws WorldEditException {
         if (editStillRunning(player)) {
             return;
         }
 
-        int times = Math.max(1, args.getInteger(0, 1));
+        int times = Math.max(1, requestedTimes);
         for (int i = 0; i < times; ++i) {
-            LocalSession target = args.argsLength() < 2 ? session : findOther(player, args, "undo");
+            LocalSession target = other == null ? session : findOther(player, other, "undo");
             if (target == null) {
                 break;
             }
@@ -131,22 +164,18 @@ public class HistoryCommands {
         }
     }
 
-    @Command(
-        aliases = { "/redo", "redo" },
-        usage = "[times] [player]",
-        desc = "Redoes the last action (from history)",
-        min = 0,
-        max = 2)
-    @CommandPermissions("worldedit.history.redo")
-    public void redo(Player player, LocalSession session, EditSession editSession, CommandContext args)
+    /**
+     * @param other the name of another player whose history to redo, or null for your own
+     */
+    void redo(Player player, LocalSession session, int requestedTimes, @Nullable String other)
         throws WorldEditException {
         if (editStillRunning(player)) {
             return;
         }
 
-        int times = Math.max(1, args.getInteger(0, 1));
+        int times = Math.max(1, requestedTimes);
         for (int i = 0; i < times; ++i) {
-            LocalSession target = args.argsLength() < 2 ? session : findOther(player, args, "redo");
+            LocalSession target = other == null ? session : findOther(player, other, "redo");
             if (target == null) {
                 break;
             }
@@ -162,11 +191,8 @@ public class HistoryCommands {
         }
     }
 
-    @Command(aliases = { "/clearhistory", "clearhistory" }, usage = "", desc = "Clear your history", min = 0, max = 0)
-    @CommandPermissions("worldedit.history.clear")
-    public void clearHistory(Player player, LocalSession session, EditSession editSession) throws WorldEditException {
+    private void clearHistory(Player player, LocalSession session) {
         session.clearHistory();
         player.print("History cleared.");
     }
-
 }

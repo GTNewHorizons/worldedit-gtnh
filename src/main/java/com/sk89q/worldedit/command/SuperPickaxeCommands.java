@@ -16,80 +16,98 @@
 
 package com.sk89q.worldedit.command;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.worldedit.EditSession;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.decimal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.sk89q.worldedit.LocalConfiguration;
-import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.command.tool.AreaPickaxe;
 import com.sk89q.worldedit.command.tool.RecursivePickaxe;
 import com.sk89q.worldedit.command.tool.SinglePickaxe;
 import com.sk89q.worldedit.entity.Player;
 
-public class SuperPickaxeCommands {
+/**
+ * The super pickaxe modes, typed {@code //superpickaxe <mode>} (aliases {@code //pickaxe} and {@code //sp}).
+ *
+ * <ul>
+ * <li>{@code single}: break one block</li>
+ * <li>{@code area <radius>}: break everything in a cube</li>
+ * <li>{@code recursive <radius>} (alias {@code recur}): break connected blocks of the same kind</li>
+ * </ul>
+ */
+public final class SuperPickaxeCommands {
 
-    private final WorldEdit we;
+    private static final String ENABLED = "Mode changed. Left click with a pickaxe. // to disable.";
 
-    public SuperPickaxeCommands(WorldEdit we) {
-        this.we = we;
+    private SuperPickaxeCommands() {}
+
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        LiteralCommandNode<ICommandSender> recursive = recursiveNode("recursive");
+
+        Nodes.register(dispatcher, literal("superpickaxe", "Super-pickaxe commands").executes(Nodes.USAGE)
+                .then(literal("single", "Enable the single block super pickaxe mode")
+                        .executes(run("worldedit.superpickaxe", SuperPickaxeCommands::single)))
+                .then(literal("area", "Enable the area super pickaxe mode").executes(Nodes.USAGE)
+                        .then(integer("radius")
+                                .executes(run("worldedit.superpickaxe.area", SuperPickaxeCommands::area))))
+                .then(recursive).then(Nodes.alias("recur", recursive)),
+                "pickaxe", "sp");
     }
 
-    @Command(aliases = { "single" }, usage = "", desc = "Enable the single block super pickaxe mode", min = 0, max = 0)
-    @CommandPermissions("worldedit.superpickaxe")
-    public void single(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
+    private static LiteralCommandNode<ICommandSender> recursiveNode(String name) {
+        return literal(name, "Enable the recursive super pickaxe mode").executes(Nodes.USAGE)
+                .then(decimal("radius")
+                        .executes(run("worldedit.superpickaxe.recursive", SuperPickaxeCommands::recursive)))
+                .build();
+    }
+    // spotless:on
 
-        session.setSuperPickaxe(new SinglePickaxe());
-        session.enableSuperPickAxe();
-        player.print("Mode changed. Left click with a pickaxe. // to disable.");
+    private static void single(CommandCall call) {
+        Player player = call.player();
+        call.session()
+            .setSuperPickaxe(new SinglePickaxe());
+        call.session()
+            .enableSuperPickAxe();
+        player.print(ENABLED);
     }
 
-    @Command(
-        aliases = { "area" },
-        usage = "<radius>",
-        desc = "Enable the area super pickaxe pickaxe mode",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.superpickaxe.area")
-    public void area(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        LocalConfiguration config = we.getConfiguration();
-        int range = args.getInteger(0);
-
+    private static void area(CommandCall call) {
+        Player player = call.player();
+        LocalConfiguration config = call.worldEdit()
+            .getConfiguration();
+        int range = call.integer("radius");
         if (range > config.maxSuperPickaxeSize) {
             player.printError("Maximum range: " + config.maxSuperPickaxeSize);
             return;
         }
-
-        session.setSuperPickaxe(new AreaPickaxe(range));
-        session.enableSuperPickAxe();
-        player.print("Mode changed. Left click with a pickaxe. // to disable.");
+        call.session()
+            .setSuperPickaxe(new AreaPickaxe(range));
+        call.session()
+            .enableSuperPickAxe();
+        player.print(ENABLED);
     }
 
-    @Command(
-        aliases = { "recur", "recursive" },
-        usage = "<radius>",
-        desc = "Enable the recursive super pickaxe pickaxe mode",
-        min = 1,
-        max = 1)
-    @CommandPermissions("worldedit.superpickaxe.recursive")
-    public void recursive(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        LocalConfiguration config = we.getConfiguration();
-        double range = args.getDouble(0);
-
+    private static void recursive(CommandCall call) {
+        Player player = call.player();
+        LocalConfiguration config = call.worldEdit()
+            .getConfiguration();
+        double range = call.decimal("radius");
         if (range > config.maxSuperPickaxeSize) {
             player.printError("Maximum range: " + config.maxSuperPickaxeSize);
             return;
         }
-
-        session.setSuperPickaxe(new RecursivePickaxe(range));
-        session.enableSuperPickAxe();
-        player.print("Mode changed. Left click with a pickaxe. // to disable.");
+        call.session()
+            .setSuperPickaxe(new RecursivePickaxe(range));
+        call.session()
+            .enableSuperPickAxe();
+        player.print(ENABLED);
     }
 }
