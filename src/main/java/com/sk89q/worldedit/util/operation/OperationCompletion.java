@@ -20,8 +20,8 @@ import com.sk89q.worldedit.WorldEditException;
 
 /**
  * Notified once an operation submitted to an {@link OperationScheduler} has finished, which may be
- * several server ticks after the command that submitted it returned. Neither method is called for
- * an operation that gets cancelled.
+ * several server ticks after the command that submitted it returned. An operation that gets cancelled
+ * gets {@link #onCancelled(boolean)} instead.
  */
 public interface OperationCompletion {
 
@@ -36,4 +36,11 @@ public interface OperationCompletion {
      * @param e the exception that stopped the operation
      */
     void onFailure(WorldEditException e);
+
+    /**
+     * Called if the operation was cancelled before it finished.
+     *
+     * @param started false if it was cancelled while waiting for its turn, so it changed nothing
+     */
+    default void onCancelled(boolean started) {}
 }

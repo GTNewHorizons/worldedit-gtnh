@@ -262,6 +262,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
         while (true) {
             if (job.operation != null) {
                 try {
+                    job.started = true;
                     job.operation = job.operation.resume(run);
                 } catch (WorldEditException e) {
                     fail(job, e);
@@ -336,6 +337,12 @@ public class ForgeOperationScheduler implements OperationScheduler {
             job.editSession.flushQueue();
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Failed to cancel an operation", e);
+        }
+
+        try {
+            job.completion.onCancelled(job.started);
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "An operation cancel handler failed", e);
         } finally {
             runFinalizer(job);
         }
@@ -369,6 +376,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
             .getSession();
         private Operation operation;
         private boolean committing;
+        private boolean started;
         private WorldEditException failure;
         private Runnable finalizer;
 

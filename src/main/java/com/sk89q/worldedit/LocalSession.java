@@ -231,6 +231,26 @@ public class LocalSession {
     }
 
     /**
+     * Give back the place that {@link #stepBack()} took, for an undo that was cancelled. The edit then
+     * counts as not undone, and undoing it again finishes whatever part of it was already undone.
+     */
+    public void cancelStepBack() {
+        if (historyPointer < history.size()) {
+            ++historyPointer;
+        }
+    }
+
+    /**
+     * Give back the place that {@link #stepForward()} took, for a redo that was cancelled. The edit
+     * then counts as not redone, and redoing it again finishes whatever part of it was already redone.
+     */
+    public void cancelStepForward() {
+        if (historyPointer > 0) {
+            --historyPointer;
+        }
+    }
+
+    /**
      * Create the edit session that an undo or redo of the given edit session writes to.
      *
      * @param source   the edit session being undone or redone

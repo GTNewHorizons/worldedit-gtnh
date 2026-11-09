@@ -100,9 +100,23 @@ public class HistoryCommands {
     /**
      * Hand a history step to the scheduler, which may spread it over several server ticks.
      */
-    private void schedule(final Player player, final EditSession writer, Operation operation, final String message) {
+    private void schedule(final Player player, final EditSession writer, Operation operation, final String message,
+        final String command, final Runnable giveBackPlace) {
         OperationScheduler scheduler = worldEdit.getOperationScheduler();
         scheduler.submit(player, writer, operation, new OperationCompletion() {
+
+            @Override
+            public void onCancelled(boolean started) {
+                // The history must match the world: a step that didn't finish doesn't count.
+                giveBackPlace.run();
+                if (started) {
+                    player.printError(
+                        "The " + command.substring(2)
+                            + " was cancelled partway, so part of it already happened. Run "
+                            + command
+                            + " again to finish it.");
+                }
+            }
 
             @Override
             public void onSuccess() {
@@ -159,8 +173,15 @@ public class HistoryCommands {
                 break;
             }
 
+            final LocalSession history = target;
             EditSession writer = target.createHistorySession(undone, session.getBlockBag(player), player);
-            schedule(player, writer, undone.undoOperation(writer), "Undo successful.");
+            schedule(player, writer, undone.undoOperation(writer), "Undo successful.", "//undo", new Runnable() {
+
+                @Override
+                public void run() {
+                    history.cancelStepBack();
+                }
+            });
         }
     }
 
@@ -186,8 +207,15 @@ public class HistoryCommands {
                 break;
             }
 
+            final LocalSession history = target;
             EditSession writer = target.createHistorySession(redone, session.getBlockBag(player), player);
-            schedule(player, writer, redone.redoOperation(writer), "Redo successful.");
+            schedule(player, writer, redone.redoOperation(writer), "Redo successful.", "//redo", new Runnable() {
+
+                @Override
+                public void run() {
+                    history.cancelStepForward();
+                }
+            });
         }
     }
 
