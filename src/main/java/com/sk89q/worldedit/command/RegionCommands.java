@@ -189,7 +189,7 @@ public final class RegionCommands {
         Nodes.registerWithFlags(dispatcher, literal("/deform", "Deforms a selected region with an expression").executes(Nodes.USAGE)
                 .then(text("expression")
                         .executes(run("worldedit.region.deform", LogMode.ALL, c ->
-                                deform(c.player(), c.session(), c.editSession(), c.region(), c.string("expression"), c.flag('r'), c.flag('o'))))),
+                                deform(c.player(), c.session(), c.queuedEditSession(), c.region(), c.string("expression"), c.flag('r'), c.flag('o'))))),
                 "ro");
 
         Nodes.register(dispatcher, literal("/hollow", "Hollows out the object contained in this selection")
@@ -573,13 +573,29 @@ public final class RegionCommands {
             if (unit.getZ() == 0) unit = unit.setZ(1.0);
         }
 
+        final EditSession.Deform deform;
         try {
-            final int affected = editSession.deformRegion(region, zero, unit, expression);
-            player.findFreePosition();
-            player.print(affected + " block(s) have been deformed.");
+            deform = editSession.deformOperation(region, zero, unit, expression);
         } catch (ExpressionException e) {
             player.printError(e.getMessage());
+            return;
         }
+
+        WorldEdit.getInstance()
+            .getOperationScheduler()
+            .submit(player, editSession, deform, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {
+                    player.findFreePosition();
+                    player.print(deform.getAffected() + " block(s) have been deformed.");
+                }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    reportFailure(player, e);
+                }
+            });
     }
 
     private static void hollow(Player player, EditSession editSession, Region region, int thickness, Pattern pattern)

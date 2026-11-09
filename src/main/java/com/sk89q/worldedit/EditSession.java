@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -72,12 +73,14 @@ import com.sk89q.worldedit.function.mask.MaskUnion;
 import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.mask.NoiseFilter2D;
 import com.sk89q.worldedit.function.mask.RegionMask;
+import com.sk89q.worldedit.function.operation.AffectedCounter;
 import com.sk89q.worldedit.function.operation.ChangeSetExecutor;
 import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.OperationQueue;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.function.util.RegionOffset;
@@ -108,7 +111,7 @@ import com.sk89q.worldedit.regions.shape.RegionShape;
 import com.sk89q.worldedit.regions.shape.WorldEditExpressionEnvironment;
 import com.sk89q.worldedit.util.Countable;
 import com.sk89q.worldedit.util.TreeGenerator;
-import com.sk89q.worldedit.util.collection.DoubleArrayList;
+import com.sk89q.worldedit.util.collection.PackedBlockList;
 import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.world.NullWorld;
 import com.sk89q.worldedit.world.World;
@@ -2077,50 +2080,135 @@ public class EditSession implements Extent {
 
     public int deformRegion(final Region region, final Vector zero, final Vector unit, final String expressionString)
         throws ExpressionException, MaxChangedBlocksException {
-        final Expression expression = Expression.compile(expressionString, "x", "y", "z");
+        Deform deform = deformOperation(region, zero, unit, expressionString);
+        try {
+            Operations.complete(deform);
+        } catch (DeformFailedException e) {
+            throw (ExpressionException) e.getCause();
+        } catch (MaxChangedBlocksException e) {
+            throw e;
+        } catch (WorldEditException e) {
+            throw new RuntimeException(e);
+        }
+        return deform.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #deformRegion(Region, Vector, Vector, String)} runs, without
+     * running it.
+     *
+     * @param region           the region to deform, which is copied
+     * @param zero             the coordinate origin
+     * @param unit             the scale of the coordinates
+     * @param expressionString the expression to evaluate for each block
+     * @return the operation, which also carries the affected count once it has run
+     * @throws ExpressionException if the expression doesn't compile
+     */
+    public Deform deformOperation(Region region, Vector zero, Vector unit, String expressionString)
+        throws ExpressionException {
+        Expression expression = Expression.compile(expressionString, "x", "y", "z");
         expression.optimize();
+        return new Deform(region.clone(), zero, unit, expression);
+    }
 
-        final RValue x = expression.getVariable("x", false);
-        final RValue y = expression.getVariable("y", false);
-        final RValue z = expression.getVariable("z", false);
+    /**
+     * Moves each block of a region to where an expression says, in two passes: every source block is
+     * read first, and only then is anything written, so that no block is read after being moved.
+     */
+    public final class Deform implements Operation, AffectedCounter {
 
-        final WorldEditExpressionEnvironment environment = new WorldEditExpressionEnvironment(this, unit, zero);
-        expression.setEnvironment(environment);
+        private final Region region;
+        private final Vector zero;
+        private final Vector unit;
+        private final Expression expression;
+        private final RValue x;
+        private final RValue y;
+        private final RValue z;
+        private final WorldEditExpressionEnvironment environment;
+        private final PackedBlockList moves = new PackedBlockList(1);
+        private Iterator<BlockVector> reading;
+        private Iterator<Map.Entry<BlockVector, BaseBlock>> writing;
+        private int affected;
 
-        final DoubleArrayList<BlockVector, BaseBlock> queue = new DoubleArrayList<BlockVector, BaseBlock>(false);
-
-        for (BlockVector position : region) {
-            // offset, scale
-            final Vector scaled = position.subtract(zero)
-                .divide(unit);
-
-            // transform
-            expression.evaluate(scaled.getX(), scaled.getY(), scaled.getZ());
-
-            final BlockVector sourcePosition = environment.toWorld(x.getValue(), y.getValue(), z.getValue());
-
-            // read block from world
-            // TODO: use getBlock here once the reflection is out of the way
-            final BaseBlock material = new BaseBlock(
-                world.getBlockType(sourcePosition),
-                world.getBlockData(sourcePosition));
-
-            // queue operation
-            queue.put(position, material);
+        private Deform(Region region, Vector zero, Vector unit, Expression expression) throws ExpressionException {
+            this.region = region;
+            this.zero = zero;
+            this.unit = unit;
+            this.expression = expression;
+            this.x = expression.getVariable("x", false);
+            this.y = expression.getVariable("y", false);
+            this.z = expression.getVariable("z", false);
+            this.environment = new WorldEditExpressionEnvironment(EditSession.this, unit, zero);
+            expression.setEnvironment(environment);
         }
 
-        int affected = 0;
-        for (Map.Entry<BlockVector, BaseBlock> entry : queue) {
-            BlockVector position = entry.getKey();
-            BaseBlock material = entry.getValue();
+        @Override
+        public int getAffected() {
+            return affected;
+        }
 
-            // set at new position
-            if (setBlock(position, material)) {
-                ++affected;
+        @Override
+        public Operation resume(RunContext run) throws WorldEditException {
+            if (reading == null) {
+                reading = region.iterator();
             }
+
+            while (reading.hasNext()) {
+                BlockVector position = reading.next();
+                Vector scaled = position.subtract(zero)
+                    .divide(unit);
+                BlockVector source;
+                try {
+                    expression.evaluate(scaled.getX(), scaled.getY(), scaled.getZ());
+                    source = environment.toWorld(x.getValue(), y.getValue(), z.getValue());
+                } catch (ExpressionException e) {
+                    throw new DeformFailedException(e);
+                }
+
+                moves.add(position, new BaseBlock(world.getBlockType(source), world.getBlockData(source)));
+
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+
+            if (writing == null) {
+                writing = moves.drain();
+            }
+
+            while (writing.hasNext()) {
+                Map.Entry<BlockVector, BaseBlock> entry = writing.next();
+                if (setBlock(entry.getKey(), entry.getValue())) {
+                    ++affected;
+                }
+
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+
+            return null;
         }
 
-        return affected;
+        @Override
+        public void cancel() {
+            moves.clear();
+        }
+
+        @Override
+        public void addStatusMessages(List<String> messages) {
+            messages.add(affected + " blocks deformed");
+        }
+    }
+
+    /**
+     * Thrown by a {@link Deform} whose expression fails while running.
+     */
+    public static final class DeformFailedException extends WorldEditException {
+
+        private DeformFailedException(ExpressionException cause) {
+            super(cause.getMessage(), cause);
+        }
     }
 
     /**
