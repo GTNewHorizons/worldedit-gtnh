@@ -289,5 +289,16 @@ public final class WorldEditConfig {
         @Config.DefaultStringList({})
         @Config.RequiresMcRestart
         public static String[] placeNormallyBlocks;
+
+        @Config.Comment({ "Names of modded blocks that count as natural terrain, for //smooth -n and the smooth brush.",
+            "Modded blocks with a stone, dirt, grass, sand or clay material already count." })
+        @Config.DefaultStringList({})
+        @Config.RequiresMcRestart
+        public static String[] naturalTerrainBlocks;
+
+        @Config.Comment("Names of modded blocks that don't count as natural terrain, even if their material says so.")
+        @Config.DefaultStringList({})
+        @Config.RequiresMcRestart
+        public static String[] notNaturalTerrainBlocks;
     }
 }

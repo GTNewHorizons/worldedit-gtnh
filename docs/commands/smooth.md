@@ -20,7 +20,7 @@ Flags go right after the command, before the arguments.
 
 | Flag | Meaning |
 |---|---|
-| `-n` | Only look at naturally occurring blocks, so buildings and trees do not count as terrain. |
+| `-n` | Only look at naturally occurring blocks, so buildings and trees do not count as terrain. Modded stone, dirt and sand count too, see `naturalTerrainBlocks` in the [configuration](../configuration.md). |
 
 ## Examples
 

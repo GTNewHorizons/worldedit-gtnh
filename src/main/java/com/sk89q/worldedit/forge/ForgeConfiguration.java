@@ -42,6 +42,8 @@ public class ForgeConfiguration extends LocalConfiguration {
     public boolean cheatMode = false;
     public Set<String> placeLastBlocks = new HashSet<String>();
     public Set<String> placeNormallyBlocks = new HashSet<String>();
+    public Set<String> naturalTerrainBlocks = new HashSet<String>();
+    public Set<String> notNaturalTerrainBlocks = new HashSet<String>();
 
     public ForgeConfiguration(ForgeWorldEdit mod) {
         this(mod.getWorkingDir());
@@ -134,6 +136,8 @@ public class ForgeConfiguration extends LocalConfiguration {
 
         placeLastBlocks = new HashSet<String>(Arrays.asList(WorldEditConfig.Placement.placeLastBlocks));
         placeNormallyBlocks = new HashSet<String>(Arrays.asList(WorldEditConfig.Placement.placeNormallyBlocks));
+        naturalTerrainBlocks = new HashSet<String>(Arrays.asList(WorldEditConfig.Placement.naturalTerrainBlocks));
+        notNaturalTerrainBlocks = new HashSet<String>(Arrays.asList(WorldEditConfig.Placement.notNaturalTerrainBlocks));
     }
 
     @Override

@@ -444,6 +444,13 @@ public enum BlockType {
     private static final BitSet placementKnown = new BitSet();
     private static final BitSet placementAttached = new BitSet();
 
+    private static ModdedBlockProperties moddedProperties;
+    private static final BitSet moddedKnown = new BitSet();
+    private static final BitSet moddedPassable = new BitSet();
+    private static final BitSet moddedLiquid = new BitSet();
+    private static final BitSet moddedTranslucent = new BitSet();
+    private static final BitSet moddedNatural = new BitSet();
+
     static {
         shouldPlaceLast.set(BlockID.SAPLING);
         shouldPlaceLast.set(BlockID.BED);
@@ -519,6 +526,54 @@ public enum BlockType {
         placementRules = rules;
         placementKnown.clear();
         placementAttached.clear();
+    }
+
+    /**
+     * Set what answers the passability, liquid, translucency and terrain questions for blocks that aren't
+     * in the vanilla tables, forgetting earlier answers.
+     *
+     * @param properties the answers, or null to treat those blocks as solid, opaque and not terrain
+     */
+    public static synchronized void setModdedProperties(@Nullable ModdedBlockProperties properties) {
+        moddedProperties = properties;
+        moddedKnown.clear();
+        moddedPassable.clear();
+        moddedLiquid.clear();
+        moddedTranslucent.clear();
+        moddedNatural.clear();
+    }
+
+    private static boolean modded(int id, BitSet answer) {
+        if (id <= LAST_VANILLA_ID || moddedProperties == null) {
+            return false;
+        }
+        return askModded(id, answer);
+    }
+
+    // Synchronized because schematics are read on a background thread.
+    private static synchronized boolean askModded(int id, BitSet answer) {
+        if (moddedProperties == null) {
+            return false;
+        }
+
+        if (!moddedKnown.get(id)) {
+            moddedKnown.set(id);
+            moddedPassable.set(id, moddedProperties.canPassThrough(id));
+            moddedLiquid.set(id, moddedProperties.isLiquid(id));
+            moddedTranslucent.set(id, moddedProperties.isTranslucent(id));
+            moddedNatural.set(id, moddedProperties.isNaturalTerrain(id));
+        }
+        return answer.get(id);
+    }
+
+    /**
+     * Checks whether a block is a liquid.
+     *
+     * @param id the ID of the block
+     * @return true if it is water, lava or a modded liquid
+     */
+    public static boolean isLiquid(int id) {
+        return (id >= BlockID.WATER && id <= BlockID.STATIONARY_LAVA) || modded(id, moddedLiquid);
     }
 
     private static boolean isModdedAttached(int id) {
@@ -640,7 +695,7 @@ public enum BlockType {
      * @return true if the block can be passed through
      */
     public static boolean canPassThrough(int id) {
-        return canPassThrough.contains(id);
+        return canPassThrough.contains(id) || modded(id, moddedPassable);
     }
 
     /**
@@ -651,7 +706,7 @@ public enum BlockType {
      * @return true if the block can be passed through
      */
     public static boolean canPassThrough(int id, int data) {
-        return canPassThrough.contains(-16 * id - data) || canPassThrough.contains(id);
+        return canPassThrough.contains(-16 * id - data) || canPassThrough.contains(id) || modded(id, moddedPassable);
     }
 
     /**
@@ -1164,7 +1219,7 @@ public enum BlockType {
      */
     @Deprecated
     public static boolean isNaturalTerrainBlock(int id) {
-        return isNaturalTerrainBlock.contains(id);
+        return isNaturalTerrainBlock.contains(id) || modded(id, moddedNatural);
     }
 
     /**
@@ -1175,7 +1230,8 @@ public enum BlockType {
      * @return true if the block type is naturally occurring
      */
     public static boolean isNaturalTerrainBlock(int id, int data) {
-        return isNaturalTerrainBlock.contains(-16 * id - data) || isNaturalTerrainBlock.contains(id);
+        return isNaturalTerrainBlock.contains(-16 * id - data) || isNaturalTerrainBlock.contains(id)
+            || modded(id, moddedNatural);
     }
 
     /**
@@ -1364,7 +1420,7 @@ public enum BlockType {
      * @return true if the block type lets light through
      */
     public static boolean isTranslucent(int id) {
-        return isTranslucent.contains(id);
+        return isTranslucent.contains(id) || modded(id, moddedTranslucent);
     }
 
     /**

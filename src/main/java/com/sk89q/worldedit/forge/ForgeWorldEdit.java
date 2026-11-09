@@ -182,6 +182,8 @@ public class ForgeWorldEdit {
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
         BlockType.setPlacementRules(new ForgeBlockPlacementRules(config.placeLastBlocks, config.placeNormallyBlocks));
+        BlockType
+            .setModdedProperties(new ForgeBlockProperties(config.naturalTerrainBlocks, config.notNaturalTerrainBlocks));
 
         lightingScheduler = new ForgeLightingScheduler();
         lightingScheduler.register();

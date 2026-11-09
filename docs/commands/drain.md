@@ -1,6 +1,6 @@
 # `//drain`
 
-Remove water and lava around you.
+Remove water, lava and modded liquids around you.
 
 Removes the connected pool.
 
