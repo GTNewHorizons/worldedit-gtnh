@@ -271,6 +271,7 @@ public class ForgeWorld extends AbstractWorld {
         return new BaseBiome(getWorld().getBiomeGenForCoords(position.getBlockX(), position.getBlockZ()).biomeID);
     }
 
+    // EndlessIDs (ForgeWorldMixin) overwrites this for its 16-bit biome IDs. Keep the signature.
     @Override
     public boolean setBiome(Vector2D position, BaseBiome biome) {
         checkNotNull(position);

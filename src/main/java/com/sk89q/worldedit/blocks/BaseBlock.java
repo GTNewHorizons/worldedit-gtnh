@@ -61,23 +61,22 @@ import com.sk89q.worldedit.world.registry.WorldData;
 public class BaseBlock extends Block implements TileEntityBlock {
 
     /**
-     * Indicates the highest possible block ID (inclusive) that can be used.
-     * This value is subject to change depending on the implementation, but
-     * internally this class only supports a range of 4096 IDs (for space
-     * reasons), which coincides with the number of possible IDs that official
-     * Minecraft supports as of version 1.7.
+     * The highest block ID (inclusive) without EndlessIDs, as in vanilla 1.7.10. EndlessIDs replaces the
+     * ID methods below with its own wider ID and limit, so this doesn't apply when it is installed.
      */
     public final static int MAX_ID = 4095;
 
     /**
-     * Indicates the maximum data value (inclusive) that can be used. A future
-     * version of Minecraft may abolish block data values.
+     * The highest data value (inclusive). Raised to 65535 at startup when EndlessIDs is installed.
      */
     public static int MAX_DATA = 15;
 
     // Instances of this class should be _as small as possible_ because there will
     // be millions of instances of this object.
 
+    // EndlessIDs (BaseBlockMixin) overwrites getId, internalSetId, getData and internalSetData, and
+    // shadows the data field. Keep their names, signatures and the field's type, or it fails to apply.
+    // With it installed, this id field is unused: the mixin keeps the ID in a field of its own.
     private short id;
     private short data;
     @Nullable
