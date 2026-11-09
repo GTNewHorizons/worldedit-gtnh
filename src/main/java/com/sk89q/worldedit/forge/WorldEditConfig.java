@@ -254,8 +254,9 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static String schematicSaveDir;
 
-        @Config.Comment("The folder that holds world backups for //restore. Restoring is off while this is empty.")
-        @Config.DefaultString("")
+        @Config.Comment({ "The folder that holds world backups for //restore, relative to the game folder.",
+            "The default is where ServerUtilities saves its backups. Restoring is off while this is empty." })
+        @Config.DefaultString("backups")
         @Config.Reloadable(RELOAD)
         public static String snapshotsDir;
 

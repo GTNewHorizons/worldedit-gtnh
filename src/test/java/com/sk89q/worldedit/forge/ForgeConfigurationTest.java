@@ -76,7 +76,7 @@ public class ForgeConfigurationTest {
         old.setProperty("disallowed-blocks", "1, 2,x,3");
         old.setProperty("place-last-blocks", " a:b ,,c:d");
         old.setProperty("schematic-save-dir", "my-schematics");
-        old.setProperty("snapshots-dir", "backups");
+        old.setProperty("snapshots-dir", "old-backups");
         old.setProperty("history-size", "5");
         old.setProperty("register-help", "true");
         try (OutputStream stream = new FileOutputStream(file("worldedit.properties"))) {
@@ -113,7 +113,7 @@ public class ForgeConfigurationTest {
 
         // //we reload picks up edits to the new file, and an emptied snapshot folder turns restoring off
         replaceInConfig("I:maxRadius=100", "I:maxRadius=200");
-        replaceInConfig("S:snapshotsDir=backups", "S:snapshotsDir=");
+        replaceInConfig("S:snapshotsDir=old-backups", "S:snapshotsDir=");
         config.load();
 
         assertEquals(200, config.maxRadius);

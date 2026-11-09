@@ -45,9 +45,6 @@ public class SnapshotRepository {
     public SnapshotRepository(File dir) {
         this.dir = dir;
 
-        // If folder doesn't exist, make it
-        dir.mkdirs();
-
         dateParsers.add(new YYMMDDHHIISSParser());
         dateParsers.add(new ModificationTimerParser());
     }
