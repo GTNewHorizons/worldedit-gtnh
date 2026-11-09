@@ -54,9 +54,12 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
     public void sendDescPacket(World world, TileEntity entity) {
         if (entity instanceof TileMultipart) {
             TileMultipart multi = (TileMultipart) entity;
+            // A tile loaded from NBT mid-game never gets the chunk load call, so its parts never join
+            // the world (AE cables stay off their network until a restart, for example).
+            if (!world.isRemote && world.getTileEntity(multi.xCoord, multi.yCoord, multi.zCoord) == multi) {
+                multi.onChunkLoad();
+            }
             MultipartHelper.sendDescPacket(world, multi);
-            NBTTagCompound nbt = new NBTTagCompound();
-            multi.writeToNBT(nbt);
         }
     }
 
