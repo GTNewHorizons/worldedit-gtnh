@@ -18,8 +18,8 @@ package com.sk89q.worldedit.extent.reorder;
 
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -162,25 +162,31 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
     private class Stage3Committer implements Operation {
 
+        // Linked, so that taking the next block is quick however many have been placed already.
+        private final Set<BlockVector> blocks = new LinkedHashSet<BlockVector>();
+        private final Map<BlockVector, BaseBlock> blockTypes = new HashMap<BlockVector, BaseBlock>();
+        private Iterator<Map.Entry<BlockVector, BaseBlock>> loading;
+
         @Override
         public Operation resume(RunContext run) throws WorldEditException {
             Extent extent = getExtent();
 
-            final Set<BlockVector> blocks = new HashSet<BlockVector>();
-            final Map<BlockVector, BaseBlock> blockTypes = new HashMap<BlockVector, BaseBlock>();
-            for (Iterator<Map.Entry<BlockVector, BaseBlock>> it = stage3.drain(); it.hasNext();) {
-                final Map.Entry<BlockVector, BaseBlock> entry = it.next();
+            if (loading == null) {
+                loading = stage3.drain();
+            }
+            while (loading.hasNext()) {
+                final Map.Entry<BlockVector, BaseBlock> entry = loading.next();
                 final BlockVector pt = entry.getKey();
                 blocks.add(pt);
                 blockTypes.put(pt, entry.getValue());
+                if (!run.shouldContinue()) {
+                    return this;
+                }
             }
 
             while (!blocks.isEmpty()) {
                 BlockVector current = blocks.iterator()
                     .next();
-                if (!blocks.contains(current)) {
-                    continue;
-                }
 
                 final Deque<BlockVector> walked = new LinkedList<BlockVector>();
 
@@ -242,8 +248,13 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
                 }
 
                 for (BlockVector pt : walked) {
-                    extent.setBlock(pt, blockTypes.get(pt));
+                    extent.setBlock(pt, blockTypes.remove(pt));
                     blocks.remove(pt);
+                }
+
+                // A whole chain at a time, so that nothing is placed before what it hangs from.
+                if (!blocks.isEmpty() && !run.shouldContinue()) {
+                    return this;
                 }
             }
 
@@ -256,7 +267,10 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         }
 
         @Override
-        public void cancel() {}
+        public void cancel() {
+            blocks.clear();
+            blockTypes.clear();
+        }
 
         @Override
         public void addStatusMessages(List<String> messages) {}

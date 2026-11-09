@@ -27,6 +27,8 @@ import com.sk89q.jnbt.Tag;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.event.extent.EditSessionEvent;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
 import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.world.World;
 
@@ -234,6 +236,31 @@ public class EditSessionHistoryTest {
         undo(edit);
         assertEquals(BlockID.AIR, get(lower).getType());
         assertEquals(BlockID.AIR, get(upper).getType());
+    }
+
+    @Test
+    public void manyDoorsAndSignsArePlacedAcrossPauses() throws Exception {
+        EditSession edit = newSession();
+        for (int x = 0; x < 300; x++) {
+            edit.setBlock(new Vector(x, 11, 0), new BaseBlock(BlockID.WOODEN_DOOR, 8));
+            edit.setBlock(new Vector(x, 10, 0), new BaseBlock(BlockID.WOODEN_DOOR, 0));
+            edit.setBlock(new Vector(x, 10, 2), new BaseBlock(BlockID.SIGN_POST, 4));
+        }
+
+        Operation next = edit.commit();
+        int resumes = 0;
+        while (next != null) {
+            next = next.resume(new TimeBudgetRunContext(0));
+            resumes++;
+        }
+
+        assertTrue("the pass never paused", resumes > 3);
+        for (int x = 0; x < 300; x++) {
+            assertEquals(0, get(new Vector(x, 10, 0)).getData());
+            assertEquals(BlockID.WOODEN_DOOR, get(new Vector(x, 10, 0)).getType());
+            assertEquals(8, get(new Vector(x, 11, 0)).getData());
+            assertEquals(BlockID.SIGN_POST, get(new Vector(x, 10, 2)).getType());
+        }
     }
 
     @Test
