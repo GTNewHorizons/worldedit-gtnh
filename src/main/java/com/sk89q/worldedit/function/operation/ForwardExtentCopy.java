@@ -148,8 +148,9 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     }
 
     /**
-     * Get the function that gets applied to all source blocks <em>after</em>
-     * the copy has been made.
+     * Get the function that gets applied to the source blocks <em>after</em>
+     * the copy has been made. Blocks that the source mask leaves out are not
+     * touched.
      *
      * @return a source function, or null if none is to be applied
      */
@@ -158,8 +159,9 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     }
 
     /**
-     * Set the function that gets applied to all source blocks <em>after</em>
-     * the copy has been made.
+     * Set the function that gets applied to the source blocks <em>after</em>
+     * the copy has been made. Blocks that the source mask leaves out are not
+     * touched.
      *
      * @param function a source function, or null if none is to be applied
      */
@@ -229,10 +231,10 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
             }
 
             ExtentBlockCopy blockCopy = new ExtentBlockCopy(source, from, destination, to, currentTransform);
-            RegionMaskingFilter filter = new RegionMaskingFilter(sourceMask, blockCopy);
-            RegionFunction function = sourceFunction != null ? new CombinedRegionFunction(filter, sourceFunction)
-                : filter;
-            RegionVisitor blockVisitor = new RegionVisitor(region, function);
+            // The mask covers the source function too: a block that is not copied must stay where it is
+            RegionFunction function = sourceFunction != null ? new CombinedRegionFunction(blockCopy, sourceFunction)
+                : blockCopy;
+            RegionVisitor blockVisitor = new RegionVisitor(region, new RegionMaskingFilter(sourceMask, function));
 
             ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, currentTransform);
             entityCopy.setRemoving(removingEntities);

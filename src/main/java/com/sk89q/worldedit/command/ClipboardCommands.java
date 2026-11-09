@@ -114,8 +114,8 @@ public final class ClipboardCommands {
         player.print(region.getArea() + " block(s) were copied.");
     }
 
-    private static void cut(Player player, LocalSession session, EditSession editSession, Region region,
-        Pattern leavePattern, boolean copyEntities, Mask mask) throws WorldEditException {
+    static void cut(Player player, LocalSession session, EditSession editSession, Region region, Pattern leavePattern,
+        boolean copyEntities, Mask mask) throws WorldEditException {
 
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));

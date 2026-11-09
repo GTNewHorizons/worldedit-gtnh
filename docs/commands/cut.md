@@ -23,7 +23,7 @@ Flags go right after the command, before the arguments.
 | Flag | Meaning |
 |---|---|
 | `-e` | Accepted, but entities are not copied at the moment. |
-| `-m` | Only cut what matches the [mask](../masks.md). |
+| `-m` | Only cut what matches the [mask](../masks.md). Other blocks stay in the world, and are air in the clipboard. |
 
 ## Examples
 
