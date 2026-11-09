@@ -181,7 +181,7 @@ public class ForgeOperationSchedulerTest {
     @Test
     public void anImmediateCommandsQueuedBlocksAreWrittenOnTheNextTick() {
         EditSession session = mock(EditSession.class);
-        when(session.hasQueuedBlocks()).thenReturn(true);
+        when(session.queuedBlockCount()).thenReturn(100000);
 
         scheduler.whenFinished(owner, session, new Runnable() {
 
@@ -199,6 +199,24 @@ public class ForgeOperationSchedulerTest {
         tick();
 
         verify(session).commit();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aSmallImmediateEditIsWrittenStraightAway() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(500);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).flushQueue();
         assertEquals(Collections.singletonList("finalize"), events);
         assertFalse(scheduler.hasPendingWork(ownerId));
     }
@@ -223,7 +241,7 @@ public class ForgeOperationSchedulerTest {
     @Test
     public void anImmediateCommandsWritesCanBeCancelled() {
         EditSession session = mock(EditSession.class);
-        when(session.hasQueuedBlocks()).thenReturn(true);
+        when(session.queuedBlockCount()).thenReturn(100000);
         scheduler.whenFinished(owner, session, new Runnable() {
 
             @Override

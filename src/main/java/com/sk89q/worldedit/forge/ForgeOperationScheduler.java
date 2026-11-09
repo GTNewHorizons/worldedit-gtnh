@@ -67,6 +67,12 @@ public class ForgeOperationScheduler implements OperationScheduler {
      */
     private static final int MAX_QUEUED = 8;
 
+    /**
+     * An edit that edited straight away and queued at most this many blocks writes them at once. A
+     * block takes something like ten microseconds to write, so this is about one tick's budget.
+     */
+    private static final int SMALL_EDIT_BLOCKS = 2048;
+
     private static final Logger logger = Logger.getLogger(ForgeOperationScheduler.class.getCanonicalName());
 
     private final Deque<Job> queue = new ArrayDeque<Job>();
@@ -108,8 +114,9 @@ public class ForgeOperationScheduler implements OperationScheduler {
             return;
         }
 
-        if (!editSession.hasQueuedBlocks()) {
-            // Nothing to write, so there is no point waiting a tick.
+        if (editSession.queuedBlockCount() <= SMALL_EDIT_BLOCKS) {
+            // Few enough to fit in one tick, and waiting would only make the next brush stroke or
+            // command run into "still running".
             editSession.flushQueue();
             task.run();
             return;

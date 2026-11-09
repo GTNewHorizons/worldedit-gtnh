@@ -170,7 +170,7 @@ public class BrushTool implements TraceTool {
 
         BlockBag bag = session.getBlockBag(player);
 
-        EditSession editSession = session.createEditSession(player);
+        EditSession editSession = ToolEdits.start(session, player);
         Request.request()
             .setEditSession(editSession);
         if (mask != null) {
@@ -192,10 +192,7 @@ public class BrushTool implements TraceTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            if (bag != null) {
-                bag.flushChanges();
-            }
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession, bag);
         }
 
         return true;

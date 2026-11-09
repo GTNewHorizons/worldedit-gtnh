@@ -239,6 +239,15 @@ public final class PackedBlockList {
     }
 
     /**
+     * Get how many positions have been added but not drained yet.
+     *
+     * @return the number left
+     */
+    public int remaining() {
+        return size - head;
+    }
+
+    /**
      * Whether anything added has not been drained yet.
      *
      * @return true if there is something left

@@ -66,7 +66,7 @@ public class FloodFillTool implements BlockTool {
             return true;
         }
 
-        EditSession editSession = session.createEditSession(player);
+        EditSession editSession = ToolEdits.start(session, player);
 
         try {
             recurse(
@@ -82,7 +82,7 @@ public class FloodFillTool implements BlockTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession, null);
         }
 
         return true;

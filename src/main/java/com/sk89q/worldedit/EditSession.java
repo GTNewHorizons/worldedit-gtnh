@@ -300,6 +300,15 @@ public class EditSession implements Extent {
     }
 
     /**
+     * Get how many blocks are waiting in the queue.
+     *
+     * @return the number of blocks
+     */
+    public int queuedBlockCount() {
+        return reorderExtent.pendingBlockCount();
+    }
+
+    /**
      * Throw away all blocks waiting in the queue without writing them.
      */
     public void discardQueue() {
