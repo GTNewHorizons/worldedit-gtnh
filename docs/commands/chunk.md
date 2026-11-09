@@ -14,7 +14,7 @@ Selects the full height of the chunk you stand in, or of the coordinates you typ
 
 | Argument | Meaning |
 |---|---|
-| `coordinates` | A position as `x,z`, without spaces. It is read as block coordinates unless you use `-c`. |
+| `coordinates` | A position as `x,z` or `x z`. It is read as block coordinates unless you use `-c`. `~` is where you stand, or the chunk you are in with `-c`, and `~2` or `~-1` is that far from it. |
 
 ## Flags
 
@@ -31,6 +31,7 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//chunk` | Select the chunk you stand in. |
 | `//chunk -c 3,-2` | Select chunk 3,-2. |
+| `//chunk -c ~1 ~` | Select the chunk east of the one you are in. |
 | `//chunk -s` | Grow the selection to whole chunks. |
 
 [All commands](../README.md)

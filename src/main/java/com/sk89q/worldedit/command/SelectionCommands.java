@@ -19,6 +19,7 @@ package com.sk89q.worldedit.command;
 import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
 import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
 import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.text;
 import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import com.sk89q.worldedit.command.brigadier.CommandFailure;
 import com.sk89q.worldedit.command.brigadier.LogMode;
 import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.command.util.CommandInput;
+import com.sk89q.worldedit.command.util.RelativeCoordinates;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.permission.ActorSelectorLimits;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
@@ -76,12 +78,12 @@ public final class SelectionCommands {
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
         Nodes.register(dispatcher, literal("/pos1", "Set position 1")
                 .executes(run("worldedit.selection.pos", LogMode.POSITION, c -> pos1(c.player(), c.session(), c)))
-                .then(word("coordinates")
+                .then(text("coordinates")
                         .executes(run("worldedit.selection.pos", LogMode.POSITION, c -> pos1(c.player(), c.session(), c)))));
 
         Nodes.register(dispatcher, literal("/pos2", "Set position 2")
                 .executes(run("worldedit.selection.pos", LogMode.POSITION, c -> pos2(c.player(), c.session(), c)))
-                .then(word("coordinates")
+                .then(text("coordinates")
                         .executes(run("worldedit.selection.pos", LogMode.POSITION, c -> pos2(c.player(), c.session(), c)))));
 
         Nodes.register(dispatcher, literal("/hpos1", "Set position 1 to targeted block")
@@ -92,7 +94,7 @@ public final class SelectionCommands {
 
         Nodes.registerWithFlags(dispatcher, literal("/chunk", "Set the selection to your current chunk")
                 .executes(run("worldedit.selection.chunk", LogMode.POSITION, c -> chunk(c.player(), c.session(), c)))
-                .then(word("coordinates")
+                .then(text("coordinates")
                         .executes(run("worldedit.selection.chunk", LogMode.POSITION, c -> chunk(c.player(), c.session(), c)))),
                 "sc");
 
@@ -167,13 +169,15 @@ public final class SelectionCommands {
         if (!args.has("coordinates")) {
             return player.getBlockIn();
         }
-        String input = args.string("coordinates");
-        if (!input.matches("-?\\d+,-?\\d+,-?\\d+")) {
-            player.printError("Invalid coordinates " + input);
+        Vector here = player.getBlockIn();
+        try {
+            int[] coords = RelativeCoordinates
+                .parse(args.string("coordinates"), here.getBlockX(), here.getBlockY(), here.getBlockZ());
+            return new Vector(coords[0], coords[1], coords[2]);
+        } catch (IllegalArgumentException e) {
+            player.printError(e.getMessage());
             return null;
         }
-        String[] coords = input.split(",");
-        return new Vector(Integer.parseInt(coords[0]), Integer.parseInt(coords[1]), Integer.parseInt(coords[2]));
     }
 
     private static void pos1(Player player, LocalSession session, CommandCall args) throws Exception {
@@ -272,14 +276,18 @@ public final class SelectionCommands {
             final Vector2D min2D;
             if (args.has("coordinates")) {
                 // coords specified
-                String[] coords = args.string("coordinates")
-                    .split(",");
-                if (coords.length != 2) {
-                    throw new InsufficientArgumentsException("Invalid coordinates specified.");
+                // ~ is relative to the chunk you are in with -c, and to your block otherwise.
+                Vector here = player.getBlockIn();
+                Vector2D origin = args.flag('c') ? ChunkStore.toChunk(here)
+                    : new Vector2D(here.getBlockX(), here.getBlockZ());
+                int[] coords;
+                try {
+                    coords = RelativeCoordinates
+                        .parse(args.string("coordinates"), origin.getBlockX(), origin.getBlockZ());
+                } catch (IllegalArgumentException e) {
+                    throw new InsufficientArgumentsException(e.getMessage());
                 }
-                int x = Integer.parseInt(coords[0]);
-                int z = Integer.parseInt(coords[1]);
-                Vector2D pos = new Vector2D(x, z);
+                Vector2D pos = new Vector2D(coords[0], coords[1]);
                 min2D = (args.flag('c')) ? pos : ChunkStore.toChunk(pos.toVector());
             } else {
                 // use player loc

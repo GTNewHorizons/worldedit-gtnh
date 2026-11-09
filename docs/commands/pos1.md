@@ -14,7 +14,7 @@ Sets position 1 to the block you are standing in, or to the coordinates you type
 
 | Argument | Meaning |
 |---|---|
-| `coordinates` | The position as `x,y,z`, without spaces. |
+| `coordinates` | The position as `x,y,z` or `x y z`. `~` is where you stand, and `~5` or `~-3` is that far from it. |
 
 ## Examples
 
@@ -22,5 +22,7 @@ Sets position 1 to the block you are standing in, or to the coordinates you type
 |---|---|
 | `//pos1` | Use the block you stand in. |
 | `//pos1 100,64,-200` | Use exact coordinates. |
+| `//pos1 ~-10 ~ ~-10` | Use the block 10 west and 10 north of where you stand. |
+| `//pos1 ~,~5,~` | Use the block 5 above where you stand. |
 
 [All commands](../README.md)
