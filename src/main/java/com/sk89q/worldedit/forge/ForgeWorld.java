@@ -433,23 +433,71 @@ public class ForgeWorld extends AbstractWorld {
     @Override
     public BaseBlock getBlock(Vector position) {
         World world = getWorld();
-        int id = Block.getIdFromBlock(world.getBlock(position.getBlockX(), position.getBlockY(), position.getBlockZ()));
-        int data = world.getBlockMetadata(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        TileEntity tile = getWorld().getTileEntity(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-
-        if (tile != null) {
-            return new TileEntityBaseBlock(id, data, tile);
-        } else {
-            return new BaseBlock(id, data);
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(world, x, y, z);
+        if (chunk == null) {
+            return new BaseBlock(0);
         }
+
+        Block block = chunk.getBlock(x & 15, y, z & 15);
+        int data = chunk.getBlockMetadata(x & 15, y, z & 15);
+        int id = Block.getIdFromBlock(block);
+        if (block.hasTileEntity(data)) {
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (tile != null) {
+                return new TileEntityBaseBlock(id, data, tile);
+            }
+        }
+        return new BaseBlock(id, data);
     }
 
     @Override
     public BaseBlock getLazyBlock(Vector position) {
         World world = getWorld();
-        int id = Block.getIdFromBlock(world.getBlock(position.getBlockX(), position.getBlockY(), position.getBlockZ()));
-        int data = world.getBlockMetadata(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        return new LazyBlock(id, data, this, position);
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(world, x, y, z);
+        if (chunk == null) {
+            return new LazyBlock(0, 0, this, position);
+        }
+        return new LazyBlock(
+            Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15)),
+            chunk.getBlockMetadata(x & 15, y, z & 15),
+            this,
+            position);
+    }
+
+    @Override
+    public int getBlockType(Vector position) {
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(getWorld(), x, y, z);
+        return chunk != null ? Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15)) : 0;
+    }
+
+    @Override
+    public int getBlockData(Vector position) {
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(getWorld(), x, y, z);
+        return chunk != null ? chunk.getBlockMetadata(x & 15, y, z & 15) : 0;
+    }
+
+    /**
+     * Get the chunk holding a position, looked up once for both the block and its metadata where the
+     * world's own getters each look it up again. Null outside the world, where those return air.
+     */
+    @Nullable
+    private static Chunk chunkAt(World world, int x, int y, int z) {
+        if (y < 0 || y >= 256 || x < -30000000 || z < -30000000 || x >= 30000000 || z >= 30000000) {
+            return null;
+        }
+        return world.getChunkFromChunkCoords(x >> 4, z >> 4);
     }
 
     @Override

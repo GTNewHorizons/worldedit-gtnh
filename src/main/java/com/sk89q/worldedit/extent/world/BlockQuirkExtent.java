@@ -48,13 +48,14 @@ public class BlockQuirkExtent extends AbstractDelegateExtent {
 
     @Override
     public boolean setBlock(Vector position, BaseBlock block) throws WorldEditException {
-        BaseBlock lazyBlock = getExtent().getLazyBlock(position);
-        int existing = lazyBlock.getType();
+        // Read straight from the world, which is what the extents below this one do too, without
+        // creating a block to hold the result.
+        int existing = world.getBlockType(position);
 
         if (existing == BlockID.ICE) {
             world.setBlock(position, new BaseBlock(BlockID.AIR)); // Ice turns until water so this has to be done first
-        } else
-            if (existing != BlockID.AIR && !(existing == block.getType() && lazyBlock.getData() == block.getData())) {
+        } else if (existing != BlockID.AIR
+            && !(existing == block.getType() && world.getBlockData(position) == block.getData())) {
                 // Otherwise the old block drops its inventory, on top of the copy kept for undo.
                 // A write of the same block is ignored, so emptying it would only lose the contents.
                 world.clearContainerBlockContents(position);

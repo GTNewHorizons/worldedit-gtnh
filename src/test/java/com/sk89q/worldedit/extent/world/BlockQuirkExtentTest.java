@@ -24,7 +24,8 @@ public class BlockQuirkExtentTest {
     private final BlockQuirkExtent quirks = new BlockQuirkExtent(extent, world);
 
     private void existing(BaseBlock block) {
-        when(extent.getLazyBlock(POSITION)).thenReturn(block);
+        when(world.getBlockType(POSITION)).thenReturn(block.getType());
+        when(world.getBlockData(POSITION)).thenReturn(block.getData());
     }
 
     @Test
