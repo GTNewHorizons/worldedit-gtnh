@@ -69,9 +69,19 @@ public class EditSessionHistoryTest {
             @Override
             public Boolean answer(InvocationOnMock call) {
                 writes++;
-                String written = key(call.<Vector>getArgument(0));
+                Vector at = call.<Vector>getArgument(0);
+                String written = key(at);
                 BaseBlock block = call.<BaseBlock>getArgument(1);
-                blocks.put(written, block);
+                BaseBlock replaced = blocks.put(written, block);
+
+                // Like vanilla, a door's top half goes away as soon as its bottom half does.
+                if (replaced != null && isDoor(replaced) && (replaced.getData() & 8) == 0 && !isDoor(block)) {
+                    String above = key(at.add(0, 1, 0));
+                    BaseBlock top = blocks.get(above);
+                    if (top != null && isDoor(top) && (top.getData() & 8) != 0) {
+                        blocks.remove(above);
+                    }
+                }
 
                 // Anything still attached to a block that just went away pops off.
                 String attached = attachedTo.get(written);
@@ -87,6 +97,10 @@ public class EditSessionHistoryTest {
         };
         when(world.setBlock(any(Vector.class), any(BaseBlock.class))).thenAnswer(write);
         when(world.setBlock(any(Vector.class), any(BaseBlock.class), anyBoolean())).thenAnswer(write);
+    }
+
+    private static boolean isDoor(BaseBlock block) {
+        return block.getType() == BlockID.WOODEN_DOOR || block.getType() == BlockID.IRON_DOOR;
     }
 
     private static String key(Vector position) {
@@ -317,6 +331,44 @@ public class EditSessionHistoryTest {
     @Test
     public void undoRemovesASignBeforeItsWall() throws Exception {
         assertUndoKeepsAttachedBlock(AIR, new BaseBlock(BlockID.WALL_SIGN, 2));
+    }
+
+    @Test
+    public void clearingADoorKeepsBothHalvesInHistory() throws Exception {
+        Vector lower = new Vector(5, 64, 5);
+        Vector upper = new Vector(5, 65, 5);
+        BaseBlock bottom = new BaseBlock(BlockID.WOODEN_DOOR, 1);
+        BaseBlock top = new BaseBlock(BlockID.WOODEN_DOOR, 8);
+        put(lower, bottom);
+        put(upper, top);
+
+        EditSession edit = newSession();
+        edit.setBlock(lower, AIR);
+        edit.setBlock(upper, AIR);
+        edit.flushQueue();
+
+        assertSameBlock(AIR, get(lower));
+        assertSameBlock(AIR, get(upper));
+
+        undo(edit);
+
+        assertSameBlock(bottom, get(lower));
+        assertSameBlock(top, get(upper));
+    }
+
+    @Test
+    public void nothingIsWrittenBeforeTheEditIsCommitted() throws Exception {
+        Vector torch = new Vector(2, 64, 2);
+        put(torch, TORCH);
+
+        EditSession edit = newSession();
+        edit.setBlock(torch, STONE);
+
+        assertEquals(0, writes);
+        assertSameBlock(TORCH, get(torch));
+
+        edit.flushQueue();
+        assertSameBlock(STONE, get(torch));
     }
 
     @Test

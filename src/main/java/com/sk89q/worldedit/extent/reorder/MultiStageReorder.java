@@ -46,6 +46,9 @@ import com.sk89q.worldedit.util.collection.PackedBlockList;
  */
 public class MultiStageReorder extends AbstractDelegateExtent implements ReorderingExtent {
 
+    private static final BaseBlock AIR = new BaseBlock(BlockID.AIR);
+
+    private final PackedBlockList detach = new PackedBlockList(1);
     private final PackedBlockList stage1 = new PackedBlockList(1);
     private final PackedBlockList stage2 = new PackedBlockList(1);
     private final PackedBlockList stage3 = new PackedBlockList(1);
@@ -101,9 +104,11 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
             && (BlockType.shouldPlaceLast(lazyBlock.getType()) || BlockType.shouldPlaceFinal(lazyBlock.getType()));
 
         // Destroy torches, etc. first, whatever replaces them. They would fall off if what they're
-        // attached to went away while they were still waiting for their turn.
+        // attached to went away while they were still waiting for their turn. This waits for the
+        // commit, because removing a block straight away can break others, such as the top half of a
+        // door, before the edit has read and recorded them.
         if (replacingAttached) {
-            super.setBlock(location, new BaseBlock(BlockID.AIR));
+            detach.add(location, AIR);
         }
 
         if (BlockType.shouldPlaceLast(block.getType())) {
@@ -114,8 +119,6 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
             // Place signs, reed, etc even later
             stage3.add(location, block);
             return changed;
-        } else if (replacingAttached) {
-            return super.setBlock(location, block);
         } else {
             stage1.add(location, block);
             return changed;
@@ -126,6 +129,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
      * Throw away everything waiting to be written.
      */
     public void discard() {
+        detach.clear();
         stage1.clear();
         stage2.clear();
         stage3.clear();
@@ -134,7 +138,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
     @Override
     public Operation commitBefore() {
         return new OperationQueue(
-            new BlockMapEntryPlacer(getExtent(), Iterators.concat(stage1.drain(), stage2.drain())),
+            new BlockMapEntryPlacer(getExtent(), Iterators.concat(detach.drain(), stage1.drain(), stage2.drain())),
             new Stage3Committer());
     }
 
@@ -225,6 +229,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
                 }
             }
 
+            detach.clear();
             stage1.clear();
             stage2.clear();
             stage3.clear();
