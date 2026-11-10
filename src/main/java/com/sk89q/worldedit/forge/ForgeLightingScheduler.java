@@ -50,7 +50,7 @@ public class ForgeLightingScheduler implements LightingScheduler {
     private double availableChunkBudget;
 
     @Override
-    public boolean schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion) {
+    public void schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion) {
         checkNotNull(world);
         checkNotNull(chunks);
 
@@ -59,14 +59,12 @@ public class ForgeLightingScheduler implements LightingScheduler {
             if (completion != null) {
                 completion.run();
             }
-            return true;
+            return;
         }
 
         synchronized (lock) {
             queue.offer(task);
         }
-
-        return true;
     }
 
     @Override

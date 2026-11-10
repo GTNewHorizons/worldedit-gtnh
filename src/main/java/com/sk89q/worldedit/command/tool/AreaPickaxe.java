@@ -89,7 +89,7 @@ public class AreaPickaxe implements BlockTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            ToolEdits.finish(session, player, editSession, null);
+            ToolEdits.finish(session, player, editSession);
         }
 
         return true;

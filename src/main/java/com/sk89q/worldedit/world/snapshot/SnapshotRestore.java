@@ -38,9 +38,6 @@ import com.sk89q.worldedit.world.storage.MissingChunkException;
 import com.sk89q.worldedit.world.storage.MissingWorldException;
 
 /**
- * A snapshot restore operation.
- */
-/**
  * Restores a region from a snapshot one chunk at a time, so that it can be spread over several server
  * ticks. Each chunk has to be read and decompressed from the snapshot, which is the slow part.
  */

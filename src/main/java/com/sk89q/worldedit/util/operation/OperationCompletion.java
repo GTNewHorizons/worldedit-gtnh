@@ -43,4 +43,15 @@ public interface OperationCompletion {
      * @param started false if it was cancelled while waiting for its turn, so it changed nothing
      */
     default void onCancelled(boolean started) {}
+
+    /**
+     * The message to show a player for a failure.
+     *
+     * @param e the failure
+     * @return its message, or a general one if it has none
+     */
+    static String messageOf(WorldEditException e) {
+        String message = e.getMessage();
+        return message != null ? message : "The operation could not be completed.";
+    }
 }

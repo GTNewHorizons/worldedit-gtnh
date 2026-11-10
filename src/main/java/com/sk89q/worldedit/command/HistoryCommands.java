@@ -139,8 +139,7 @@ public class HistoryCommands {
                 // the same command would leave the history out of order if they went ahead.
                 batchFailed[0] = true;
                 giveBackPlace.run();
-                String error = e.getMessage();
-                player.printError(error != null ? error : "The operation could not be completed.");
+                player.printError(OperationCompletion.messageOf(e));
                 player.printError("Run " + command + " again to retry.");
             }
         });

@@ -114,8 +114,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
 
             @Override
             public void onFailure(WorldEditException e) {
-                String message = e.getMessage();
-                owner.printError(message != null ? message : "The operation could not be completed.");
+                owner.printError(OperationCompletion.messageOf(e));
             }
         });
         job.finalizer = task;

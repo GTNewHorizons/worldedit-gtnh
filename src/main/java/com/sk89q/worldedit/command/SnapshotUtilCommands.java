@@ -161,8 +161,7 @@ public final class SnapshotUtilCommands {
                 @Override
                 public void onFailure(WorldEditException e) {
                     close(store);
-                    String message = e.getMessage();
-                    player.printError(message != null ? message : "The operation could not be completed.");
+                    player.printError(OperationCompletion.messageOf(e));
                 }
 
                 @Override

@@ -61,10 +61,6 @@ final class ForgeBlockPlacementRules implements BlockPlacementRules {
     @Override
     public boolean isAttached(int id) {
         Block block = Block.getBlockById(id);
-        if (block == null) {
-            return false;
-        }
-
         String name = Block.blockRegistry.getNameForObject(block);
         if (placeLast.contains(name)) {
             return true;

@@ -16,13 +16,10 @@
 
 package com.sk89q.worldedit.command.tool;
 
-import javax.annotation.Nullable;
-
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 
 /**
  * Starts and finishes the edit sessions of tools that can change a lot of blocks, such as brushes, so
@@ -45,20 +42,14 @@ final class ToolEdits {
     /**
      * Write the edit session's blocks, straight away if there are only a few, and record it for undo
      * once they are written.
-     *
-     * @param bag the block bag to flush afterwards, or null for none
      */
-    static void finish(final LocalSession session, Player player, final EditSession editSession,
-        @Nullable final BlockBag bag) {
+    static void finish(final LocalSession session, Player player, final EditSession editSession) {
         WorldEdit.getInstance()
             .getOperationScheduler()
             .whenFinished(player, editSession, new Runnable() {
 
                 @Override
                 public void run() {
-                    if (bag != null) {
-                        bag.flushChanges();
-                    }
                     session.remember(editSession);
                 }
             });

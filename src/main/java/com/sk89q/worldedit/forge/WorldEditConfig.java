@@ -24,7 +24,8 @@ import com.sk89q.worldedit.LocalConfiguration;
  *
  * <p>
  * The rest of WorldEdit does not read these directly: {@link ForgeConfiguration} copies them to
- * {@link LocalConfiguration}. All fields are reloadable with {@code //we reload}.
+ * {@link LocalConfiguration}. Fields marked reloadable apply with {@code /we reload}, the others
+ * after a restart.
  * </p>
  */
 public final class WorldEditConfig {

@@ -21,7 +21,6 @@ import com.sk89q.worldedit.world.World;
 /**
  * @deprecated Replace all uses of {@link WorldVector}s with {@link com.sk89q.worldedit.util.Location}s
  */
-@SuppressWarnings("deprecation")
 @Deprecated
 public class BlockWorldVector extends WorldVector {
 

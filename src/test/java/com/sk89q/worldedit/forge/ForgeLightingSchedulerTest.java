@@ -1,7 +1,6 @@
 package com.sk89q.worldedit.forge;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
@@ -45,8 +44,8 @@ public class ForgeLightingSchedulerTest {
         World first = mock(World.class);
         World second = mock(World.class);
 
-        assertTrue(scheduler.schedule(first, chunks, null, completion));
-        assertTrue(scheduler.schedule(second, chunks, null, completion));
+        scheduler.schedule(first, chunks, null, completion);
+        scheduler.schedule(second, chunks, null, completion);
         ticks(200);
 
         verify(first, atLeastOnce()).fixLighting(any());

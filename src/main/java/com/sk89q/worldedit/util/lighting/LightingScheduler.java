@@ -32,10 +32,8 @@ public interface LightingScheduler {
      * @param chunks     the chunks that should be fixed
      * @param player     the player who initiated the fix (may be {@code null})
      * @param completion a callback to run once the relight completes
-     *
-     * @return {@code true} if the relight was scheduled, {@code false} otherwise
      */
-    boolean schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion);
+    void schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion);
 
     /**
      * Shutdown the scheduler.

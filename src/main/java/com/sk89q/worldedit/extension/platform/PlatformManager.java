@@ -312,7 +312,6 @@ public class PlatformManager {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Subscribe
     public void handleBlockInteract(BlockInteractEvent event) {
         // Create a proxy actor with a potentially different world for

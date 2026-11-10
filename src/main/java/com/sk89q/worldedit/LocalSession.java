@@ -654,19 +654,6 @@ public class LocalSession {
     }
 
     /**
-     * Get the last script used.
-     *
-     * @return the last script's name
-     */
-    @Nullable
-    /**
-     * Tell the player the WorldEdit version.
-     *
-     * @param player the player
-     */
-    public void tellVersion(Actor player) {}
-
-    /**
      * Dispatch a CUI event but only if the actor has CUI support.
      *
      * @param actor the actor
@@ -824,7 +811,6 @@ public class LocalSession {
      * @param player the player
      * @return an edit session
      */
-    @SuppressWarnings("deprecation")
     public EditSession createEditSession(Player player) {
         checkNotNull(player);
 

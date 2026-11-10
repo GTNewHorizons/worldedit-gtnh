@@ -44,13 +44,13 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
  */
 public final class Nodes {
 
+    private static final Map<String, String> DESCRIPTIONS = new HashMap<>();
+
     private Nodes() {}
 
     public static LiteralArgumentBuilder<ICommandSender> literal(String name) {
         return LiteralArgumentBuilder.literal(name);
     }
-
-    private static final Map<String, String> DESCRIPTIONS = new HashMap<>();
 
     /**
      * A command name together with the one line description that //help shows for it.
@@ -66,6 +66,22 @@ public final class Nodes {
     public static String descriptionOf(String name) {
         String description = DESCRIPTIONS.get(name);
         return description == null ? "" : description;
+    }
+
+    /**
+     * Same as {@link #literal(String, String)} for a name that more than one group uses, such as {@code list}.
+     */
+    public static LiteralArgumentBuilder<ICommandSender> sub(String group, String name, String description) {
+        DESCRIPTIONS.put(group + " " + name, description);
+        return LiteralArgumentBuilder.literal(name);
+    }
+
+    /**
+     * The description of a command inside a group.
+     */
+    public static String descriptionOf(String group, String name) {
+        String description = DESCRIPTIONS.get(group + " " + name);
+        return description != null ? description : descriptionOf(name);
     }
 
     public static <T> RequiredArgumentBuilder<ICommandSender, T> arg(String name, ArgumentType<T> type) {
@@ -117,22 +133,6 @@ public final class Nodes {
     public static RequiredArgumentBuilder<ICommandSender, NumberArgumentType.Input> decimal(String name, double min,
         double max) {
         return arg(name, new NumberArgumentType(min, max));
-    }
-
-    /**
-     * Same as {@link #literal(String, String)} for a name that more than one group uses, such as {@code list}.
-     */
-    public static LiteralArgumentBuilder<ICommandSender> sub(String group, String name, String description) {
-        DESCRIPTIONS.put(group + " " + name, description);
-        return LiteralArgumentBuilder.literal(name);
-    }
-
-    /**
-     * The description of a command inside a group.
-     */
-    public static String descriptionOf(String group, String name) {
-        String description = DESCRIPTIONS.get(group + " " + name);
-        return description != null ? description : descriptionOf(name);
     }
 
     public static RequiredArgumentBuilder<ICommandSender, NumberArgumentType.Input> decimal(String name) {

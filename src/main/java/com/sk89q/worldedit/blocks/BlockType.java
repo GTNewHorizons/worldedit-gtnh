@@ -431,7 +431,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for shouldPlaceLast.
+     * The vanilla block IDs for shouldPlaceLast.
      */
     private static final BitSet shouldPlaceLast = new BitSet();
 
@@ -631,7 +631,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for shouldPlaceLast.
+     * The vanilla block IDs for shouldPlaceFinal.
      */
     private static final BitSet shouldPlaceFinal = new BitSet();
     static {
@@ -661,7 +661,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for canPassThrough.
+     * The vanilla block IDs for canPassThrough.
      */
     private static final Set<Integer> canPassThrough = new HashSet<Integer>();
     static {
@@ -762,7 +762,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for centralTopLimit.
+     * The vanilla values for centralTopLimit.
      */
     private static final Map<Integer, Double> centralTopLimit = new HashMap<Integer, Double>();
     static {
@@ -860,7 +860,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for usesData.
+     * The vanilla block IDs for usesData.
      */
     private static final Set<Integer> usesData = new HashSet<Integer>();
     static {
@@ -1005,7 +1005,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isContainerBlock.
+     * The vanilla block IDs for isContainerBlock.
      */
     private static final BitSet isContainerBlock = new BitSet();
     static {
@@ -1040,7 +1040,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isRedstoneBlock.
+     * The vanilla block IDs for isRedstoneBlock.
      */
     private static final Set<Integer> isRedstoneBlock = new HashSet<Integer>();
     static {
@@ -1098,7 +1098,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for canTransferRedstone.
+     * The vanilla block IDs for canTransferRedstone.
      */
     private static final Set<Integer> canTransferRedstone = new HashSet<Integer>();
     static {
@@ -1139,7 +1139,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isRedstoneSource.
+     * The vanilla block IDs for isRedstoneSource.
      */
     private static final Set<Integer> isRedstoneSource = new HashSet<Integer>();
     static {
@@ -1179,7 +1179,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isRailBlock.
+     * The vanilla block IDs for isRailBlock.
      */
     private static final Set<Integer> isRailBlock = new HashSet<Integer>();
     static {
@@ -1209,7 +1209,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isNaturalBlock.
+     * The vanilla block IDs for isNaturalTerrainBlock.
      */
     private static final Set<Integer> isNaturalTerrainBlock = new HashSet<Integer>();
     static {
@@ -1286,7 +1286,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for emitsLight.
+     * The vanilla block IDs for emitsLight.
      */
     private static final Set<Integer> emitsLight = new HashSet<Integer>();
     static {
@@ -1324,7 +1324,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isTranslucent.
+     * The vanilla block IDs for isTranslucent.
      */
     private static final Set<Integer> isTranslucent = new HashSet<Integer>();
     static {

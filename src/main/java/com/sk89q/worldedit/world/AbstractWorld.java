@@ -205,7 +205,6 @@ public abstract class AbstractWorld implements World {
         return false;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public boolean queueBlockBreakEffect(Platform server, Vector position, int blockId, double priority) {
         if (taskId == -1) {

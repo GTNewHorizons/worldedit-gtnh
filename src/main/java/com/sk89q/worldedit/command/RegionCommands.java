@@ -184,7 +184,7 @@ public final class RegionCommands {
 
         Nodes.register(dispatcher, literal("/regen", "Regenerates the contents of the selection")
                 .executes(run("worldedit.regen", LogMode.REGION, c ->
-                        regenerateChunk(c.player(), c.session(), c.queuedEditSession(), c.region()))));
+                        regenerateChunk(c.player(), c.queuedEditSession(), c.region()))));
 
         Nodes.registerWithFlags(dispatcher, literal("/deform", "Deforms a selected region with an expression").executes(Nodes.USAGE)
                 .then(text("expression")
@@ -221,26 +221,26 @@ public final class RegionCommands {
 
         Nodes.register(dispatcher, literal("/fixlighting", "Fix lighting in a region or around you")
                 .executes(run("worldedit.light.fix", LogMode.REGION, c ->
-                        fixLighting(c.player(), c.session(), c.editSession()))));
+                        fixLighting(c.player(), c.session()))));
 
         Nodes.register(dispatcher, literal("/getlighting", "Get the emitted and sky light at your position")
                 .executes(run("worldedit.light.fix", c -> getLighting(c.player()))));
 
         Nodes.register(dispatcher, literal("/removelight", "Remove lighting in a region or around you")
                 .executes(run("worldedit.light.remove", LogMode.REGION, c ->
-                        removeLighting(c.player(), c.session(), c.editSession()))),
+                        removeLighting(c.player(), c.session()))),
                 "/removelighting");
 
         Nodes.register(dispatcher, literal("/setblocklight", "Set block lighting in a selection").executes(Nodes.USAGE)
                 .then(integer("level", 0, 15)
                         .executes(run("worldedit.light.set", LogMode.REGION, c ->
-                                setBlockLight(c.player(), c.editSession(), c.region(), c.integer("level"))))),
+                                setBlockLight(c.player(), c.region(), c.integer("level"))))),
                 "/setlight");
 
         Nodes.register(dispatcher, literal("/setskylight", "Set sky lighting in a selection").executes(Nodes.USAGE)
                 .then(integer("level", 0, 15)
                         .executes(run("worldedit.light.set", LogMode.REGION, c ->
-                                setSkyLight(c.player(), c.editSession(), c.region(), c.integer("level"))))));
+                                setSkyLight(c.player(), c.region(), c.integer("level"))))));
     }
     // spotless:on
 
@@ -375,8 +375,7 @@ public final class RegionCommands {
     }
 
     private static void reportFailure(Player player, WorldEditException e) {
-        String message = e.getMessage();
-        player.printError(message != null ? message : "The operation could not be completed.");
+        player.printError(OperationCompletion.messageOf(e));
     }
 
     private static void line(Player player, EditSession editSession, Region region, Pattern pattern, int thickness,
@@ -524,7 +523,7 @@ public final class RegionCommands {
             });
     }
 
-    private static void regenerateChunk(Player player, LocalSession session, EditSession editSession, Region region)
+    private static void regenerateChunk(Player player, EditSession editSession, Region region)
         throws WorldEditException {
         Operation operation = player.getWorld()
             .regenerate(region, editSession);
@@ -637,8 +636,7 @@ public final class RegionCommands {
         player.print(ground.getAffected() + " flora created.");
     }
 
-    private static void fixLighting(Player player, LocalSession session, EditSession editSession)
-        throws WorldEditException {
+    private static void fixLighting(Player player, LocalSession session) throws WorldEditException {
         World world = player.getWorld();
         Region region;
         try {
@@ -660,18 +658,13 @@ public final class RegionCommands {
 
         LightingScheduler scheduler = WorldEdit.getInstance()
             .getLightingScheduler();
-        boolean scheduled = scheduler.schedule(world, chunks, player, new Runnable() {
+        scheduler.schedule(world, chunks, player, new Runnable() {
 
             @Override
             public void run() {
                 player.print("Lighting Fixed. You may need to reload chunks.");
             }
         });
-
-        if (!scheduled) {
-            player.print("A lighting fix is already running. Please wait for it to finish.");
-            return;
-        }
 
         if (!chunks.isEmpty()) {
             player.print(chunks.size() + " chunk(s) queued for relight.");
@@ -686,8 +679,7 @@ public final class RegionCommands {
         player.print("Light: " + block + " | " + sky);
     }
 
-    private static void removeLighting(Player player, LocalSession session, EditSession editSession)
-        throws WorldEditException {
+    private static void removeLighting(Player player, LocalSession session) throws WorldEditException {
         World world = player.getWorld();
         Region region;
         try {
@@ -709,7 +701,7 @@ public final class RegionCommands {
         player.print(chunkVectors.size() + " chunk(s) updated.");
     }
 
-    private static void setBlockLight(Player player, EditSession editSession, Region region, int level) {
+    private static void setBlockLight(Player player, Region region, int level) {
         World world = player.getWorld();
         Set<Vector2D> chunkVectors = region.getChunks();
         for (Vector pt : region) {
@@ -718,7 +710,7 @@ public final class RegionCommands {
         player.print(chunkVectors.size() + " chunk(s) updated.");
     }
 
-    private static void setSkyLight(Player player, EditSession editSession, Region region, int level) {
+    private static void setSkyLight(Player player, Region region, int level) {
         World world = player.getWorld();
         Set<Vector2D> chunkVectors = region.getChunks();
         for (Vector pt : region) {

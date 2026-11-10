@@ -146,8 +146,7 @@ public final class ClipboardCommands {
                 @Override
                 public void onFailure(WorldEditException e) {
                     putBack();
-                    String message = e.getMessage();
-                    player.printError(message != null ? message : "The operation could not be completed.");
+                    player.printError(OperationCompletion.messageOf(e));
                 }
 
                 @Override
@@ -226,8 +225,7 @@ public final class ClipboardCommands {
 
                 @Override
                 public void onFailure(WorldEditException e) {
-                    String message = e.getMessage();
-                    player.printError(message != null ? message : "The operation could not be completed.");
+                    player.printError(OperationCompletion.messageOf(e));
                 }
             });
     }
