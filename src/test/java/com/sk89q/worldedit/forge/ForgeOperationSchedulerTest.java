@@ -325,6 +325,29 @@ public class ForgeOperationSchedulerTest {
     }
 
     @Test
+    public void crashDuringCommitDiscardsWhatIsLeftOfTheQueue() {
+        EditSession session = mock(EditSession.class);
+        when(session.commit()).thenReturn(new CrashingOperation());
+        submit(owner, session, new FakeOperation(1), "a");
+
+        tick();
+        tick();
+
+        verify(session).discardQueue();
+        verify(session).flushQueue();
+    }
+
+    @Test
+    public void crashBeforeCommitKeepsTheQueueForTheCommit() {
+        EditSession session = mock(EditSession.class);
+        submit(owner, session, new CrashingOperation(), "a");
+
+        tick();
+
+        verify(session, never()).discardQueue();
+    }
+
+    @Test
     public void workSeesTheRequestOfTheCommandThatSubmittedIt() {
         final LocalSession commandSession = mock(LocalSession.class);
         final World commandWorld = mock(World.class);

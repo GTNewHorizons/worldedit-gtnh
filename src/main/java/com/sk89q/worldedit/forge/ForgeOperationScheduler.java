@@ -342,7 +342,27 @@ public class ForgeOperationScheduler implements OperationScheduler {
         if (job.failure == null) {
             job.failure = e;
         }
+        Operation failed = job.operation;
         job.operation = null;
+        if (job.committing) {
+            // Nothing writes the rest, so drop it like a cancel does. That also records the blocks
+            // cleared ahead of their write, which undo could not bring back otherwise.
+            abandon(job, failed, "Failed to clean up after a failed commit");
+        }
+    }
+
+    private void abandon(Job job, Operation operation, String warning) {
+        try {
+            if (operation != null) {
+                operation.cancel();
+            }
+            // History keeps the edit session alive, which must not keep its queue alive too.
+            job.editSession.discardQueue();
+            // With nothing left to write, this only runs the follow-up work such as fast mode's.
+            job.editSession.flushQueue();
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, warning, e);
+        }
     }
 
     private void drain(Job job) {
@@ -368,17 +388,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
     }
 
     private void stop(Job job) {
-        try {
-            if (job.operation != null) {
-                job.operation.cancel();
-            }
-            // History keeps the edit session alive, which must not keep its queue alive too.
-            job.editSession.discardQueue();
-            // With nothing left to write, this only runs the follow-up work such as fast mode's.
-            job.editSession.flushQueue();
-        } catch (RuntimeException e) {
-            logger.log(Level.WARNING, "Failed to cancel an operation", e);
-        }
+        abandon(job, job.operation, "Failed to cancel an operation");
     }
 
     private void notifyCancelled(Job job) {
