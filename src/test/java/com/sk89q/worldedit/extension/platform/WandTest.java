@@ -212,4 +212,36 @@ public class WandTest {
         assertFalse(leftClickAir());
         verify(player, never()).hasPermission("worldedit.navigation.jumpto.tool");
     }
+
+    @Test
+    public void aGivenWandIsInUseForBlockBreaks() {
+        allow("worldedit.selection.pos");
+        hold(AXE, Player.SELECTION_WAND);
+
+        assertTrue(manager.isUsingWand(player));
+    }
+
+    @Test
+    public void anOrdinaryAxeDoesNotStopBlockBreaks() {
+        allow("worldedit.selection.pos");
+        hold(AXE, null);
+
+        assertFalse(manager.isUsingWand(player));
+    }
+
+    @Test
+    public void aWandWithoutPermissionDoesNotStopBlockBreaks() {
+        hold(AXE, Player.SELECTION_WAND);
+
+        assertFalse(manager.isUsingWand(player));
+    }
+
+    @Test
+    public void theNavigationWandIsInUseForBlockBreaks() {
+        allow("worldedit.navigation.jumpto.tool");
+        hold(COMPASS, Player.NAVIGATION_WAND);
+
+        assertTrue(manager.isUsingWand(player));
+    }
+
 }

@@ -29,6 +29,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.world.BlockEvent;
 
 import org.apache.logging.log4j.Logger;
 
@@ -244,6 +245,26 @@ public class ForgeWorldEdit {
         WorldEdit.getInstance()
             .getEventBus()
             .post(new PlatformReadyEvent());
+    }
+
+    /**
+     * A wand never breaks the block it is used on. Vanilla blocks don't get this far, because the click
+     * itself is cancelled, but blocks that mods break on their own, such as LittleTiles in creative,
+     * only ask through this event.
+     */
+    @SubscribeEvent
+    public void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (platform == null || !platform.isHookingEvents()) {
+            return;
+        }
+        if (!(event.getPlayer() instanceof EntityPlayerMP) || event.getPlayer() instanceof FakePlayer) {
+            return;
+        }
+        if (WorldEdit.getInstance()
+            .getPlatformManager()
+            .isUsingWand(wrap((EntityPlayerMP) event.getPlayer()))) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent

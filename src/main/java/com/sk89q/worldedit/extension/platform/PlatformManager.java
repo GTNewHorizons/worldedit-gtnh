@@ -507,8 +507,23 @@ public class PlatformManager {
     }
 
     /**
-     * Tools edit straight away, so like commands that do, they wait for the player's queued edits.
+     * Whether the player holds a wand that a left click would use, which must then not break the block
+     * it was used on. Mods that break blocks on their own, such as LittleTiles, ask through the block
+     * break event.
+     *
+     * @param player the player
+     * @return true if a left click with what they hold is a wand action
      */
+    public boolean isUsingWand(Player player) {
+        if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
+            return player.hasPermission("worldedit.selection.pos");
+        }
+        if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
+            return player.hasPermission("worldedit.navigation.jumpto.tool");
+        }
+        return false;
+    }
+
     /**
      * Whether the player holds the given wand. Using it still needs its permission, which the caller
      * checks.
