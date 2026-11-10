@@ -441,6 +441,10 @@ public class ForgeWorldEdit {
 
     public void setPermissionsProvider(ForgePermissionsProvider provider) {
         this.provider = provider;
+        // Other mods install theirs after the commands declared their nodes.
+        if (platform != null) {
+            provider.registerNodes();
+        }
     }
 
     public ForgePermissionsProvider getPermissionsProvider() {
