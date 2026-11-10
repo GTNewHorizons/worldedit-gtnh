@@ -215,19 +215,21 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
             new Stage3Committer());
     }
 
+    // Both record before writing: a write can change the world and then throw, in a mod's breakBlock
+    // for example, and undo still has to bring that block back.
     private void write(BlockVector position, BaseBlock block, @Nullable BaseBlock previous) throws WorldEditException {
-        getExtent().setBlock(position, block);
         detached.remove(position);
         if (previous != null && history != null) {
             history.add(new BlockChange(position, previous, block));
         }
+        getExtent().setBlock(position, block);
     }
 
     private void detach(BlockVector position, BaseBlock block, @Nullable BaseBlock previous) throws WorldEditException {
-        getExtent().setBlock(position, block);
         if (previous != null && history != null && !detached.containsKey(position)) {
             detached.put(position, previous);
         }
+        getExtent().setBlock(position, block);
     }
 
     /**

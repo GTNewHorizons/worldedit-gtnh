@@ -46,6 +46,8 @@ public class EditSessionHistoryTest {
     private final Map<String, BaseBlock> blocks = new HashMap<String, BaseBlock>();
     private int writes;
     private int drops;
+    /** A position whose next write changes the block and then fails, as a mod's breakBlock can. */
+    private String failsAfterWriting;
     private final Map<String, String> attachedTo = new HashMap<String, String>();
     private World world;
 
@@ -75,6 +77,10 @@ public class EditSessionHistoryTest {
                 String written = key(at);
                 BaseBlock block = call.<BaseBlock>getArgument(1);
                 BaseBlock replaced = blocks.put(written, block);
+                if (written.equals(failsAfterWriting)) {
+                    failsAfterWriting = null;
+                    throw new IllegalStateException("mod block misbehaved");
+                }
 
                 // Like vanilla, a door's top half goes away as soon as its bottom half does.
                 if (replaced != null && isDoor(replaced) && (replaced.getData() & 8) == 0 && !isDoor(block)) {
@@ -472,6 +478,48 @@ public class EditSessionHistoryTest {
         }
         undo(edit);
         assertSameBlock(TORCH, get(torch));
+    }
+
+    @Test
+    public void aWriteThatChangesTheBlockAndThenFailsCanBeUndone() throws Exception {
+        Vector position = new Vector(1, 10, 0);
+        put(position, DIRT);
+
+        EditSession edit = newSession();
+        edit.setBlock(position, STONE);
+        failsAfterWriting = key(position);
+        flushExpectingFailure(edit);
+        edit.discardQueue();
+
+        assertSameBlock(STONE, get(position));
+        undo(edit);
+        assertSameBlock(DIRT, get(position));
+    }
+
+    @Test
+    public void aTorchWhoseClearingFailsStillComesBack() throws Exception {
+        Vector torch = new Vector(1, 64, 0);
+        put(new Vector(0, 64, 0), STONE);
+        put(torch, TORCH);
+
+        EditSession edit = newSession();
+        edit.setBlock(torch, new BaseBlock(BlockID.GLASS));
+        failsAfterWriting = key(torch);
+        flushExpectingFailure(edit);
+        edit.discardQueue();
+
+        assertSameBlock(AIR, get(torch));
+        undo(edit);
+        assertSameBlock(TORCH, get(torch));
+    }
+
+    private static void flushExpectingFailure(EditSession edit) {
+        try {
+            edit.flushQueue();
+        } catch (RuntimeException expected) {
+            return;
+        }
+        throw new AssertionError("the write should have failed");
     }
 
     @Test

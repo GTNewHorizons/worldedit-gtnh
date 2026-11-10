@@ -208,9 +208,6 @@ public class ForgeWorldEdit {
 
     @EventHandler
     public void serverStopping(FMLServerStoppingEvent event) {
-        BlockType.setPlacementRules(null);
-        BlockType.setModdedProperties(null);
-
         if (clickedBlockRefresher != null) {
             clickedBlockRefresher.unregister();
             clickedBlockRefresher = null;
@@ -227,6 +224,10 @@ public class ForgeWorldEdit {
                 .setOperationScheduler(previousOperationScheduler);
             previousOperationScheduler = null;
         }
+
+        // Only now: the edits finished above still needed these to order modded blocks.
+        BlockType.setPlacementRules(null);
+        BlockType.setModdedProperties(null);
 
         if (lightingScheduler != null) {
             lightingScheduler.shutdown();
