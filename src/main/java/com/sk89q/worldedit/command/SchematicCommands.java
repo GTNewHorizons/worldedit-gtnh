@@ -187,7 +187,7 @@ public final class SchematicCommands {
                 @Override
                 public void onFailure(WorldEditException e) {
                     session.finishLoadingClipboard(request);
-                    player.printError("Schematic could not read or it does not exist: " + e.getMessage());
+                    player.printError("The schematic could not be read: " + e.getMessage());
                     log.log(Level.WARNING, "Failed to load a saved clipboard", e);
                 }
 
@@ -255,7 +255,7 @@ public final class SchematicCommands {
             log.info(player.getName() + " saved " + f.getCanonicalPath());
             player.print(filename + " saved.");
         } catch (IOException e) {
-            player.printError("Schematic could not written: " + e.getMessage());
+            player.printError("The schematic could not be written: " + e.getMessage());
             log.log(Level.WARNING, "Failed to write a saved clipboard", e);
         } finally {
             try {
@@ -315,7 +315,7 @@ public final class SchematicCommands {
                     .getConfiguration().saveDir);
         List<File> fileList = allFiles(dir);
 
-        if (fileList.isEmpty()) {
+        if (fileList == null || fileList.isEmpty()) {
             actor.printError("No schematics found.");
             return;
         }
@@ -323,13 +323,13 @@ public final class SchematicCommands {
         File[] files = new File[fileList.size()];
         fileList.toArray(files);
 
-        int pageCount = files.length / SCHEMATICS_PER_PAGE + 1;
+        int pageCount = (files.length + SCHEMATICS_PER_PAGE - 1) / SCHEMATICS_PER_PAGE;
         if (page < 1) {
             actor.printError("Page must be at least 1");
             return;
         }
         if (page > pageCount) {
-            actor.printError("Page must be less than " + (pageCount + 1));
+            actor.printError("There " + (pageCount == 1 ? "is only 1 page." : "are only " + pageCount + " pages."));
             return;
         }
 

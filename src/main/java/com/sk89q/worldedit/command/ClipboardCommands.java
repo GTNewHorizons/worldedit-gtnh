@@ -200,10 +200,22 @@ public final class ClipboardCommands {
                 @Override
                 public void onSuccess() {
                     if (selectPasted) {
-                        Vector max = to.add(
-                            region.getMaximumPoint()
-                                .subtract(region.getMinimumPoint()));
-                        RegionSelector selector = new CuboidRegionSelector(world, to, max);
+                        // Where the paste actually went: the clipboard's corners relative to its origin,
+                        // turned by //rotate or //flip.
+                        Vector min = region.getMinimumPoint()
+                            .subtract(clipboard.getOrigin());
+                        Vector max = region.getMaximumPoint()
+                            .subtract(clipboard.getOrigin());
+                        RegionSelector selector = new CuboidRegionSelector(
+                            world,
+                            to.add(
+                                holder.getTransform()
+                                    .apply(min))
+                                .round(),
+                            to.add(
+                                holder.getTransform()
+                                    .apply(max))
+                                .round());
                         session.setRegionSelector(world, selector);
                         selector.learnChanges();
                         selector.explainRegionAdjust(player, session);

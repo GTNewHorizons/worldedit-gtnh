@@ -17,6 +17,9 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.sk89q.jnbt.CompoundTag;
+import com.sk89q.jnbt.StringTag;
+import com.sk89q.jnbt.Tag;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
@@ -114,6 +117,24 @@ public class DeformOperationTest {
 
         assertMirrored();
         assertEquals(true, resumes > 2);
+    }
+
+    @Test
+    public void tileEntityDataMovesWithItsBlock() throws Exception {
+        Map<String, Tag> nbt = new HashMap<String, Tag>();
+        nbt.put("contents", new StringTag("diamonds"));
+        blocks.put("0,0,0", new BaseBlock(54, 2, new CompoundTag(nbt)));
+
+        EditSession editSession = TestEditSessions.create(world);
+        editSession.deformRegion(region, zero(), unit(), "x=-x");
+        editSession.flushQueue();
+
+        BaseBlock moved = get(new Vector(LENGTH - 1, 0, 0));
+        assertEquals(54, moved.getType());
+        assertEquals(
+            "diamonds",
+            moved.getNbtData()
+                .getString("contents"));
     }
 
     @Test

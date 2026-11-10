@@ -2174,7 +2174,8 @@ public class EditSession implements Extent {
                     throw new DeformFailedException(e);
                 }
 
-                moves.add(position, new BaseBlock(world.getBlockType(source), world.getBlockData(source)));
+                // The full block, so that chests and machines keep their contents.
+                moves.add(position, world.getBlock(source));
 
                 if (!run.shouldContinue()) {
                     return this;

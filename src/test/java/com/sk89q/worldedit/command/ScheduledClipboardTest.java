@@ -36,7 +36,9 @@ import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.transform.BlockTransformHook;
 import com.sk89q.worldedit.forge.ForgeOperationScheduler;
 import com.sk89q.worldedit.function.pattern.BlockPattern;
+import com.sk89q.worldedit.math.transform.AffineTransform;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.registry.BlockRegistry;
@@ -207,6 +209,26 @@ public class ScheduledClipboardTest {
         scheduler.cancel(id);
 
         assertSame(previous, session.getClipboard());
+    }
+
+    @Test
+    public void pasteSelectsWhereARotatedClipboardWent() throws Exception {
+        CuboidRegion small = new CuboidRegion(new Vector(0, 0, 0), new Vector(4, 1, 2));
+        ClipboardCommands.copy(worldEdit, player, session, newSession(), small, false, null);
+        runToCompletion();
+        session.getClipboard()
+            .setTransform(new AffineTransform().rotateY(90));
+        doReturn(new Vector(100, 0, 100)).when(session)
+            .getPlacementPosition(player);
+
+        ClipboardCommands.paste(worldEdit, player, session, newSession(), false, false, true);
+        runToCompletion();
+
+        Region selected = session.getRegionSelector(world)
+            .getRegion();
+        assertEquals(5 * 2 * 3, selected.getArea());
+        assertEquals(3, selected.getWidth());
+        assertEquals(5, selected.getLength());
     }
 
     @Test

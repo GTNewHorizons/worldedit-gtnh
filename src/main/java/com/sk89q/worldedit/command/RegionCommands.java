@@ -398,7 +398,7 @@ public final class RegionCommands {
     private static void curve(Player player, EditSession editSession, Region region, Pattern pattern, int thickness,
         boolean shell) throws WorldEditException {
         if (!(region instanceof ConvexPolyhedralRegion)) {
-            player.printError("//line only works with convex polyhedral selections");
+            player.printError("//curve only works with convex polyhedral selections");
             return;
         }
 
