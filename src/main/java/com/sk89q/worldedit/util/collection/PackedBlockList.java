@@ -138,6 +138,9 @@ public final class PackedBlockList {
     }
 
     private int paletteIndexOf(BaseBlock block) {
+        if (block == null) {
+            return -1;
+        }
         if (block.getNbtData() != null) {
             palette.add(block);
             return palette.size() - 1;
@@ -192,10 +195,11 @@ public final class PackedBlockList {
      *
      * @param index  the index
      * @param column which of the position's blocks to get, starting at 0
-     * @return the block, which must not be modified
+     * @return the block, which must not be modified, or null if null was added
      */
     public BaseBlock blockAt(int index, int column) {
-        return palette.get(blocks.get(index >>> SEGMENT_BITS)[(index & SEGMENT_MASK) * columns + column]);
+        int paletteIndex = blocks.get(index >>> SEGMENT_BITS)[(index & SEGMENT_MASK) * columns + column];
+        return paletteIndex < 0 ? null : palette.get(paletteIndex);
     }
 
     /**
@@ -221,13 +225,7 @@ public final class PackedBlockList {
                 Map.Entry<BlockVector, BaseBlock> entry = new AbstractMap.SimpleImmutableEntry<BlockVector, BaseBlock>(
                     positionAt(head),
                     blockAt(head, 0));
-
-                head++;
-                if ((head & SEGMENT_MASK) == 0) {
-                    int finished = (head - 1) >>> SEGMENT_BITS;
-                    positions.set(finished, null);
-                    blocks.set(finished, null);
-                }
+                advance();
                 return entry;
             }
 
@@ -236,6 +234,63 @@ public final class PackedBlockList {
                 throw new UnsupportedOperationException();
             }
         };
+    }
+
+    /**
+     * Like {@link #drain()}, but with both blocks of a two-column list.
+     *
+     * @return an iterator over the positions and their blocks
+     */
+    public Iterator<Entry> drainEntries() {
+        checkArgument(columns == 2, "this list has one block per position");
+        return new Iterator<Entry>() {
+
+            @Override
+            public boolean hasNext() {
+                return head < size;
+            }
+
+            @Override
+            public Entry next() {
+                if (head >= size) {
+                    throw new NoSuchElementException();
+                }
+
+                Entry entry = new Entry(positionAt(head), blockAt(head, 0), blockAt(head, 1));
+                advance();
+                return entry;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    private void advance() {
+        head++;
+        if ((head & SEGMENT_MASK) == 0) {
+            int finished = (head - 1) >>> SEGMENT_BITS;
+            positions.set(finished, null);
+            blocks.set(finished, null);
+        }
+    }
+
+    /**
+     * A position and its two blocks.
+     */
+    public static final class Entry {
+
+        public final BlockVector position;
+        public final BaseBlock first;
+        public final BaseBlock second;
+
+        Entry(BlockVector position, BaseBlock first, BaseBlock second) {
+            this.position = position;
+            this.first = first;
+            this.second = second;
+        }
     }
 
     /**

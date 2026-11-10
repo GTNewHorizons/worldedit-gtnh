@@ -420,7 +420,58 @@ public class EditSessionHistoryTest {
         edit.flushQueue();
 
         assertEquals(0, writes);
-        assertEquals(1, edit.size());
+        // Nothing was written, so there is nothing to undo either.
+        assertEquals(0, edit.size());
+    }
+
+    @Test
+    public void aCancelledEditOnlyRemembersWhatItWrote() throws Exception {
+        EditSession edit = newSession();
+        for (int x = 0; x < 1000; x++) {
+            put(new Vector(x, 10, 0), DIRT);
+            edit.setBlock(new Vector(x, 10, 0), STONE);
+        }
+
+        Operation commit = edit.commit();
+        while (get(new Vector(0, 10, 0)).getType() != BlockID.STONE) {
+            commit = commit.resume(new TimeBudgetRunContext(0));
+        }
+        edit.discardQueue();
+
+        int written = 0;
+        for (int x = 0; x < 1000; x++) {
+            if (get(new Vector(x, 10, 0)).getType() == BlockID.STONE) {
+                written++;
+            }
+        }
+        assertTrue("written " + written, written > 0 && written < 1000);
+        assertEquals(written, edit.size());
+
+        undo(edit);
+        for (int x = 0; x < 1000; x++) {
+            assertSameBlock(DIRT, get(new Vector(x, 10, 0)));
+        }
+    }
+
+    @Test
+    public void aTorchClearedBeforeTheEditStoppedStillComesBack() throws Exception {
+        Vector torch = new Vector(1, 64, 0);
+        put(new Vector(0, 64, 0), STONE);
+        put(torch, TORCH);
+
+        EditSession edit = newSession();
+        edit.setBlock(torch, new BaseBlock(BlockID.GLASS));
+        Operation commit = edit.commit();
+        while (get(torch).getType() == BlockID.TORCH) {
+            commit = commit.resume(new TimeBudgetRunContext(0));
+        }
+        edit.discardQueue();
+
+        if (get(torch).getType() == BlockID.AIR) {
+            assertEquals(1, edit.size());
+        }
+        undo(edit);
+        assertSameBlock(TORCH, get(torch));
     }
 
     @Test

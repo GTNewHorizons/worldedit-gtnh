@@ -19,11 +19,14 @@ package com.sk89q.worldedit.extent.reorder;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterators;
 import com.sk89q.worldedit.BlockVector;
@@ -35,10 +38,11 @@ import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.Extent;
-import com.sk89q.worldedit.function.operation.BlockMapEntryPlacer;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.OperationQueue;
 import com.sk89q.worldedit.function.operation.RunContext;
+import com.sk89q.worldedit.history.change.BlockChange;
+import com.sk89q.worldedit.history.changeset.ChangeSet;
 import com.sk89q.worldedit.util.collection.PackedBlockList;
 
 /**
@@ -48,11 +52,18 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
 
     private static final BaseBlock AIR = new BaseBlock(BlockID.AIR);
 
-    private final PackedBlockList detach = new PackedBlockList(1);
-    private final PackedBlockList stage1 = new PackedBlockList(1);
-    private final PackedBlockList stage2 = new PackedBlockList(1);
-    private final PackedBlockList stage3 = new PackedBlockList(1);
+    // Each entry holds the block to write and the block that was there when it was queued, which goes
+    // into history once the write happens. Null for writes that aren't recorded.
+    private final PackedBlockList detach = new PackedBlockList(2);
+    private final PackedBlockList stage1 = new PackedBlockList(2);
+    private final PackedBlockList stage2 = new PackedBlockList(2);
+    private final PackedBlockList stage3 = new PackedBlockList(2);
     private boolean enabled;
+    @Nullable
+    private ChangeSet history;
+    // Blocks cleared ahead of their real write, with what was there. Recorded only if the edit stops
+    // before the real write, which records them otherwise.
+    private final Map<BlockVector, BaseBlock> detached = new LinkedHashMap<BlockVector, BaseBlock>();
 
     /**
      * Create a new instance.
@@ -92,9 +103,44 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         this.enabled = enabled;
     }
 
+    /**
+     * Set where queued writes are recorded once they happen, for those queued with
+     * {@link #setBlock(Vector, BaseBlock, BaseBlock)}.
+     *
+     * @param history the change set, or null to record nothing
+     */
+    public void setHistory(@Nullable ChangeSet history) {
+        this.history = history;
+    }
+
+    /**
+     * Whether a write to the given position would be queued rather than written straight away.
+     *
+     * @param location the position
+     * @return true if it would be queued
+     */
+    public boolean queues(Vector location) {
+        return enabled && PackedBlockList.fits(location);
+    }
+
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        if (!enabled || !PackedBlockList.fits(location)) {
+        return setBlock(location, block, null);
+    }
+
+    /**
+     * Queue a block together with what history should record as being there before. The change is
+     * only recorded once the block is actually written, so an edit cancelled partway leaves no history
+     * for the blocks it never wrote.
+     *
+     * @param location the position
+     * @param block    the block to write
+     * @param previous the block that was there when this was queued, or null to record nothing
+     * @return whether the block changes
+     * @throws WorldEditException if writing straight away fails
+     */
+    public boolean setBlock(Vector location, BaseBlock block, @Nullable BaseBlock previous) throws WorldEditException {
+        if (!queues(location)) {
             return super.setBlock(location, block);
         }
 
@@ -109,19 +155,20 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         // commit, because removing a block straight away can break others, such as the top half of a
         // door, before the edit has read and recorded them.
         if (replacingAttached) {
-            detach.add(location, AIR);
+            // Recorded too: if the edit stops before the real write, undo still has to bring it back.
+            detach.add(location, AIR, previous);
         }
 
         if (BlockType.shouldPlaceLast(block.getType()) || BlockType.isAttachedByContents(block)) {
             // Place torches, etc. last
-            stage2.add(location, block);
+            stage2.add(location, block, previous);
             return changed;
         } else if (BlockType.shouldPlaceFinal(block.getType())) {
             // Place signs, reed, etc even later
-            stage3.add(location, block);
+            stage3.add(location, block, previous);
             return changed;
         } else {
-            stage1.add(location, block);
+            stage1.add(location, block, previous);
             return changed;
         }
     }
@@ -148,6 +195,12 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
      * Throw away everything waiting to be written.
      */
     public void discard() {
+        if (history != null) {
+            for (Map.Entry<BlockVector, BaseBlock> entry : detached.entrySet()) {
+                history.add(new BlockChange(entry.getKey(), entry.getValue(), AIR));
+            }
+        }
+        detached.clear();
         detach.clear();
         stage1.clear();
         stage2.clear();
@@ -157,8 +210,60 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
     @Override
     public Operation commitBefore() {
         return new OperationQueue(
-            new BlockMapEntryPlacer(getExtent(), Iterators.concat(detach.drain(), stage1.drain(), stage2.drain())),
+            new EntryPlacer(detach.drainEntries(), true),
+            new EntryPlacer(Iterators.concat(stage1.drainEntries(), stage2.drainEntries()), false),
             new Stage3Committer());
+    }
+
+    private void write(BlockVector position, BaseBlock block, @Nullable BaseBlock previous) throws WorldEditException {
+        getExtent().setBlock(position, block);
+        detached.remove(position);
+        if (previous != null && history != null) {
+            history.add(new BlockChange(position, previous, block));
+        }
+    }
+
+    private void detach(BlockVector position, BaseBlock block, @Nullable BaseBlock previous) throws WorldEditException {
+        getExtent().setBlock(position, block);
+        if (previous != null && history != null && !detached.containsKey(position)) {
+            detached.put(position, previous);
+        }
+    }
+
+    /**
+     * Writes queued entries in order and records each one.
+     */
+    private class EntryPlacer implements Operation {
+
+        private final Iterator<PackedBlockList.Entry> entries;
+        private final boolean detaching;
+
+        private EntryPlacer(Iterator<PackedBlockList.Entry> entries, boolean detaching) {
+            this.entries = entries;
+            this.detaching = detaching;
+        }
+
+        @Override
+        public Operation resume(RunContext run) throws WorldEditException {
+            while (entries.hasNext()) {
+                PackedBlockList.Entry entry = entries.next();
+                if (detaching) {
+                    detach(entry.position, entry.first, entry.second);
+                } else {
+                    write(entry.position, entry.first, entry.second);
+                }
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public void cancel() {}
+
+        @Override
+        public void addStatusMessages(List<String> messages) {}
     }
 
     private class Stage3Committer implements Operation {
@@ -166,20 +271,25 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         // Linked, so that taking the next block is quick however many have been placed already.
         private final Set<BlockVector> blocks = new LinkedHashSet<BlockVector>();
         private final Map<BlockVector, BaseBlock> blockTypes = new HashMap<BlockVector, BaseBlock>();
-        private Iterator<Map.Entry<BlockVector, BaseBlock>> loading;
+        private final Map<BlockVector, BaseBlock> previous = new HashMap<BlockVector, BaseBlock>();
+        private Iterator<PackedBlockList.Entry> loading;
 
         @Override
         public Operation resume(RunContext run) throws WorldEditException {
             Extent extent = getExtent();
 
             if (loading == null) {
-                loading = stage3.drain();
+                loading = stage3.drainEntries();
             }
             while (loading.hasNext()) {
-                final Map.Entry<BlockVector, BaseBlock> entry = loading.next();
-                final BlockVector pt = entry.getKey();
+                final PackedBlockList.Entry entry = loading.next();
+                final BlockVector pt = entry.position;
                 blocks.add(pt);
-                blockTypes.put(pt, entry.getValue());
+                blockTypes.put(pt, entry.first);
+                // A position queued twice keeps the block from before the first, which is what was there.
+                if (!previous.containsKey(pt)) {
+                    previous.put(pt, entry.second);
+                }
                 if (!run.shouldContinue()) {
                     return this;
                 }
@@ -249,7 +359,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
                 }
 
                 for (BlockVector pt : walked) {
-                    extent.setBlock(pt, blockTypes.remove(pt));
+                    write(pt, blockTypes.remove(pt), previous.remove(pt));
                     blocks.remove(pt);
                 }
 
@@ -271,6 +381,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         public void cancel() {
             blocks.clear();
             blockTypes.clear();
+            previous.clear();
         }
 
         @Override

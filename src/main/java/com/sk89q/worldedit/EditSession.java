@@ -195,6 +195,7 @@ public class EditSession implements Extent {
 
             // This extent can be skipped by calling rawSetBlock()
             extent = reorderExtent = new MultiStageReorder(extent, false);
+            reorderExtent.setHistory(changeSet);
             extent = wrapExtent(extent, eventBus, event, Stage.BEFORE_REORDER);
 
             // These extents can be skipped by calling smartSetBlock()
