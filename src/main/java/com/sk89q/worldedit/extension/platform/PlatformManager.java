@@ -365,7 +365,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionBlockTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player, session)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -397,7 +397,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof BlockTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player, session)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -449,7 +449,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionTraceTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player, session)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -490,7 +490,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof TraceTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player, session)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }

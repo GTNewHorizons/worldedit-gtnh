@@ -196,11 +196,11 @@ public class ForgeWorldEdit {
             .getOperationScheduler();
         operationScheduler = new ForgeOperationScheduler();
         operationScheduler.register();
+        WorldEdit.getInstance()
+            .setOperationScheduler(operationScheduler);
 
         clickedBlockRefresher = new ClickedBlockRefresher();
         clickedBlockRefresher.register();
-        WorldEdit.getInstance()
-            .setOperationScheduler(operationScheduler);
     }
 
     @EventHandler
@@ -213,17 +213,7 @@ public class ForgeWorldEdit {
             clickedBlockRefresher = null;
         }
 
-        if (lightingScheduler != null) {
-            lightingScheduler.shutdown();
-            lightingScheduler = null;
-        }
-
-        if (previousLightingScheduler != null) {
-            WorldEdit.getInstance()
-                .setLightingScheduler(previousLightingScheduler);
-            previousLightingScheduler = null;
-        }
-
+        // Edits finishing here may still ask for relighting, so the lighting scheduler goes last.
         if (operationScheduler != null) {
             operationScheduler.shutdown();
             operationScheduler = null;
@@ -233,6 +223,17 @@ public class ForgeWorldEdit {
             WorldEdit.getInstance()
                 .setOperationScheduler(previousOperationScheduler);
             previousOperationScheduler = null;
+        }
+
+        if (lightingScheduler != null) {
+            lightingScheduler.shutdown();
+            lightingScheduler = null;
+        }
+
+        if (previousLightingScheduler != null) {
+            WorldEdit.getInstance()
+                .setLightingScheduler(previousLightingScheduler);
+            previousLightingScheduler = null;
         }
 
         WorldEdit.getInstance()

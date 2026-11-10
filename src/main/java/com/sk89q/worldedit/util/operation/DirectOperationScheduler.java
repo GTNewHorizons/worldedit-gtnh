@@ -47,11 +47,6 @@ public class DirectOperationScheduler implements OperationScheduler {
     }
 
     @Override
-    public boolean isPending(EditSession editSession) {
-        return false;
-    }
-
-    @Override
     public void whenFinished(Actor owner, EditSession editSession, Runnable task) {
         editSession.flushQueue();
         task.run();
@@ -65,6 +60,11 @@ public class DirectOperationScheduler implements OperationScheduler {
     @Override
     public boolean hasPendingWork(UUID owner) {
         return false;
+    }
+
+    @Override
+    public int queuedJobs(UUID owner) {
+        return 0;
     }
 
     @Override

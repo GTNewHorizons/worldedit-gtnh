@@ -41,6 +41,11 @@ public class QueryTool implements BlockTool {
     }
 
     @Override
+    public boolean editsBlocks() {
+        return false;
+    }
+
+    @Override
     public boolean actPrimary(Platform server, LocalConfiguration config, Player player, LocalSession session,
         com.sk89q.worldedit.util.Location clicked) {
 

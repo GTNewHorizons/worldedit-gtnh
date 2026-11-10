@@ -52,6 +52,17 @@ public interface OperationScheduler {
     String HISTORY_HELD = "Someone is undoing or redoing your edits. Wait for them to finish.";
 
     /**
+     * How many jobs a player may have queued before new commands are refused. One command can still
+     * queue more than this, such as //undo 15.
+     */
+    int MAX_QUEUED_JOBS = 8;
+
+    /**
+     * The message for a player with too many jobs queued.
+     */
+    String TOO_MANY_QUEUED = "You have too many edits queued. Wait for some to finish, or use //cancel.";
+
+    /**
      * Submit an operation to run against the given edit session.
      *
      * @param owner       the actor the work is done for, who is the one able to cancel it
@@ -62,14 +73,6 @@ public interface OperationScheduler {
      *         completion before this method returned
      */
     boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion);
-
-    /**
-     * Whether work submitted for the given edit session has not finished yet.
-     *
-     * @param editSession the edit session
-     * @return true if work is still queued or running
-     */
-    boolean isPending(EditSession editSession);
 
     /**
      * Flush the edit session and then run the given task, either immediately if no work is pending
@@ -115,6 +118,14 @@ public interface OperationScheduler {
      * @return true if there is unfinished work
      */
     boolean hasPendingWork(UUID owner);
+
+    /**
+     * How many jobs an owner has running or queued.
+     *
+     * @param owner the unique ID of the owner
+     * @return the number of jobs
+     */
+    int queuedJobs(UUID owner);
 
     /**
      * Run any queued work to completion and stop.

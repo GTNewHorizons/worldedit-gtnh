@@ -61,6 +61,7 @@ public final class CommandCall {
     private final CommandContext<ICommandSender> context;
     private final Actor actor;
     private EditSession editSession;
+    private boolean editSessionChecked;
 
     CommandCall(WorldEdit worldEdit, CommandContext<ICommandSender> context, Actor actor) {
         this.worldEdit = worldEdit;
@@ -117,20 +118,32 @@ public final class CommandCall {
     }
 
     private EditSession editSession(boolean queued) {
-        if (editSession == null) {
+        if (!editSessionChecked) {
             Player player = player();
-            if (!queued && worldEdit.getOperationScheduler()
-                .hasPendingWork(player.getUniqueId())) {
+            OperationScheduler scheduler = worldEdit.getOperationScheduler();
+            if (!queued && scheduler.hasPendingWork(player.getUniqueId())) {
                 throw new CommandFailure(OperationScheduler.STILL_RUNNING);
             }
-            LocalSession session = session();
-            if (session.isHistoryHeld()) {
+            if (queued && scheduler.queuedJobs(player.getUniqueId()) >= OperationScheduler.MAX_QUEUED_JOBS) {
+                throw new CommandFailure(OperationScheduler.TOO_MANY_QUEUED);
+            }
+            if (session().isHistoryHeld()) {
                 // Remembering this edit would cut off the history another player is undoing.
                 throw new CommandFailure(OperationScheduler.HISTORY_HELD);
             }
-            editSession = session.createEditSession(player);
+            editSessionChecked = true;
+        }
+        return createEditSession();
+    }
+
+    /**
+     * Create the edit session without the checks for queued work, for reading masks: they only need it
+     * to exist, and the command's own call checks before editing.
+     */
+    private EditSession createEditSession() {
+        if (editSession == null) {
+            editSession = session().createEditSession(player());
             editSession.enableQueue();
-            session.tellVersion(player);
         }
         return editSession;
     }
@@ -329,7 +342,7 @@ public final class CommandCall {
 
     public Mask parseMask(String input) throws WorldEditException {
         // Some masks, such as =expression, read the edit session of the current request
-        editSession();
+        createEditSession();
         try {
             return worldEdit.getMaskFactory()
                 .parseFromInput(input, parserContext());

@@ -72,7 +72,7 @@ public class ForgeOperationSchedulerTest {
         verify(session).discardQueue();
         verify(session).flushQueue();
         assertEquals(Arrays.asList("cancelled a", "finalize a"), events);
-        assertFalse(scheduler.isPending(session));
+        assertFalse(scheduler.hasPendingWork(ownerId));
     }
 
     @Test
@@ -125,7 +125,7 @@ public class ForgeOperationSchedulerTest {
 
         assertEquals(2, theirOperation.resumes);
         assertEquals(0, myOperation.resumes);
-        assertTrue(scheduler.isPending(theirs));
+        assertTrue(scheduler.hasPendingWork(otherId));
     }
 
     @Test
@@ -142,6 +142,42 @@ public class ForgeOperationSchedulerTest {
         assertTrue(scheduler.hasPendingWork(ownerId));
 
         tick();
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aLongQueueIsNeverFinishedOnTheSpot() {
+        FakeOperation[] operations = new FakeOperation[20];
+        for (int i = 0; i < operations.length; i++) {
+            operations[i] = new FakeOperation(100);
+            submit(owner, mock(EditSession.class), operations[i], "job " + i);
+        }
+
+        assertEquals(0, operations[0].resumes);
+        assertEquals(20, scheduler.queuedJobs(ownerId));
+        assertEquals(0, scheduler.queuedJobs(UUID.randomUUID()));
+    }
+
+    @Test
+    public void smallJobsShareATick() {
+        for (int i = 0; i < 5; i++) {
+            submit(owner, mock(EditSession.class), new Operation() {
+
+                @Override
+                public Operation resume(RunContext run) {
+                    return null;
+                }
+
+                @Override
+                public void cancel() {}
+
+                @Override
+                public void addStatusMessages(List<String> messages) {}
+            }, "small " + i);
+        }
+
+        tick();
+
         assertFalse(scheduler.hasPendingWork(ownerId));
     }
 

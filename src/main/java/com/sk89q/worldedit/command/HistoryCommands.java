@@ -165,6 +165,11 @@ public class HistoryCommands {
             player.printError(OperationScheduler.HISTORY_HELD);
             return true;
         }
+        if (worldEdit.getOperationScheduler()
+            .queuedJobs(player.getUniqueId()) >= OperationScheduler.MAX_QUEUED_JOBS) {
+            player.printError(OperationScheduler.TOO_MANY_QUEUED);
+            return true;
+        }
         return editStillRunning(player);
     }
 

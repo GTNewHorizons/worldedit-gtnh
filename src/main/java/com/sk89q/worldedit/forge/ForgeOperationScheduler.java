@@ -35,7 +35,6 @@ import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
 import com.sk89q.worldedit.session.request.Request;
-import com.sk89q.worldedit.util.operation.DirectOperationScheduler;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
@@ -62,12 +61,6 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private static final long BUDGET_NANOS = 20L * 1000L * 1000L;
 
     /**
-     * Once this many jobs are queued, the backlog is finished on the spot and further submissions run
-     * synchronously, so a player spamming commands cannot grow it without bound.
-     */
-    private static final int MAX_QUEUED = 8;
-
-    /**
      * An edit that edited straight away and queued at most this many blocks writes them at once. A
      * block takes something like ten microseconds to write, so this is about one tick's budget.
      */
@@ -76,7 +69,6 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private static final Logger logger = Logger.getLogger(ForgeOperationScheduler.class.getCanonicalName());
 
     private final Deque<Job> queue = new ArrayDeque<Job>();
-    private final DirectOperationScheduler fallback = new DirectOperationScheduler();
     private Job current;
     private boolean registered;
 
@@ -87,19 +79,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
         checkNotNull(operation);
         checkNotNull(completion);
 
-        if (queue.size() >= MAX_QUEUED) {
-            // Edits must not overtake each other: the steps of an //undo 20 only work in order.
-            finishEverything();
-            return fallback.submit(owner, editSession, operation, completion);
-        }
-
+        // Never finished on the spot: commands refuse to start once their player has too many jobs
+        // queued, see MAX_QUEUED_JOBS.
         queue.offer(new Job(owner.getUniqueId(), editSession, operation, completion));
         return true;
-    }
-
-    @Override
-    public boolean isPending(EditSession editSession) {
-        return find(editSession) != null;
     }
 
     @Override
@@ -117,13 +100,6 @@ public class ForgeOperationScheduler implements OperationScheduler {
         if (editSession.queuedBlockCount() <= SMALL_EDIT_BLOCKS) {
             // Few enough to fit in one tick, and waiting would only make the next brush stroke or
             // command run into "still running".
-            editSession.flushQueue();
-            task.run();
-            return;
-        }
-
-        if (queue.size() >= MAX_QUEUED) {
-            finishEverything();
             editSession.flushQueue();
             task.run();
             return;
@@ -179,6 +155,19 @@ public class ForgeOperationScheduler implements OperationScheduler {
             runFinalizer(job);
         }
         return editSessions;
+    }
+
+    @Override
+    public int queuedJobs(UUID owner) {
+        checkNotNull(owner);
+
+        int count = current != null && owner.equals(current.owner) ? 1 : 0;
+        for (Job job : queue) {
+            if (owner.equals(job.owner)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
@@ -254,23 +243,32 @@ public class ForgeOperationScheduler implements OperationScheduler {
             return;
         }
 
-        if (current == null) {
-            current = queue.poll();
-        }
-
-        Job job = current;
-        if (job == null) {
-            return;
-        }
-
         RunContext run = new TimeBudgetRunContext(BUDGET_NANOS);
-        do {
-            if (advanceInRequest(job, run)) {
-                current = null;
-                finish(job);
+        while (true) {
+            if (current == null) {
+                current = queue.poll();
+            }
+            Job job = current;
+            if (job == null) {
                 return;
             }
-        } while (run.shouldContinue());
+
+            boolean done;
+            do {
+                done = advanceInRequest(job, run);
+            } while (!done && run.shouldContinue());
+            if (!done) {
+                return;
+            }
+
+            current = null;
+            finish(job);
+            // Several small jobs can share a tick, but check the clock itself rather than its
+            // amortised counter, which may not have looked yet.
+            if (!run.shouldContinueAfterLargeStep()) {
+                return;
+            }
+        }
     }
 
     /**

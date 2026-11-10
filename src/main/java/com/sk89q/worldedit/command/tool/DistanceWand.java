@@ -40,6 +40,11 @@ public class DistanceWand extends BrushTool implements DoubleActionTraceTool {
     }
 
     @Override
+    public boolean editsBlocks() {
+        return false;
+    }
+
+    @Override
     public boolean actSecondary(Platform server, LocalConfiguration config, Player player, LocalSession session) {
         if (player.hasPermission("worldedit.selection.pos")) {
             WorldVector target = getTarget(player);
