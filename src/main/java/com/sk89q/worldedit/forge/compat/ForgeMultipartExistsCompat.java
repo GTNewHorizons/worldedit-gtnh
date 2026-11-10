@@ -64,96 +64,6 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         }
     }
 
-    private int rotateSlot(int[][] edge_rotations, int slot, int ticks) {
-        for (int type = 0; type < edge_rotations.length; type++) {
-            int[] rotations = edge_rotations[type];
-            for (int i = 0; i < rotations.length; i++) {
-                if (rotations[i] == slot) {
-                    // make sure ticks is positive
-                    ticks = ticks % rotations.length + rotations.length;
-                    slot = rotations[(i + ticks) % rotations.length];
-                    return slot;
-                }
-            }
-        }
-        return -1;
-    }
-
-    private int[][] edge_rotations = { { 4, 10, 5, 8 }, // bottom edges
-        { 6, 11, 7, 9 }, // top edges
-        { 2, 0, 1, 3 }, // corner vertical
-    };
-
-    private int rotateEdgeSlot(Vector rot, int slot) {
-        if (rot.getY() > 0) {
-            int ticks = (int) Math.round(rot.getY() / 90);
-            slot = rotateSlot(edge_rotations, slot, ticks);
-        }
-        if (rot.getX() < 0) {
-            int ticks = (int) Math.round(rot.getX() / 90);
-        }
-        if (rot.getZ() > 0) {
-            int ticks = (int) Math.round(rot.getZ() / 90);
-        }
-        return slot;
-    }
-
-    private int[][] post_rotations = { { 0 }, // Y
-        { 1 }, // X
-        { 2 }, // Z
-    };
-
-    private int rotatePostSlot(Vector rot, int slot) {
-        if (rot.getY() > 0) {
-            int ticks = (int) Math.round(rot.getY() / 90);
-            slot = rotateSlot(post_rotations, slot, ticks);
-        }
-        if (rot.getX() < 0) {
-            int ticks = (int) Math.round(rot.getX() / 90);
-        }
-        if (rot.getZ() > 0) {
-            int ticks = (int) Math.round(rot.getZ() / 90);
-        }
-        return slot;
-    }
-
-    private int[][] cnr_rotations = { { 0, 2, 6, 4 }, // bottom
-        { 1, 3, 7, 5 }, // top
-    };
-
-    private int rotateCnrSlot(Vector rot, int slot) {
-        if (rot.getY() > 0) {
-            int ticks = (int) Math.round(rot.getY() / 90);
-            slot = rotateSlot(cnr_rotations, slot, ticks);
-        }
-        if (rot.getX() < 0) {
-            int ticks = (int) Math.round(rot.getX() / 90);
-        }
-        if (rot.getZ() > 0) {
-            int ticks = (int) Math.round(rot.getZ() / 90);
-        }
-        return slot;
-    }
-
-    private int[][] face_rotations = { { 0 }, // bottom
-        { 2, 5, 3, 4 }, // edges
-        { 1 }, // top
-    };
-
-    private int rotateFaceSlot(Vector rot, int slot) {
-        if (rot.getY() > 0) {
-            int ticks = (int) Math.round(rot.getY() / 90);
-            slot = rotateSlot(face_rotations, slot, ticks);
-        }
-        if (rot.getX() < 0) {
-            int ticks = (int) Math.round(rot.getX() / 90);
-        }
-        if (rot.getZ() > 0) {
-            int ticks = (int) Math.round(rot.getZ() / 90);
-        }
-        return slot;
-    }
-
     @Override
     public BaseBlock transformBlock(BaseBlock block, Transform transform) {
         CompoundTag nbt = block.getNbtData();
@@ -166,17 +76,8 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         if (!(transform instanceof AffineTransform affine)) {
             return block;
         }
-        Vector rot = affine.getRotations();
-        if (rot.getX() > 0) {
-            System.out.println("X rotation is currently unsupported");
-            rot = rot.setX(0);
-        }
-        if (rot.getZ() > 0) {
-            System.out.println("Z rotation is currently unsupported");
-            rot = rot.setZ(0);
-        }
         int[] sides = sideMap(affine);
-        if (rot.lengthSq() == 0 && isIdentity(sides)) {
+        if (isIdentity(sides)) {
             return block;
         }
 
@@ -186,42 +87,86 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         for (int i = 0; i < parts.size(); i++) {
             CompoundTag part = parts.get(i);
             String id = part.getString("id");
-            if (!id.startsWith("mcr_")) {
-                parts.set(i, transformFacePart(part, sides));
-                continue;
-            }
-            byte shape = part.getByte("shape");
-            int size = shape >> 4;
-            int slot = shape & 0xF;
-            switch (id) {
-                case "mcr_edge":
-                    slot = rotateEdgeSlot(rot, slot);
-                    break;
-
-                case "mcr_post":
-                    slot = rotatePostSlot(rot, slot);
-                    break;
-
-                case "mcr_cnr":
-                    slot = rotateCnrSlot(rot, slot);
-                    break;
-
-                case "mcr_face", "mcr_hllw":
-                    slot = rotateFaceSlot(rot, slot);
-                    break;
-
-                default:
-                    break;
-            }
-            shape = (byte) ((size << 4) | slot);
-
-            CompoundTagBuilder partBuilder = part.createBuilder();
-            partBuilder.putByte("shape", shape);
-            parts.set(i, partBuilder.build());
+            parts.set(i, id.startsWith("mcr_") ? transformMicroblock(part, sides) : transformFacePart(part, sides));
         }
         builder.put("parts", new ListTag(CompoundTag.class, parts));
 
         return new BaseBlock(block.getId(), block.getData(), builder.build());
+    }
+
+    /**
+     * Move a microblock to the slot the transform sends it to. ForgeMultipart keeps the slot in the low
+     * bits of {@code shape} and the size in the high bits, and every slot kind is a direction: a face
+     * or hollow is a side, a corner is a sign per axis, an edge is a sign on each of its two free axes,
+     * and a post is an axis.
+     */
+    static CompoundTag transformMicroblock(CompoundTag part, int[] sides) {
+        int shape = part.getByte("shape") & 0xFF;
+        int size = shape >> 4;
+        int slot = shape & 0xF;
+        switch (part.getString("id")) {
+            case "mcr_face":
+            case "mcr_hllw":
+                if (slot > 5) {
+                    return part;
+                }
+                slot = sides[slot];
+                break;
+            case "mcr_cnr":
+                slot = transformCorner(slot & 7, sides);
+                break;
+            case "mcr_edge":
+                if (slot > 11) {
+                    return part;
+                }
+                slot = transformEdge(slot, sides);
+                break;
+            case "mcr_post":
+                if (slot > 2) {
+                    return part;
+                }
+                // Post axes follow the side numbering: 0 is Y, 1 is Z, 2 is X.
+                slot = sides[slot << 1] >> 1;
+                break;
+            default:
+                return part;
+        }
+        return part.createBuilder()
+            .putByte("shape", (byte) (size << 4 | slot))
+            .build();
+    }
+
+    /**
+     * Axis bits as ForgeMultipart uses them: Y is 1, Z is 2 and X is 4, which is 1 shifted by the
+     * axis of a side ({@code side >> 1}). A set bit means the positive end of that axis.
+     */
+    private static int transformCorner(int corner, int[] sides) {
+        int moved = 0;
+        for (int axis = 0; axis < 3; axis++) {
+            int face = sides[axis << 1 | (corner >> axis & 1)];
+            moved |= (face & 1) << (face >> 1);
+        }
+        return moved;
+    }
+
+    /**
+     * The two sides each edge touches, in ForgeMultipart's edge order (PartMap EDGE_NYN to EDGE_XPP):
+     * four along Y, four along Z, then four along X.
+     */
+    private static final int[][] EDGE_SIDES = { { 4, 2 }, { 4, 3 }, { 5, 2 }, { 5, 3 }, { 4, 0 }, { 5, 0 }, { 4, 1 },
+        { 5, 1 }, { 0, 2 }, { 1, 2 }, { 0, 3 }, { 1, 3 } };
+
+    private static int transformEdge(int edge, int[] sides) {
+        int a = sides[EDGE_SIDES[edge][0]];
+        int b = sides[EDGE_SIDES[edge][1]];
+        for (int candidate = 0; candidate < EDGE_SIDES.length; candidate++) {
+            int c = EDGE_SIDES[candidate][0];
+            int d = EDGE_SIDES[candidate][1];
+            if ((c == a && d == b) || (c == b && d == a)) {
+                return candidate;
+            }
+        }
+        return edge;
     }
 
     private static final Vector[] SIDE_VECTORS = { new Vector(0, -1, 0), new Vector(0, 1, 0), new Vector(0, 0, -1),
