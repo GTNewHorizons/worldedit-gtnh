@@ -71,7 +71,7 @@ public class ForgeOperationSchedulerTest {
         verify(session, never()).commit();
         verify(session).discardQueue();
         verify(session).flushQueue();
-        assertEquals(Collections.singletonList("finalize a"), events);
+        assertEquals(Arrays.asList("cancelled a", "finalize a"), events);
         assertFalse(scheduler.isPending(session));
     }
 
@@ -88,7 +88,8 @@ public class ForgeOperationSchedulerTest {
         assertEquals(Arrays.asList(first, second), scheduler.cancel(ownerId));
 
         assertEquals(0, secondOperation.resumes);
-        assertEquals(Arrays.asList("finalize a", "finalize b"), events);
+        // Commands unwind newest first, history is recorded oldest first.
+        assertEquals(Arrays.asList("cancelled b", "cancelled a", "finalize a", "finalize b"), events);
     }
 
     @Test
@@ -105,7 +106,7 @@ public class ForgeOperationSchedulerTest {
 
         assertEquals(1, commit.resumes);
         assertTrue(commit.cancelled);
-        assertEquals(Collections.singletonList("finalize a"), events);
+        assertEquals(Arrays.asList("cancelled a", "finalize a"), events);
     }
 
     @Test
@@ -346,6 +347,11 @@ public class ForgeOperationSchedulerTest {
             @Override
             public void onFailure(WorldEditException e) {
                 events.add("failure " + name);
+            }
+
+            @Override
+            public void onCancelled(boolean started) {
+                events.add("cancelled " + name);
             }
         });
         scheduler.whenFinished(actor, session, new Runnable() {

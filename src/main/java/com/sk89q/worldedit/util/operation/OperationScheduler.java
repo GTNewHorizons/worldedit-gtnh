@@ -47,6 +47,11 @@ public interface OperationScheduler {
     String STILL_RUNNING = "You have an edit still running. Wait for it to finish, or use //cancel.";
 
     /**
+     * The message for a player whose history another player is undoing or redoing.
+     */
+    String HISTORY_HELD = "Someone is undoing or redoing your edits. Wait for them to finish.";
+
+    /**
      * Submit an operation to run against the given edit session.
      *
      * @param owner       the actor the work is done for, who is the one able to cancel it

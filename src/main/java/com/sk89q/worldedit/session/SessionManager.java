@@ -115,6 +115,23 @@ public class SessionManager {
     }
 
     /**
+     * Get the ID of the owner of the session with the given name.
+     *
+     * @param name the name of the owner
+     * @return the ID, or null if there is no such session
+     */
+    @Nullable
+    public synchronized UUID findOwnerByName(String name) {
+        checkNotNull(name);
+        for (SessionHolder holder : sessions.values()) {
+            if (name.equals(holder.key.getName())) {
+                return holder.key.getUniqueId();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Gets the session for an owner and return it if it exists, otherwise
      * return {@code null}.
      *

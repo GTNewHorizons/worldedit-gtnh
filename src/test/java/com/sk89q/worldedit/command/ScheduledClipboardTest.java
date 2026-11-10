@@ -174,12 +174,39 @@ public class ScheduledClipboardTest {
 
     @Test
     public void aPasteWaitsForASchematicStillLoading() throws Exception {
-        session.setLoadingClipboard(true);
+        session.startLoadingClipboard(session.nextClipboardRequest());
 
         ClipboardCommands.paste(worldEdit, player, session, newSession(), false, false, false);
 
         verify(player).printError(contains("still loading"));
         assertFalse(scheduler.hasPendingWork(id));
+    }
+
+    @Test
+    public void aCopyAfterALoadDoesNotWaitForTheLoad() throws Exception {
+        session.startLoadingClipboard(session.nextClipboardRequest());
+
+        ClipboardCommands.copy(worldEdit, player, session, newSession(), selection, false, null);
+        doReturn(new Vector(100, 0, 0)).when(session)
+            .getPlacementPosition(player);
+        ClipboardCommands.paste(worldEdit, player, session, newSession(), false, false, false);
+        runToCompletion();
+
+        assertCopyAt(100);
+    }
+
+    @Test
+    public void cancellingTwoQueuedCopiesKeepsTheClipboardFromBefore() throws Exception {
+        ClipboardHolder previous = new ClipboardHolder(
+            new BlockArrayClipboard(selection.clone()),
+            world.getWorldData());
+        session.setClipboard(previous);
+
+        ClipboardCommands.copy(worldEdit, player, session, newSession(), selection, false, null);
+        ClipboardCommands.copy(worldEdit, player, session, newSession(), selection, false, null);
+        scheduler.cancel(id);
+
+        assertSame(previous, session.getClipboard());
     }
 
     @Test

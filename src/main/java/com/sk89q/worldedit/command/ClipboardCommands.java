@@ -132,6 +132,7 @@ public final class ClipboardCommands {
             clipboard,
             editSession.getWorld()
                 .getWorldData());
+        session.nextClipboardRequest();
         session.setClipboard(holder);
 
         worldEdit.getOperationScheduler()
@@ -256,6 +257,7 @@ public final class ClipboardCommands {
     }
 
     private static void clearClipboard(Player player, LocalSession session) throws WorldEditException {
+        session.nextClipboardRequest();
         session.setClipboard(null);
         player.print("Clipboard cleared.");
     }

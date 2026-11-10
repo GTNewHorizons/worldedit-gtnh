@@ -1,6 +1,7 @@
 package com.sk89q.worldedit.command;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -31,6 +32,8 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.forge.ForgeOperationScheduler;
+import com.sk89q.worldedit.session.SessionManager;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -96,6 +99,10 @@ public class CancelledHistoryTest {
 
         WorldEdit worldEdit = mock(WorldEdit.class);
         when(worldEdit.getOperationScheduler()).thenReturn(scheduler);
+        SessionManager sessions = mock(SessionManager.class);
+        when(sessions.findByName("target")).thenReturn(session);
+        when(sessions.findOwnerByName("target")).thenReturn(id);
+        when(worldEdit.getSessionManager()).thenReturn(sessions);
         commands = new HistoryCommands(worldEdit);
 
         session.remember(filledEdit(1, 3));
@@ -211,6 +218,72 @@ public class CancelledHistoryTest {
         commands.redo(player, session, 1, null);
         runToCompletion();
         assertEquals(SIDE * SIDE * SIDE, count(3));
+    }
+
+    private Player admin() {
+        Player admin = mock(Player.class);
+        when(admin.getUniqueId()).thenReturn(UUID.randomUUID());
+        return admin;
+    }
+
+    private LocalSession adminSession() {
+        LocalSession adminSession = spy(new LocalSession());
+        doReturn(null).when(adminSession)
+            .getBlockBag(any(Player.class));
+        return adminSession;
+    }
+
+    @Test
+    public void anotherPlayersUndoLocksTheirHistoryUntilItFinishes() throws Exception {
+        Player admin = admin();
+        commands.undo(admin, adminSession(), 1, "target");
+
+        assertTrue(session.isHistoryHeld());
+        commands.undo(player, session, 1, null);
+        verify(player).printError(OperationScheduler.HISTORY_HELD);
+
+        int ticks = 0;
+        while (session.isHistoryHeld()) {
+            tick();
+            assertTrue("the scheduler stopped making progress", ++ticks < 100000);
+        }
+
+        assertFalse(session.isHistoryHeld());
+        assertEquals(SIDE * SIDE * SIDE, count(1));
+    }
+
+    @Test
+    public void aCancelledUndoOfAnotherPlayerReleasesTheirHistory() throws Exception {
+        Player admin = admin();
+        commands.undo(admin, adminSession(), 1, "target");
+
+        scheduler.cancel(admin.getUniqueId());
+
+        assertFalse(session.isHistoryHeld());
+    }
+
+    @Test
+    public void anotherPlayersHistoryIsRefusedWhileTheyHaveEditsQueued() throws Exception {
+        session.remember(filledEdit(3, 5));
+        commands.undo(player, session, 1, null);
+
+        Player admin = admin();
+        commands.undo(admin, adminSession(), 1, "target");
+
+        verify(admin).printError(contains("still running"));
+        runToCompletion();
+        assertEquals(SIDE * SIDE * SIDE, count(3));
+    }
+
+    @Test
+    public void twoAdminsCannotUndoTheSameHistoryAtOnce() throws Exception {
+        session.remember(filledEdit(3, 5));
+        commands.undo(admin(), adminSession(), 1, "target");
+
+        Player second = admin();
+        commands.undo(second, adminSession(), 1, "target");
+
+        verify(second).printError(contains("still running"));
     }
 
     @Test

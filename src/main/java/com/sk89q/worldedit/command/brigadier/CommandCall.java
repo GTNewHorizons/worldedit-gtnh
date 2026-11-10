@@ -124,6 +124,10 @@ public final class CommandCall {
                 throw new CommandFailure(OperationScheduler.STILL_RUNNING);
             }
             LocalSession session = session();
+            if (session.isHistoryHeld()) {
+                // Remembering this edit would cut off the history another player is undoing.
+                throw new CommandFailure(OperationScheduler.HISTORY_HELD);
+            }
             editSession = session.createEditSession(player);
             editSession.enableQueue();
             session.tellVersion(player);

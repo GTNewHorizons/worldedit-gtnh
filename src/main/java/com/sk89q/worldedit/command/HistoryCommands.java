@@ -23,6 +23,7 @@ import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
 import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -104,7 +105,8 @@ public class HistoryCommands {
      * Hand a history step to the scheduler, which may spread it over several server ticks.
      */
     private void schedule(final Player player, final EditSession writer, Operation operation, final String message,
-        final String command, final Runnable giveBackPlace, final boolean[] batchFailed) {
+        final String command, final Runnable giveBackPlace, final boolean[] batchFailed,
+        @Nullable final LocalSession held) {
         final SkippableStep step = new SkippableStep(operation, batchFailed);
         OperationScheduler scheduler = worldEdit.getOperationScheduler();
         scheduler.submit(player, writer, step, new OperationCompletion() {
@@ -146,9 +148,48 @@ public class HistoryCommands {
 
             @Override
             public void run() {
+                if (held != null) {
+                    held.releaseHistory();
+                }
                 worldEdit.flushBlockBag(player, writer);
             }
         });
+    }
+
+    /**
+     * Whether the player can't touch their own history yet, because of their own queued edits or
+     * another player's undo of it.
+     */
+    private boolean historyBusy(Player player, LocalSession session) {
+        if (session.isHistoryHeld()) {
+            player.printError(OperationScheduler.HISTORY_HELD);
+            return true;
+        }
+        return editStillRunning(player);
+    }
+
+    /**
+     * Find another player's history and check it is free: that player's own queued edits, or another
+     * admin's queued undo, would change it underneath this one.
+     *
+     * @return the other player's session, or null if there is none or it is busy
+     */
+    @Nullable
+    private LocalSession findFreeOther(Player player, LocalSession session, String name, String action)
+        throws WorldEditException {
+        LocalSession target = findOther(player, name, action);
+        if (target == null || target == session) {
+            return target;
+        }
+
+        UUID owner = worldEdit.getSessionManager()
+            .findOwnerByName(name);
+        if (target.isHistoryHeld() || (owner != null && worldEdit.getOperationScheduler()
+            .hasPendingWork(owner))) {
+            player.printError(name + " has edits still running. Try again once they finish.");
+            return null;
+        }
+        return target;
     }
 
     /**
@@ -169,23 +210,23 @@ public class HistoryCommands {
      */
     void undo(Player player, LocalSession session, int requestedTimes, @Nullable String other)
         throws WorldEditException {
-        if (editStillRunning(player)) {
+        if (historyBusy(player, session)) {
+            return;
+        }
+        LocalSession target = other == null ? session : findFreeOther(player, session, other, "undo");
+        if (target == null) {
             return;
         }
 
         int times = Math.max(1, requestedTimes);
         boolean[] batchFailed = { false };
         for (int i = 0; i < times; ++i) {
-            LocalSession target = other == null ? session : findOther(player, other, "undo");
-            if (target == null) {
-                break;
-            }
-
             EditSession undone = target.stepBack();
             if (undone == null) {
                 player.printError("Nothing left to undo.");
                 break;
             }
+            LocalSession held = hold(target, session);
 
             final LocalSession history = target;
             EditSession writer = target.createHistorySession(undone, session.getBlockBag(player), player);
@@ -195,7 +236,7 @@ public class HistoryCommands {
                 public void run() {
                     history.cancelStepBack();
                 }
-            }, batchFailed);
+            }, batchFailed, held);
         }
     }
 
@@ -204,23 +245,23 @@ public class HistoryCommands {
      */
     void redo(Player player, LocalSession session, int requestedTimes, @Nullable String other)
         throws WorldEditException {
-        if (editStillRunning(player)) {
+        if (historyBusy(player, session)) {
+            return;
+        }
+        LocalSession target = other == null ? session : findFreeOther(player, session, other, "redo");
+        if (target == null) {
             return;
         }
 
         int times = Math.max(1, requestedTimes);
         boolean[] batchFailed = { false };
         for (int i = 0; i < times; ++i) {
-            LocalSession target = other == null ? session : findOther(player, other, "redo");
-            if (target == null) {
-                break;
-            }
-
             EditSession redone = target.stepForward();
             if (redone == null) {
                 player.printError("Nothing left to redo.");
                 break;
             }
+            LocalSession held = hold(target, session);
 
             final LocalSession history = target;
             EditSession writer = target.createHistorySession(redone, session.getBlockBag(player), player);
@@ -230,11 +271,29 @@ public class HistoryCommands {
                 public void run() {
                     history.cancelStepForward();
                 }
-            }, batchFailed);
+            }, batchFailed, held);
         }
     }
 
+    /**
+     * Reserve another player's history for one queued step. Your own needs no reservation, since your
+     * own queue already keeps your edits in order.
+     *
+     * @return the reserved session, or null if none was needed
+     */
+    @Nullable
+    private static LocalSession hold(LocalSession target, LocalSession session) {
+        if (target == session) {
+            return null;
+        }
+        target.holdHistory();
+        return target;
+    }
+
     private void clearHistory(Player player, LocalSession session) {
+        if (historyBusy(player, session)) {
+            return;
+        }
         session.clearHistory();
         player.print("History cleared.");
     }

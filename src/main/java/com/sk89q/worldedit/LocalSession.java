@@ -74,7 +74,9 @@ public class LocalSession {
     private transient LinkedList<EditSession> history = new LinkedList<EditSession>();
     private transient int historyPointer = 0;
     private transient ClipboardHolder clipboard;
-    private transient boolean loadingClipboard;
+    private transient int clipboardRequests;
+    private transient int loadingRequest;
+    private transient int historyHolds;
     private transient boolean toolControl = true;
     private transient boolean superPickaxe = false;
     private transient BlockTool pickaxeMode = new SinglePickaxe();
@@ -412,21 +414,79 @@ public class LocalSession {
     }
 
     /**
-     * Whether a schematic is being loaded into the clipboard.
+     * Start a command that will replace the clipboard, such as //copy or a schematic load. Commands can
+     * finish out of order once queued, so only the latest one started may still set the clipboard.
+     *
+     * @return the request's number, for {@link #isLatestClipboardRequest(int)}
+     */
+    public int nextClipboardRequest() {
+        return ++clipboardRequests;
+    }
+
+    /**
+     * Whether no other clipboard command has started since the given one.
+     *
+     * @param request the number {@link #nextClipboardRequest()} gave
+     * @return true if it is the latest
+     */
+    public boolean isLatestClipboardRequest(int request) {
+        return request == clipboardRequests;
+    }
+
+    /**
+     * Whether the clipboard is waiting for a schematic that is still loading, because the latest
+     * clipboard command is that load.
      *
      * @return true if one is loading
      */
     public boolean isLoadingClipboard() {
-        return loadingClipboard;
+        return loadingRequest != 0 && loadingRequest == clipboardRequests;
     }
 
     /**
-     * Set whether a schematic is being loaded into the clipboard.
+     * Note that a schematic load started.
      *
-     * @param loading true while one is loading
+     * @param request the load's number from {@link #nextClipboardRequest()}
      */
-    public void setLoadingClipboard(boolean loading) {
-        this.loadingClipboard = loading;
+    public void startLoadingClipboard(int request) {
+        loadingRequest = request;
+    }
+
+    /**
+     * Note that a schematic load finished, however it ended.
+     *
+     * @param request the load's number from {@link #nextClipboardRequest()}
+     */
+    public void finishLoadingClipboard(int request) {
+        if (loadingRequest == request) {
+            loadingRequest = 0;
+        }
+    }
+
+    /**
+     * Reserve the history while another player's undo or redo of it is queued, so that this session's
+     * owner can't change it in the meantime. Each call needs a matching {@link #releaseHistory()}.
+     */
+    public void holdHistory() {
+        historyHolds++;
+    }
+
+    /**
+     * Give back a reservation from {@link #holdHistory()}.
+     */
+    public void releaseHistory() {
+        if (historyHolds > 0) {
+            historyHolds--;
+        }
+    }
+
+    /**
+     * Whether another player's undo or redo of this history is queued.
+     *
+     * @return true if the history is reserved
+     */
+    public boolean isHistoryHeld() {
+        return historyHolds > 0;
     }
 
     /**

@@ -39,7 +39,6 @@ import net.minecraft.command.ICommandSender;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.EmptyClipboardException;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
@@ -165,17 +164,17 @@ public final class SchematicCommands {
             }
         });
 
-        final ClipboardHolder before = currentClipboard(session);
-        session.setLoadingClipboard(true);
+        final int request = session.nextClipboardRequest();
+        session.startLoadingClipboard(request);
         worldEdit.getOperationScheduler()
             .submit(player, editSession, reading, new OperationCompletion() {
 
                 @Override
                 public void onSuccess() {
-                    session.setLoadingClipboard(false);
-                    // A //copy queued behind the load sets its own clipboard, which must win.
-                    if (currentClipboard(session) != before) {
-                        player.printError(filename + " loaded, but your clipboard changed meanwhile, so it was kept.");
+                    session.finishLoadingClipboard(request);
+                    // A later //copy or load replaces this one, as it would have done one after the other.
+                    if (!session.isLatestClipboardRequest(request)) {
+                        player.printError(filename + " loaded, but a newer clipboard command replaced it.");
                         return;
                     }
                     session.setClipboard(new ClipboardHolder(reading.getResult(), worldData));
@@ -187,24 +186,16 @@ public final class SchematicCommands {
 
                 @Override
                 public void onFailure(WorldEditException e) {
-                    session.setLoadingClipboard(false);
+                    session.finishLoadingClipboard(request);
                     player.printError("Schematic could not read or it does not exist: " + e.getMessage());
                     log.log(Level.WARNING, "Failed to load a saved clipboard", e);
                 }
 
                 @Override
                 public void onCancelled(boolean started) {
-                    session.setLoadingClipboard(false);
+                    session.finishLoadingClipboard(request);
                 }
             });
-    }
-
-    private static ClipboardHolder currentClipboard(LocalSession session) {
-        try {
-            return session.getClipboard();
-        } catch (EmptyClipboardException e) {
-            return null;
-        }
     }
 
     private static void save(Player player, LocalSession session, String formatName, String filename)

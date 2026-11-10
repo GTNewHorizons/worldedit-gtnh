@@ -351,7 +351,7 @@ public class PlatformManager {
                 if (player.isHoldingPickAxe() && session.hasSuperPickAxe()) {
                     final BlockTool superPickaxe = session.getSuperPickaxe();
                     if (superPickaxe != null && superPickaxe.canUse(player)) {
-                        if (editStillRunning(player)) {
+                        if (editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -369,7 +369,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionBlockTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player)) {
+                        if (editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -405,7 +405,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof BlockTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player)) {
+                        if (editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -457,7 +457,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionTraceTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player)) {
+                        if (editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -498,7 +498,7 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof TraceTool) {
                     if (tool.canUse(player)) {
-                        if (editStillRunning(player)) {
+                        if (editStillRunning(player, session)) {
                             event.setCancelled(true);
                             return;
                         }
@@ -528,7 +528,11 @@ public class PlatformManager {
         return !getConfiguration().requireWandTag || player.isHoldingWand(kind);
     }
 
-    private boolean editStillRunning(Player player) {
+    private boolean editStillRunning(Player player, LocalSession session) {
+        if (session.isHistoryHeld()) {
+            player.printError(OperationScheduler.HISTORY_HELD);
+            return true;
+        }
         if (worldEdit.getOperationScheduler()
             .hasPendingWork(player.getUniqueId())) {
             player.printError(OperationScheduler.STILL_RUNNING);

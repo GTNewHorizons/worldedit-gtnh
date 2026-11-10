@@ -163,10 +163,20 @@ public class ForgeOperationScheduler implements OperationScheduler {
             }
         }
 
+        // Stop everything first, then tell the commands newest first, so that each one puts back what
+        // was there before it: a queued //copy restores the clipboard from before it, which only
+        // means anything once the copies after it have restored theirs. Finalizers record history, so
+        // they still go oldest first.
         List<EditSession> editSessions = new ArrayList<EditSession>(cancelled.size());
         for (Job job : cancelled) {
-            abort(job);
+            stop(job);
             editSessions.add(job.editSession);
+        }
+        for (int i = cancelled.size() - 1; i >= 0; i--) {
+            notifyCancelled(cancelled.get(i));
+        }
+        for (Job job : cancelled) {
+            runFinalizer(job);
         }
         return editSessions;
     }
@@ -360,7 +370,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
         }
     }
 
-    private void abort(Job job) {
+    private void stop(Job job) {
         try {
             if (job.operation != null) {
                 job.operation.cancel();
@@ -372,13 +382,13 @@ public class ForgeOperationScheduler implements OperationScheduler {
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Failed to cancel an operation", e);
         }
+    }
 
+    private void notifyCancelled(Job job) {
         try {
             job.completion.onCancelled(job.started);
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "An operation cancel handler failed", e);
-        } finally {
-            runFinalizer(job);
         }
     }
 
