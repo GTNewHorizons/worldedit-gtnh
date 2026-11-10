@@ -33,6 +33,7 @@ import com.sk89q.worldedit.extent.transform.BlockTransformHook;
 import com.sk89q.worldedit.math.transform.AffineTransform;
 import com.sk89q.worldedit.math.transform.Transform;
 
+import codechicken.lib.vec.Rotation;
 import codechicken.multipart.MultipartHelper;
 import codechicken.multipart.TileMultipart;
 
@@ -174,7 +175,8 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
             System.out.println("Z rotation is currently unsupported");
             rot = rot.setZ(0);
         }
-        if (rot.lengthSq() == 0) {
+        int[] sides = sideMap(affine);
+        if (rot.lengthSq() == 0 && isIdentity(sides)) {
             return block;
         }
 
@@ -184,6 +186,10 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         for (int i = 0; i < parts.size(); i++) {
             CompoundTag part = parts.get(i);
             String id = part.getString("id");
+            if (!id.startsWith("mcr_")) {
+                parts.set(i, transformFacePart(part, sides));
+                continue;
+            }
             byte shape = part.getByte("shape");
             int size = shape >> 4;
             int slot = shape & 0xF;
@@ -216,6 +222,88 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         builder.put("parts", new ListTag(CompoundTag.class, parts));
 
         return new BaseBlock(block.getId(), block.getData(), builder.build());
+    }
+
+    private static final Vector[] SIDE_VECTORS = { new Vector(0, -1, 0), new Vector(0, 1, 0), new Vector(0, 0, -1),
+        new Vector(0, 0, 1), new Vector(-1, 0, 0), new Vector(1, 0, 0) };
+
+    /**
+     * Where the transform sends each side, worked out the way block directions are elsewhere, by
+     * transforming the side's direction.
+     */
+    static int[] sideMap(AffineTransform transform) {
+        int[] sides = new int[6];
+        Vector zero = transform.apply(Vector.ZERO);
+        for (int side = 0; side < 6; side++) {
+            Vector moved = transform.apply(SIDE_VECTORS[side])
+                .subtract(zero);
+            int best = side;
+            double bestDot = Double.NEGATIVE_INFINITY;
+            for (int candidate = 0; candidate < 6; candidate++) {
+                double dot = moved.dot(SIDE_VECTORS[candidate]);
+                if (dot > bestDot) {
+                    bestDot = dot;
+                    best = candidate;
+                }
+            }
+            sides[side] = best;
+        }
+        return sides;
+    }
+
+    private static boolean isIdentity(int[] sides) {
+        for (int side = 0; side < 6; side++) {
+            if (sides[side] != side) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Turn a part that sits on one face of the block, such as a ProjectRed wire ({@code side}) or gate
+     * ({@code orient}: the side, and which way the gate faces on it).
+     */
+    static CompoundTag transformFacePart(CompoundTag part, int[] sides) {
+        if (part.containsKey("side")) {
+            int side = part.getByte("side");
+            if (side < 0 || side > 5) {
+                return part;
+            }
+            CompoundTagBuilder rotated = part.createBuilder()
+                .putByte("side", (byte) sides[side]);
+            if (part.containsKey("connMap")) {
+                // Connections are stored relative to the old side, so ask the wire to work them out
+                // again when it joins the world, as ProjectRed does for converted wires.
+                rotated.putInt("connMap", part.getInt("connMap") | 0x80000000);
+            }
+            return rotated.build();
+        }
+
+        if (part.containsKey("orient")) {
+            int orient = part.getByte("orient") & 0xFF;
+            int side = orient >> 2;
+            if (side > 5) {
+                return part;
+            }
+            // ProjectRed's TFaceOrient: the gate's front is rotateSide(side, (rotation + 2) % 4).
+            int front = Rotation.rotateSide(side, ((orient & 3) + 2) % 4);
+            int newSide = sides[side];
+            int newFront = sides[front];
+            int rotation = (Rotation.rotationTo(newSide, newFront) + 2) % 4;
+            return part.createBuilder()
+                .putByte("orient", (byte) (newSide << 2 | rotation))
+                .build();
+        }
+
+        if (part.containsKey("connMap")) {
+            // A framed wire sits in the middle, but its connections are kept by direction too.
+            return part.createBuilder()
+                .putInt("connMap", part.getInt("connMap") | 0x80000000)
+                .build();
+        }
+
+        return part;
     }
 
 }
