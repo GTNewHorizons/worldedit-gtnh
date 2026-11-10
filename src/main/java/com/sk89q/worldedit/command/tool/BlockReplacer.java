@@ -25,7 +25,6 @@ import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extension.platform.Platform;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -47,16 +46,11 @@ public class BlockReplacer implements DoubleActionBlockTool {
     @Override
     public boolean actPrimary(Platform server, LocalConfiguration config, Player player, LocalSession session,
         com.sk89q.worldedit.util.Location clicked) {
-        BlockBag bag = session.getBlockBag(player);
-
         EditSession editSession = session.createEditSession(player);
 
         try {
             editSession.setBlock(clicked.toVector(), targetBlock);
         } catch (MaxChangedBlocksException ignored) {} finally {
-            if (bag != null) {
-                bag.flushChanges();
-            }
             session.remember(editSession);
         }
 
@@ -69,11 +63,7 @@ public class BlockReplacer implements DoubleActionBlockTool {
         World world = (World) clicked.getExtent();
         EditSession editSession = session.createEditSession(player);
         targetBlock = (editSession).getBlock(clicked.toVector());
-        BlockType type = BlockType.fromID(targetBlock.getType());
-
-        if (type != null) {
-            player.print("Replacer tool switched to: " + type.getName());
-        }
+        player.print("Replacer tool switched to: " + BlockType.nameOf(targetBlock.getType()));
 
         return true;
     }

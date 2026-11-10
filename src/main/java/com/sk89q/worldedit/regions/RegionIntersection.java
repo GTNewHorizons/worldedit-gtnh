@@ -26,8 +26,8 @@ import java.util.List;
 
 import com.google.common.collect.Iterators;
 import com.sk89q.worldedit.BlockVector;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.world.World;
 
 /**
  * An intersection of several other regions. Any location that is contained in one
@@ -50,7 +50,7 @@ public class RegionIntersection extends AbstractRegion {
      * @param regions a list of regions, which is copied
      */
     public RegionIntersection(List<Region> regions) {
-        this(null, regions);
+        this((World) null, regions);
     }
 
     /**
@@ -59,7 +59,7 @@ public class RegionIntersection extends AbstractRegion {
      * @param regions a list of regions, which is copied
      */
     public RegionIntersection(Region... regions) {
-        this(null, regions);
+        this((World) null, regions);
     }
 
     /**
@@ -68,7 +68,7 @@ public class RegionIntersection extends AbstractRegion {
      * @param world   the world
      * @param regions a list of regions, which is copied
      */
-    public RegionIntersection(LocalWorld world, List<Region> regions) {
+    public RegionIntersection(World world, List<Region> regions) {
         super(world);
         checkNotNull(regions);
         checkArgument(!regions.isEmpty(), "empty region list is not supported");
@@ -83,7 +83,7 @@ public class RegionIntersection extends AbstractRegion {
      * @param world   the world
      * @param regions an array of regions, which is copied
      */
-    public RegionIntersection(LocalWorld world, Region... regions) {
+    public RegionIntersection(World world, Region... regions) {
         super(world);
         checkNotNull(regions);
         checkArgument(regions.length > 0, "empty region list is not supported");

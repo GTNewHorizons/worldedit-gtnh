@@ -32,7 +32,6 @@ import javax.annotation.Nullable;
 
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.ServerInterface;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
@@ -49,10 +48,10 @@ import com.sk89q.worldedit.event.platform.PlatformInitializeEvent;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.event.platform.PlayerInputEvent;
 import com.sk89q.worldedit.extension.platform.permission.ActorSelectorLimits;
-import com.sk89q.worldedit.internal.ServerInterfaceAdapter;
 import com.sk89q.worldedit.regions.RegionSelector;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.eventbus.Subscribe;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -304,17 +303,6 @@ public class PlatformManager {
         return queryCapability(Capability.CONFIGURATION).getConfiguration();
     }
 
-    /**
-     * Return a legacy {@link ServerInterface}.
-     *
-     * @return a {@link ServerInterface}
-     * @throws IllegalStateException if no platform has been registered
-     */
-    @SuppressWarnings("deprecation")
-    public ServerInterface getServerInterface() throws IllegalStateException {
-        return ServerInterfaceAdapter.adapt(queryCapability(Capability.USER_COMMANDS));
-    }
-
     @Subscribe
     public void handlePlatformReady(PlatformReadyEvent event) {
         choosePreferred();
@@ -324,7 +312,6 @@ public class PlatformManager {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Subscribe
     public void handleBlockInteract(BlockInteractEvent event) {
         // Create a proxy actor with a potentially different world for
@@ -341,11 +328,7 @@ public class PlatformManager {
                 .get(actor);
 
             if (event.getType() == Interaction.HIT) {
-                if (player.getItemInHand() == getConfiguration().wandItem) {
-                    if (!session.isToolControlEnabled()) {
-                        return;
-                    }
-
+                if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
                     if (!actor.hasPermission("worldedit.selection.pos")) {
                         return;
                     }
@@ -363,6 +346,10 @@ public class PlatformManager {
                 if (player.isHoldingPickAxe() && session.hasSuperPickAxe()) {
                     final BlockTool superPickaxe = session.getSuperPickaxe();
                     if (superPickaxe != null && superPickaxe.canUse(player)) {
+                        if (editStillRunning(player, session)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         event.setCancelled(
                             superPickaxe.actPrimary(
                                 queryCapability(Capability.WORLD_EDITING),
@@ -377,6 +364,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionBlockTool) {
                     if (tool.canUse(player)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((DoubleActionBlockTool) tool).actSecondary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -388,11 +379,7 @@ public class PlatformManager {
                 }
 
             } else if (event.getType() == Interaction.OPEN) {
-                if (player.getItemInHand() == getConfiguration().wandItem) {
-                    if (!session.isToolControlEnabled()) {
-                        return;
-                    }
-
+                if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
                     if (!actor.hasPermission("worldedit.selection.pos")) {
                         return;
                     }
@@ -409,6 +396,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof BlockTool) {
                     if (tool.canUse(player)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((BlockTool) tool).actPrimary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -431,7 +422,7 @@ public class PlatformManager {
 
         switch (event.getInputType()) {
             case PRIMARY: {
-                if (player.getItemInHand() == getConfiguration().navigationWand) {
+                if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
                     if (getConfiguration().navigationWandMaxDistance <= 0) {
                         return;
                     }
@@ -457,6 +448,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof DoubleActionTraceTool) {
                     if (tool.canUse(player)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((DoubleActionTraceTool) tool).actSecondary(
                             queryCapability(Capability.WORLD_EDITING),
                             getConfiguration(),
@@ -471,7 +466,7 @@ public class PlatformManager {
             }
 
             case SECONDARY: {
-                if (player.getItemInHand() == getConfiguration().navigationWand) {
+                if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
                     if (getConfiguration().navigationWandMaxDistance <= 0) {
                         return;
                     }
@@ -494,6 +489,10 @@ public class PlatformManager {
                 Tool tool = session.getTool(player.getItemInHand());
                 if (tool != null && tool instanceof TraceTool) {
                     if (tool.canUse(player)) {
+                        if (tool.editsBlocks() && editStillRunning(player, session)) {
+                            event.setCancelled(true);
+                            return;
+                        }
                         ((TraceTool) tool)
                             .actPrimary(queryCapability(Capability.WORLD_EDITING), getConfiguration(), player, session);
                         event.setCancelled(true);
@@ -504,6 +503,48 @@ public class PlatformManager {
                 break;
             }
         }
+    }
+
+    /**
+     * Whether the player holds a wand that a left click would use, which must then not break the block
+     * it was used on. Mods that break blocks on their own, such as LittleTiles, ask through the block
+     * break event.
+     *
+     * @param player the player
+     * @return true if a left click with what they hold is a wand action
+     */
+    public boolean isUsingWand(Player player) {
+        if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
+            return player.hasPermission("worldedit.selection.pos");
+        }
+        if (holdsWand(player, getConfiguration().navigationWand, Player.NAVIGATION_WAND)) {
+            return player.hasPermission("worldedit.navigation.jumpto.tool");
+        }
+        return false;
+    }
+
+    /**
+     * Whether the player holds the given wand. Using it still needs its permission, which the caller
+     * checks.
+     */
+    private boolean holdsWand(Player player, int item, String kind) {
+        if (item <= 0 || player.getItemInHand() != item) {
+            return false;
+        }
+        return !getConfiguration().requireWandTag || player.isHoldingWand(kind);
+    }
+
+    private boolean editStillRunning(Player player, LocalSession session) {
+        if (session.isHistoryHeld()) {
+            player.printError(OperationScheduler.HISTORY_HELD);
+            return true;
+        }
+        if (worldEdit.getOperationScheduler()
+            .hasPendingWork(player.getUniqueId())) {
+            player.printError(OperationScheduler.STILL_RUNNING);
+            return true;
+        }
+        return false;
     }
 
 }

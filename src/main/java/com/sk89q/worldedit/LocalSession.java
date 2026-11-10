@@ -40,7 +40,6 @@ import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.function.mask.Mask;
-import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.internal.cui.CUIRegion;
 import com.sk89q.worldedit.internal.cui.SelectionShapeEvent;
@@ -59,6 +58,11 @@ import com.sk89q.worldedit.world.snapshot.Snapshot;
 public class LocalSession {
 
     public transient static int MAX_HISTORY_SIZE = 15;
+    /**
+     * The most changed blocks the undo history may hold in total, or -1 for no limit. The newest edit is
+     * always kept, however large.
+     */
+    public transient static int MAX_HISTORY_BLOCKS = 10000000;
 
     // Non-session related fields
     private transient LocalConfiguration config;
@@ -70,12 +74,13 @@ public class LocalSession {
     private transient LinkedList<EditSession> history = new LinkedList<EditSession>();
     private transient int historyPointer = 0;
     private transient ClipboardHolder clipboard;
-    private transient boolean toolControl = true;
+    private transient int clipboardRequests;
+    private transient int loadingRequest;
+    private transient int historyHolds;
     private transient boolean superPickaxe = false;
     private transient BlockTool pickaxeMode = new SinglePickaxe();
     private transient Map<Integer, Tool> tools = new HashMap<Integer, Tool>();
     private transient int maxBlocksChanged = -1;
-    private transient boolean useInventory;
     private transient Snapshot snapshot;
     private transient boolean hasCUISupport = false;
     private transient int cuiVersion = -1;
@@ -84,7 +89,6 @@ public class LocalSession {
     private transient TimeZone timezone = TimeZone.getDefault();
 
     // Saved properties
-    private String lastScript;
     private RegionSelectorType defaultSelector;
 
     /**
@@ -199,78 +203,86 @@ public class LocalSession {
         while (history.size() > MAX_HISTORY_SIZE) {
             history.remove(0);
         }
+        if (MAX_HISTORY_BLOCKS >= 0) {
+            long total = 0;
+            for (EditSession remembered : history) {
+                total += remembered.size();
+            }
+            while (history.size() > 1 && total > MAX_HISTORY_BLOCKS) {
+                total -= history.remove(0)
+                    .size();
+            }
+        }
         historyPointer = history.size();
     }
 
     /**
-     * Performs an undo.
+     * Step back through the history. The caller has to run the undo itself, using an edit session from
+     * {@link #createHistorySession(EditSession, BlockBag, Player)}.
      *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was undone
+     * @return the edit session to undo, or null if there is nothing left to undo
      */
-    public EditSession undo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
-        return undo(newBlockBag, (Player) player);
-    }
-
-    /**
-     * Performs an undo.
-     *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was undone
-     */
-    public EditSession undo(@Nullable BlockBag newBlockBag, Player player) {
-        checkNotNull(player);
+    @Nullable
+    public EditSession stepBack() {
         --historyPointer;
         if (historyPointer >= 0) {
-            EditSession editSession = history.get(historyPointer);
-            EditSession newEditSession = WorldEdit.getInstance()
-                .getEditSessionFactory()
-                .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
-            newEditSession.enableQueue();
-            newEditSession.setFastMode(fastMode);
-            editSession.undo(newEditSession);
-            return editSession;
-        } else {
-            historyPointer = 0;
-            return null;
+            return history.get(historyPointer);
         }
-    }
-
-    /**
-     * Performs a redo
-     *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was redone
-     */
-    public EditSession redo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
-        return redo(newBlockBag, (Player) player);
-    }
-
-    /**
-     * Performs a redo
-     *
-     * @param newBlockBag a new block bag
-     * @param player      the player
-     * @return whether anything was redone
-     */
-    public EditSession redo(@Nullable BlockBag newBlockBag, Player player) {
-        checkNotNull(player);
-        if (historyPointer < history.size()) {
-            EditSession editSession = history.get(historyPointer);
-            EditSession newEditSession = WorldEdit.getInstance()
-                .getEditSessionFactory()
-                .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
-            newEditSession.enableQueue();
-            newEditSession.setFastMode(fastMode);
-            editSession.redo(newEditSession);
-            ++historyPointer;
-            return editSession;
-        }
-
+        historyPointer = 0;
         return null;
+    }
+
+    /**
+     * Step forward through the history. The caller has to run the redo itself, using an edit session
+     * from {@link #createHistorySession(EditSession, BlockBag, Player)}.
+     *
+     * @return the edit session to redo, or null if there is nothing left to redo
+     */
+    @Nullable
+    public EditSession stepForward() {
+        if (historyPointer < history.size()) {
+            return history.get(historyPointer++);
+        }
+        return null;
+    }
+
+    /**
+     * Give back the place that {@link #stepBack()} took, for an undo that was cancelled. The edit then
+     * counts as not undone, and undoing it again finishes whatever part of it was already undone.
+     */
+    public void cancelStepBack() {
+        if (historyPointer < history.size()) {
+            ++historyPointer;
+        }
+    }
+
+    /**
+     * Give back the place that {@link #stepForward()} took, for a redo that was cancelled. The edit
+     * then counts as not redone, and redoing it again finishes whatever part of it was already redone.
+     */
+    public void cancelStepForward() {
+        if (historyPointer > 0) {
+            --historyPointer;
+        }
+    }
+
+    /**
+     * Create the edit session that an undo or redo of the given edit session writes to.
+     *
+     * @param source   the edit session being undone or redone
+     * @param blockBag the block bag to use, or null to use none
+     * @param player   the player
+     * @return the new edit session
+     */
+    public EditSession createHistorySession(EditSession source, @Nullable BlockBag blockBag, Player player) {
+        checkNotNull(source);
+        checkNotNull(player);
+        EditSession editSession = WorldEdit.getInstance()
+            .getEditSessionFactory()
+            .getEditSession(source.getWorld(), -1, blockBag, player);
+        editSession.enableQueue();
+        editSession.setFastMode(fastMode);
+        return editSession;
     }
 
     /**
@@ -294,14 +306,6 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated Use {@link #getRegionSelector(World)}
-     */
-    @Deprecated
-    public RegionSelector getRegionSelector(LocalWorld world) {
-        return getRegionSelector((World) world);
-    }
-
-    /**
      * Get the region selector for defining the selection. If the selection
      * was defined for a different world, the old selection will be discarded.
      *
@@ -319,22 +323,6 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated use {@link #getRegionSelector(World)}
-     */
-    @Deprecated
-    public RegionSelector getRegionSelector() {
-        return selector;
-    }
-
-    /**
-     * @deprecated use {@link #setRegionSelector(World, RegionSelector)}
-     */
-    @Deprecated
-    public void setRegionSelector(LocalWorld world, RegionSelector selector) {
-        setRegionSelector((World) world, selector);
-    }
-
-    /**
      * Set the region selector.
      *
      * @param world    the world
@@ -345,24 +333,6 @@ public class LocalSession {
         checkNotNull(selector);
         selector.setWorld(world);
         this.selector = selector;
-    }
-
-    /**
-     * Returns true if the region is fully defined.
-     *
-     * @return true if a region selection is defined
-     */
-    @Deprecated
-    public boolean isRegionDefined() {
-        return selector.isDefined();
-    }
-
-    /**
-     * @deprecated use {@link #isSelectionDefined(World)}
-     */
-    @Deprecated
-    public boolean isSelectionDefined(LocalWorld world) {
-        return isSelectionDefined((World) world);
     }
 
     /**
@@ -381,22 +351,6 @@ public class LocalSession {
             return false;
         }
         return selector.isDefined();
-    }
-
-    /**
-     * @deprecated use {@link #getSelection(World)}
-     */
-    @Deprecated
-    public Region getRegion() throws IncompleteRegionException {
-        return selector.getRegion();
-    }
-
-    /**
-     * @deprecated use {@link #getSelection(World)}
-     */
-    @Deprecated
-    public Region getSelection(LocalWorld world) throws IncompleteRegionException {
-        return getSelection((World) world);
     }
 
     /**
@@ -458,21 +412,79 @@ public class LocalSession {
     }
 
     /**
-     * See if tool control is enabled.
+     * Start a command that will replace the clipboard, such as //copy or a schematic load. Commands can
+     * finish out of order once queued, so only the latest one started may still set the clipboard.
      *
-     * @return true if enabled
+     * @return the request's number, for {@link #isLatestClipboardRequest(int)}
      */
-    public boolean isToolControlEnabled() {
-        return toolControl;
+    public int nextClipboardRequest() {
+        return ++clipboardRequests;
     }
 
     /**
-     * Change tool control setting.
+     * Whether no other clipboard command has started since the given one.
      *
-     * @param toolControl true to enable tool control
+     * @param request the number {@link #nextClipboardRequest()} gave
+     * @return true if it is the latest
      */
-    public void setToolControl(boolean toolControl) {
-        this.toolControl = toolControl;
+    public boolean isLatestClipboardRequest(int request) {
+        return request == clipboardRequests;
+    }
+
+    /**
+     * Whether the clipboard is waiting for a schematic that is still loading, because the latest
+     * clipboard command is that load.
+     *
+     * @return true if one is loading
+     */
+    public boolean isLoadingClipboard() {
+        return loadingRequest != 0 && loadingRequest == clipboardRequests;
+    }
+
+    /**
+     * Note that a schematic load started.
+     *
+     * @param request the load's number from {@link #nextClipboardRequest()}
+     */
+    public void startLoadingClipboard(int request) {
+        loadingRequest = request;
+    }
+
+    /**
+     * Note that a schematic load finished, however it ended.
+     *
+     * @param request the load's number from {@link #nextClipboardRequest()}
+     */
+    public void finishLoadingClipboard(int request) {
+        if (loadingRequest == request) {
+            loadingRequest = 0;
+        }
+    }
+
+    /**
+     * Reserve the history while another player's undo or redo of it is queued, so that this session's
+     * owner can't change it in the meantime. Each call needs a matching {@link #releaseHistory()}.
+     */
+    public void holdHistory() {
+        historyHolds++;
+    }
+
+    /**
+     * Give back a reservation from {@link #holdHistory()}.
+     */
+    public void releaseHistory() {
+        if (historyHolds > 0) {
+            historyHolds--;
+        }
+    }
+
+    /**
+     * Whether another player's undo or redo of this history is queued.
+     *
+     * @return true if the history is reserved
+     */
+    public boolean isHistoryHeld() {
+        return historyHolds > 0;
     }
 
     /**
@@ -554,21 +566,6 @@ public class LocalSession {
     }
 
     /**
-     * Get a block bag for a player.
-     *
-     * @param player the player to get the block bag for
-     * @return a block bag
-     */
-    @Nullable
-    public BlockBag getBlockBag(Player player) {
-        checkNotNull(player);
-        if (!useInventory) {
-            return null;
-        }
-        return player.getInventoryBlockBag();
-    }
-
-    /**
      * Get the snapshot that has been selected.
      *
      * @return the snapshot
@@ -647,59 +644,14 @@ public class LocalSession {
     public void setTool(int item, @Nullable Tool tool) throws InvalidToolBindException {
         if (item > 0 && item < 255) {
             throw new InvalidToolBindException(item, "Blocks can't be used");
-        } else if (item == config.wandItem) {
+        } else if (config.wandItem > 0 && item == config.wandItem) {
             throw new InvalidToolBindException(item, "Already used for the wand");
-        } else if (item == config.navigationWand) {
+        } else if (config.navigationWand > 0 && item == config.navigationWand) {
             throw new InvalidToolBindException(item, "Already used for the navigation wand");
         }
 
         this.tools.put(item, tool);
     }
-
-    /**
-     * Returns whether inventory usage is enabled for this session.
-     *
-     * @return if inventory is being used
-     */
-    public boolean isUsingInventory() {
-        return useInventory;
-    }
-
-    /**
-     * Set the state of inventory usage.
-     *
-     * @param useInventory if inventory is to be used
-     */
-    public void setUseInventory(boolean useInventory) {
-        this.useInventory = useInventory;
-    }
-
-    /**
-     * Get the last script used.
-     *
-     * @return the last script's name
-     */
-    @Nullable
-    public String getLastScript() {
-        return lastScript;
-    }
-
-    /**
-     * Set the last script used.
-     *
-     * @param lastScript the last script's name
-     */
-    public void setLastScript(@Nullable String lastScript) {
-        this.lastScript = lastScript;
-        setDirty();
-    }
-
-    /**
-     * Tell the player the WorldEdit version.
-     *
-     * @param player the player
-     */
-    public void tellVersion(Actor player) {}
 
     /**
      * Dispatch a CUI event but only if the actor has CUI support.
@@ -854,32 +806,25 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated use {@link #createEditSession(Player)}
-     */
-    @Deprecated
-    public EditSession createEditSession(LocalPlayer player) {
-        return createEditSession((Player) player);
-    }
-
-    /**
      * Construct a new edit session.
      *
      * @param player the player
      * @return an edit session
      */
-    @SuppressWarnings("deprecation")
     public EditSession createEditSession(Player player) {
         checkNotNull(player);
-
-        BlockBag blockBag = getBlockBag(player);
 
         // Create an edit session
         EditSession editSession = WorldEdit.getInstance()
             .getEditSessionFactory()
-            .getEditSession(player.isPlayer() ? player.getWorld() : null, getBlockChangeLimit(), blockBag, player);
+            .getEditSession(player.isPlayer() ? player.getWorld() : null, getBlockChangeLimit(), null, player);
         editSession.setFastMode(fastMode);
         Request.request()
             .setEditSession(editSession);
+        Request.request()
+            .setSession(this);
+        Request.request()
+            .setWorld(player.isPlayer() ? player.getWorld() : null);
         editSession.setMask(mask);
 
         return editSession;
@@ -919,16 +864,6 @@ public class LocalSession {
      */
     public void setMask(Mask mask) {
         this.mask = mask;
-    }
-
-    /**
-     * Set a mask.
-     *
-     * @param mask mask or null
-     */
-    @SuppressWarnings("deprecation")
-    public void setMask(com.sk89q.worldedit.masks.Mask mask) {
-        setMask(mask != null ? Masks.wrap(mask) : null);
     }
 
 }

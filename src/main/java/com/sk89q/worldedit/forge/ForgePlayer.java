@@ -23,6 +23,8 @@ import javax.annotation.Nullable;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.play.server.S3FPacketCustomPayload;
 import net.minecraft.util.ChatComponentText;
 
@@ -31,8 +33,6 @@ import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.extension.platform.AbstractPlayerActor;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
-import com.sk89q.worldedit.internal.LocalWorldAdapter;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.Location;
@@ -84,7 +84,7 @@ public class ForgePlayer extends AbstractPlayerActor {
     @Override
     public WorldVector getPosition() {
         return new WorldVector(
-            LocalWorldAdapter.adapt(ForgeWorldEdit.inst.getWorld(this.player.worldObj)),
+            ForgeWorldEdit.inst.getWorld(this.player.worldObj),
             this.player.posX,
             this.player.posY,
             this.player.posZ);
@@ -108,6 +108,38 @@ public class ForgePlayer extends AbstractPlayerActor {
     @Override
     public void giveItem(int type, int amt) {
         this.player.inventory.addItemStackToInventory(new ItemStack(Item.getItemById(type), amt, 0));
+    }
+
+    @Override
+    public boolean isHoldingWand(String kind) {
+        ItemStack is = this.player.getCurrentEquippedItem();
+        return is != null && is.hasTagCompound()
+            && kind.equals(
+                is.getTagCompound()
+                    .getString(WAND_TAG));
+    }
+
+    @Override
+    public boolean giveWand(int type, String kind, String name) {
+        Item item = Item.getItemById(type);
+        if (item == null) {
+            return false;
+        }
+
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setString(WAND_TAG, kind);
+        NBTTagCompound display = new NBTTagCompound();
+        display.setString("Name", name);
+        tag.setTag("display", display);
+        // An empty enchantment list gives the shimmer without any enchantment.
+        tag.setTag("ench", new NBTTagList());
+
+        ItemStack is = new ItemStack(item, 1, 0);
+        is.setTagCompound(tag);
+        if (!this.player.inventory.addItemStackToInventory(is)) {
+            this.player.dropPlayerItemWithRandomChoice(is, false);
+        }
+        return true;
     }
 
     @Override
@@ -159,11 +191,6 @@ public class ForgePlayer extends AbstractPlayerActor {
     @Override
     public String[] getGroups() {
         return new String[] {}; // WorldEditMod.inst.getPermissionsResolver().getGroups(this.player.username);
-    }
-
-    @Override
-    public BlockBag getInventoryBlockBag() {
-        return null;
     }
 
     @Override

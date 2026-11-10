@@ -35,7 +35,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.DeadEvent;
-import com.sk89q.worldedit.internal.annotation.RequiresNewerGuava;
 
 /**
  * Dispatches events to listeners, and provides ways for listeners to register
@@ -73,7 +72,6 @@ public class EventBus {
      */
     private final SubscriberFindingStrategy finder = new AnnotatedSubscriberFinder();
 
-    @RequiresNewerGuava
     private HierarchyCache flattenHierarchyCache = new HierarchyCache();
 
     /**

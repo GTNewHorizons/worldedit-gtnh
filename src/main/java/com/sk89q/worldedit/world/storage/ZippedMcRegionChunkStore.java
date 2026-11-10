@@ -22,12 +22,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import com.sk89q.worldedit.world.DataException;
+import com.sk89q.worldedit.world.World;
 
 /**
  * Represents the chunk store used by Minecraft alpha but zipped.
@@ -70,40 +70,12 @@ public class ZippedMcRegionChunkStore extends McRegionChunkStore {
     }
 
     @Override
-    protected InputStream getInputStream(String name, String worldName) throws IOException, DataException {
-        // Detect subfolder for the world's files
-        if (folder != null) {
-            if (!folder.equals("")) {
-                name = folder + "/" + name;
-            }
-        } else {
-            Pattern pattern = Pattern.compile(".*\\.mc[ra]$");
-            for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
-                ZipEntry testEntry = e.nextElement();
-                // Check for world
-                if (testEntry.getName()
-                    .startsWith(worldName + "/")) {
-                    if (pattern.matcher(testEntry.getName())
-                        .matches()) { // does entry end in .mca
-                        folder = testEntry.getName()
-                            .substring(
-                                0,
-                                testEntry.getName()
-                                    .lastIndexOf("/"));
-                        name = folder + "/" + name;
-                        break;
-                    }
-
-                }
-            }
-
-            // Check if world is found
-            if (folder == null) {
-                throw new MissingWorldException("Target world is not present in ZIP.", worldName);
-            }
+    protected InputStream getInputStream(String name, World world) throws IOException, DataException {
+        if (folder == null) {
+            folder = findRegionFolder(world);
         }
 
-        ZipEntry entry = getEntry(name);
+        ZipEntry entry = getEntry(folder.isEmpty() ? name : folder + "/" + name);
         if (entry == null) {
             throw new MissingChunkException();
         }
@@ -112,6 +84,38 @@ public class ZippedMcRegionChunkStore extends McRegionChunkStore {
         } catch (ZipException e) {
             throw new IOException("Failed to read " + name + " in ZIP");
         }
+    }
+
+    /**
+     * Find the folder holding a world's region files. The world can be at any depth, because backups
+     * taken in single player keep the saves/ folder in their paths.
+     */
+    private String findRegionFolder(World world) throws MissingWorldException {
+        String dimension = world.getDimensionFolder();
+        String regionPath = dimension == null ? "region" : dimension + "/region";
+        String worldRegionPath = world.getDirectoryName() + "/" + regionPath;
+        boolean atRoot = false;
+
+        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
+            String entry = e.nextElement()
+                .getName()
+                .replace('\\', '/');
+            int slash = entry.lastIndexOf('/');
+            if (slash < 0 || !entry.endsWith(".mca")) {
+                continue;
+            }
+
+            String parent = entry.substring(0, slash);
+            if (parent.equals(worldRegionPath) || parent.endsWith("/" + worldRegionPath)) {
+                return parent;
+            }
+            atRoot |= parent.equals(regionPath);
+        }
+
+        if (atRoot) {
+            return regionPath;
+        }
+        throw new MissingWorldException("Target world is not present in ZIP.", world.getDirectoryName());
     }
 
     /**
@@ -133,20 +137,4 @@ public class ZippedMcRegionChunkStore extends McRegionChunkStore {
         zip.close();
     }
 
-    @Override
-    public boolean isValid() {
-        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
-
-            ZipEntry testEntry = e.nextElement();
-
-            if (testEntry.getName()
-                .matches(".*\\.mcr$")
-                || testEntry.getName()
-                    .matches(".*\\.mca$")) { // TODO: does this need a separate class?
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

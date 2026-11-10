@@ -16,8 +16,8 @@
 
 package com.sk89q.worldedit.extent.cache;
 
-import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.Extent;
@@ -28,7 +28,10 @@ import com.sk89q.worldedit.extent.Extent;
  */
 public class LastAccessExtentCache extends AbstractDelegateExtent {
 
-    private CachedBlock lastBlock;
+    private BaseBlock lastBlock;
+    private int lastX;
+    private int lastY;
+    private int lastZ;
 
     /**
      * Create a new instance.
@@ -41,26 +44,29 @@ public class LastAccessExtentCache extends AbstractDelegateExtent {
 
     @Override
     public BaseBlock getLazyBlock(Vector position) {
-        BlockVector blockVector = position.toBlockVector();
-        CachedBlock lastBlock = this.lastBlock;
-        if (lastBlock != null && lastBlock.position.equals(blockVector)) {
-            return lastBlock.block;
-        } else {
-            BaseBlock block = super.getLazyBlock(position);
-            this.lastBlock = new CachedBlock(blockVector, block);
-            return block;
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        if (lastBlock != null && x == lastX && y == lastY && z == lastZ) {
+            return lastBlock;
         }
+
+        BaseBlock block = super.getLazyBlock(position);
+        lastBlock = block;
+        lastX = x;
+        lastY = y;
+        lastZ = z;
+        return block;
     }
 
-    private static class CachedBlock {
-
-        private final BlockVector position;
-        private final BaseBlock block;
-
-        private CachedBlock(BlockVector position, BaseBlock block) {
-            this.position = position;
-            this.block = block;
+    @Override
+    public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
+        // The cached block would no longer be what is there.
+        if (lastBlock != null && location.getBlockX() == lastX
+            && location.getBlockY() == lastY
+            && location.getBlockZ() == lastZ) {
+            lastBlock = null;
         }
+        return super.setBlock(location, block);
     }
-
 }

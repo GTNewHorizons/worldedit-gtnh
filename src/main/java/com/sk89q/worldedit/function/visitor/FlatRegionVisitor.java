@@ -18,6 +18,7 @@ package com.sk89q.worldedit.function.visitor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Iterator;
 import java.util.List;
 
 import com.sk89q.worldedit.Vector2D;
@@ -34,6 +35,7 @@ public class FlatRegionVisitor implements Operation {
 
     private final FlatRegion flatRegion;
     private final FlatRegionFunction function;
+    private Iterator<Vector2D> iterator;
     private int affected = 0;
 
     /**
@@ -61,9 +63,18 @@ public class FlatRegionVisitor implements Operation {
 
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
-        for (Vector2D pt : flatRegion.asFlatRegion()) {
-            if (function.apply(pt)) {
+        if (iterator == null) {
+            iterator = flatRegion.asFlatRegion()
+                .iterator();
+        }
+
+        while (iterator.hasNext()) {
+            if (function.apply(iterator.next())) {
                 affected++;
+            }
+
+            if (!run.shouldContinue()) {
+                return this;
             }
         }
 

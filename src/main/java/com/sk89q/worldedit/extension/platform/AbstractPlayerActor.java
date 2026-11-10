@@ -19,7 +19,6 @@ package com.sk89q.worldedit.extension.platform;
 import java.io.File;
 
 import com.sk89q.worldedit.BlockWorldVector;
-import com.sk89q.worldedit.LocalPlayer;
 import com.sk89q.worldedit.NotABlockException;
 import com.sk89q.worldedit.PlayerDirection;
 import com.sk89q.worldedit.Vector;
@@ -445,10 +444,10 @@ public abstract class AbstractPlayerActor implements Actor, Player, Cloneable {
 
     @Override
     public boolean equals(Object other) {
-        if (!(other instanceof LocalPlayer)) {
+        if (!(other instanceof Player)) {
             return false;
         }
-        LocalPlayer other2 = (LocalPlayer) other;
+        Player other2 = (Player) other;
         return other2.getName()
             .equals(getName());
     }

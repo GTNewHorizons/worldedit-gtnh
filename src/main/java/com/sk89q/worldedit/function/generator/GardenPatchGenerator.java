@@ -83,11 +83,13 @@ public class GardenPatchGenerator implements RegionFunction {
      */
     private void placeVine(Vector basePos, Vector pos) throws MaxChangedBlocksException {
         if (pos.distance(basePos) > 4) return;
-        if (editSession.getBlockType(pos) != 0) return;
+        if (editSession.getLazyBlock(pos)
+            .getType() != 0) return;
 
         for (int i = -1; i > -3; --i) {
             Vector testPos = pos.add(0, i, 0);
-            if (editSession.getBlockType(testPos) == BlockID.AIR) {
+            if (editSession.getLazyBlock(testPos)
+                .getType() == BlockID.AIR) {
                 pos = testPos;
             } else {
                 break;

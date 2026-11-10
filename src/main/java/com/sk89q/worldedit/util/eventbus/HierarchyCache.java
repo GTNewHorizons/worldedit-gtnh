@@ -24,7 +24,6 @@ import java.util.WeakHashMap;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.sk89q.worldedit.internal.annotation.RequiresNewerGuava;
 
 /**
  * Holds a cache of class hierarchy.
@@ -33,7 +32,6 @@ import com.sk89q.worldedit.internal.annotation.RequiresNewerGuava;
  * This exists because Bukkit has an ancient version of Guava and the cache
  * library in Guava has since changed.</>
  */
-@RequiresNewerGuava
 class HierarchyCache {
 
     private final Map<Class<?>, Set<Class<?>>> cache = new WeakHashMap<Class<?>, Set<Class<?>>>();

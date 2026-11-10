@@ -18,6 +18,7 @@ package com.sk89q.worldedit.blocks;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.BitSet;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -430,62 +431,79 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for shouldPlaceLast.
+     * The vanilla block IDs for shouldPlaceLast.
      */
-    private static final Set<Integer> shouldPlaceLast = new HashSet<Integer>();
+    private static final BitSet shouldPlaceLast = new BitSet();
+
+    /**
+     * The highest ID used by vanilla blocks, which are covered by these tables.
+     */
+    private static final int LAST_VANILLA_ID = 175;
+
+    private static BlockPlacementRules placementRules;
+    private static final BitSet placementKnown = new BitSet();
+    private static final BitSet placementAttached = new BitSet();
+
+    private static ModdedBlockProperties moddedProperties;
+    private static final BitSet moddedKnown = new BitSet();
+    private static final BitSet moddedPassable = new BitSet();
+    private static final BitSet moddedLiquid = new BitSet();
+    private static final BitSet moddedTranslucent = new BitSet();
+    private static final BitSet moddedNatural = new BitSet();
+
     static {
-        shouldPlaceLast.add(BlockID.SAPLING);
-        shouldPlaceLast.add(BlockID.BED);
-        shouldPlaceLast.add(BlockID.POWERED_RAIL);
-        shouldPlaceLast.add(BlockID.DETECTOR_RAIL);
-        shouldPlaceLast.add(BlockID.LONG_GRASS);
-        shouldPlaceLast.add(BlockID.DEAD_BUSH);
-        shouldPlaceLast.add(BlockID.PISTON_EXTENSION);
-        shouldPlaceLast.add(BlockID.YELLOW_FLOWER);
-        shouldPlaceLast.add(BlockID.RED_FLOWER);
-        shouldPlaceLast.add(BlockID.BROWN_MUSHROOM);
-        shouldPlaceLast.add(BlockID.RED_MUSHROOM);
-        shouldPlaceLast.add(BlockID.TORCH);
-        shouldPlaceLast.add(BlockID.FIRE);
-        shouldPlaceLast.add(BlockID.REDSTONE_WIRE);
-        shouldPlaceLast.add(BlockID.CROPS);
-        shouldPlaceLast.add(BlockID.LADDER);
-        shouldPlaceLast.add(BlockID.MINECART_TRACKS);
-        shouldPlaceLast.add(BlockID.LEVER);
-        shouldPlaceLast.add(BlockID.STONE_PRESSURE_PLATE);
-        shouldPlaceLast.add(BlockID.WOODEN_PRESSURE_PLATE);
-        shouldPlaceLast.add(BlockID.REDSTONE_TORCH_OFF);
-        shouldPlaceLast.add(BlockID.REDSTONE_TORCH_ON);
-        shouldPlaceLast.add(BlockID.STONE_BUTTON);
-        shouldPlaceLast.add(BlockID.SNOW);
-        shouldPlaceLast.add(BlockID.PORTAL);
-        shouldPlaceLast.add(BlockID.REDSTONE_REPEATER_OFF);
-        shouldPlaceLast.add(BlockID.REDSTONE_REPEATER_ON);
-        shouldPlaceLast.add(BlockID.TRAP_DOOR);
-        shouldPlaceLast.add(BlockID.VINE);
-        shouldPlaceLast.add(BlockID.LILY_PAD);
-        shouldPlaceLast.add(BlockID.NETHER_WART);
-        shouldPlaceLast.add(BlockID.PISTON_BASE);
-        shouldPlaceLast.add(BlockID.PISTON_STICKY_BASE);
-        shouldPlaceLast.add(BlockID.PISTON_EXTENSION);
-        shouldPlaceLast.add(BlockID.PISTON_MOVING_PIECE);
-        shouldPlaceLast.add(BlockID.COCOA_PLANT);
-        shouldPlaceLast.add(BlockID.TRIPWIRE_HOOK);
-        shouldPlaceLast.add(BlockID.TRIPWIRE);
-        shouldPlaceLast.add(BlockID.FLOWER_POT);
-        shouldPlaceLast.add(BlockID.CARROTS);
-        shouldPlaceLast.add(BlockID.POTATOES);
-        shouldPlaceLast.add(BlockID.WOODEN_BUTTON);
-        shouldPlaceLast.add(BlockID.ANVIL); // becomes relevant with asynchronous placement
-        shouldPlaceLast.add(BlockID.PRESSURE_PLATE_LIGHT);
-        shouldPlaceLast.add(BlockID.PRESSURE_PLATE_HEAVY);
-        shouldPlaceLast.add(BlockID.COMPARATOR_OFF);
-        shouldPlaceLast.add(BlockID.COMPARATOR_ON);
-        shouldPlaceLast.add(BlockID.ACTIVATOR_RAIL);
-        shouldPlaceLast.add(BlockID.IRON_TRAP_DOOR);
-        shouldPlaceLast.add(BlockID.CARPET);
-        shouldPlaceLast.add(BlockID.DOUBLE_PLANT);
-        shouldPlaceLast.add(BlockID.DAYLIGHT_SENSOR_INVERTED);
+        shouldPlaceLast.set(BlockID.SAPLING);
+        shouldPlaceLast.set(BlockID.BED);
+        shouldPlaceLast.set(BlockID.POWERED_RAIL);
+        shouldPlaceLast.set(BlockID.DETECTOR_RAIL);
+        shouldPlaceLast.set(BlockID.LONG_GRASS);
+        shouldPlaceLast.set(BlockID.DEAD_BUSH);
+        shouldPlaceLast.set(BlockID.PISTON_EXTENSION);
+        shouldPlaceLast.set(BlockID.YELLOW_FLOWER);
+        shouldPlaceLast.set(BlockID.RED_FLOWER);
+        shouldPlaceLast.set(BlockID.BROWN_MUSHROOM);
+        shouldPlaceLast.set(BlockID.RED_MUSHROOM);
+        shouldPlaceLast.set(BlockID.TORCH);
+        shouldPlaceLast.set(BlockID.FIRE);
+        shouldPlaceLast.set(BlockID.REDSTONE_WIRE);
+        shouldPlaceLast.set(BlockID.CROPS);
+        shouldPlaceLast.set(BlockID.LADDER);
+        shouldPlaceLast.set(BlockID.MINECART_TRACKS);
+        shouldPlaceLast.set(BlockID.LEVER);
+        shouldPlaceLast.set(BlockID.STONE_PRESSURE_PLATE);
+        shouldPlaceLast.set(BlockID.WOODEN_PRESSURE_PLATE);
+        shouldPlaceLast.set(BlockID.REDSTONE_TORCH_OFF);
+        shouldPlaceLast.set(BlockID.REDSTONE_TORCH_ON);
+        shouldPlaceLast.set(BlockID.STONE_BUTTON);
+        shouldPlaceLast.set(BlockID.SNOW);
+        shouldPlaceLast.set(BlockID.PORTAL);
+        shouldPlaceLast.set(BlockID.REDSTONE_REPEATER_OFF);
+        shouldPlaceLast.set(BlockID.REDSTONE_REPEATER_ON);
+        shouldPlaceLast.set(BlockID.TRAP_DOOR);
+        shouldPlaceLast.set(BlockID.VINE);
+        shouldPlaceLast.set(BlockID.LILY_PAD);
+        shouldPlaceLast.set(BlockID.NETHER_WART);
+        shouldPlaceLast.set(BlockID.PISTON_BASE);
+        shouldPlaceLast.set(BlockID.PISTON_STICKY_BASE);
+        shouldPlaceLast.set(BlockID.PISTON_EXTENSION);
+        shouldPlaceLast.set(BlockID.PISTON_MOVING_PIECE);
+        shouldPlaceLast.set(BlockID.COCOA_PLANT);
+        shouldPlaceLast.set(BlockID.TRIPWIRE_HOOK);
+        shouldPlaceLast.set(BlockID.TRIPWIRE);
+        shouldPlaceLast.set(BlockID.FLOWER_POT);
+        shouldPlaceLast.set(BlockID.CARROTS);
+        shouldPlaceLast.set(BlockID.POTATOES);
+        shouldPlaceLast.set(BlockID.WOODEN_BUTTON);
+        shouldPlaceLast.set(BlockID.ANVIL); // becomes relevant with asynchronous placement
+        shouldPlaceLast.set(BlockID.PRESSURE_PLATE_LIGHT);
+        shouldPlaceLast.set(BlockID.PRESSURE_PLATE_HEAVY);
+        shouldPlaceLast.set(BlockID.COMPARATOR_OFF);
+        shouldPlaceLast.set(BlockID.COMPARATOR_ON);
+        shouldPlaceLast.set(BlockID.ACTIVATOR_RAIL);
+        shouldPlaceLast.set(BlockID.IRON_TRAP_DOOR);
+        shouldPlaceLast.set(BlockID.CARPET);
+        shouldPlaceLast.set(BlockID.DOUBLE_PLANT);
+        shouldPlaceLast.set(BlockID.DAYLIGHT_SENSOR_INVERTED);
     }
 
     /**
@@ -496,7 +514,110 @@ public enum BlockType {
      * @return true if the block should be placed last
      */
     public static boolean shouldPlaceLast(int id) {
-        return shouldPlaceLast.contains(id);
+        return shouldPlaceLast.get(id) || isModdedAttached(id);
+    }
+
+    /**
+     * Set the rules for blocks that aren't in the vanilla tables, forgetting earlier answers.
+     *
+     * @param rules the rules, or null to treat those blocks as ordinary
+     */
+    public static void setPlacementRules(@Nullable BlockPlacementRules rules) {
+        placementRules = rules;
+        placementKnown.clear();
+        placementAttached.clear();
+    }
+
+    /**
+     * Set what answers the passability, liquid, translucency and terrain questions for blocks that aren't
+     * in the vanilla tables, forgetting earlier answers.
+     *
+     * @param properties the answers, or null to treat those blocks as solid, opaque and not terrain
+     */
+    public static synchronized void setModdedProperties(@Nullable ModdedBlockProperties properties) {
+        moddedProperties = properties;
+        moddedKnown.clear();
+        moddedPassable.clear();
+        moddedLiquid.clear();
+        moddedTranslucent.clear();
+        moddedNatural.clear();
+    }
+
+    private static boolean modded(int id, BitSet answer) {
+        if (id <= LAST_VANILLA_ID || moddedProperties == null) {
+            return false;
+        }
+        return askModded(id, answer);
+    }
+
+    // Synchronized because schematics are read on a background thread.
+    private static synchronized boolean askModded(int id, BitSet answer) {
+        if (moddedProperties == null) {
+            return false;
+        }
+
+        if (!moddedKnown.get(id)) {
+            moddedKnown.set(id);
+            moddedPassable.set(id, moddedProperties.canPassThrough(id));
+            moddedLiquid.set(id, moddedProperties.isLiquid(id));
+            moddedTranslucent.set(id, moddedProperties.isTranslucent(id));
+            moddedNatural.set(id, moddedProperties.isNaturalTerrain(id));
+        }
+        return answer.get(id);
+    }
+
+    /**
+     * Get a block's name to show players: the vanilla name, or the registry name of a modded block.
+     *
+     * @param id the ID of the block
+     * @return the name, or "Unknown"
+     */
+    public static String nameOf(int id) {
+        BlockType type = fromID(id);
+        if (type != null) {
+            return type.getName();
+        }
+        ModdedBlockProperties properties = moddedProperties;
+        String name = properties != null && id > LAST_VANILLA_ID ? properties.getName(id) : null;
+        return name != null ? name : "Unknown";
+    }
+
+    /**
+     * Checks whether a block is a liquid.
+     *
+     * @param id the ID of the block
+     * @return true if it is water, lava or a modded liquid
+     */
+    public static boolean isLiquid(int id) {
+        return (id >= BlockID.WATER && id <= BlockID.STATIONARY_LAVA) || modded(id, moddedLiquid);
+    }
+
+    /**
+     * Checks whether a block attaches to others because of what its tile entity holds, such as a
+     * multipart holding ProjectRed wires rather than only microblocks.
+     *
+     * @param block the block; its tile entity data is only read for IDs where it matters
+     * @return true if it should be placed with the attached blocks
+     */
+    public static boolean isAttachedByContents(BaseBlock block) {
+        BlockPlacementRules rules = placementRules;
+        int id = block.getType();
+        if (rules == null || id <= LAST_VANILLA_ID || !rules.dependsOnContents(id)) {
+            return false;
+        }
+        return block.getNbtData() != null && rules.isAttached(block);
+    }
+
+    private static boolean isModdedAttached(int id) {
+        if (placementRules == null || id <= LAST_VANILLA_ID) {
+            return false;
+        }
+
+        if (!placementKnown.get(id)) {
+            placementKnown.set(id);
+            placementAttached.set(id, placementRules.isAttached(id));
+        }
+        return placementAttached.get(id);
     }
 
     /**
@@ -506,25 +627,25 @@ public enum BlockType {
      * @return true if the block should be placed last
      */
     public boolean shouldPlaceLast() {
-        return shouldPlaceLast.contains(id);
+        return shouldPlaceLast.get(id);
     }
 
     /**
-     * HashSet for shouldPlaceLast.
+     * The vanilla block IDs for shouldPlaceFinal.
      */
-    private static final Set<Integer> shouldPlaceFinal = new HashSet<Integer>();
+    private static final BitSet shouldPlaceFinal = new BitSet();
     static {
-        shouldPlaceFinal.add(BlockID.SIGN_POST);
-        shouldPlaceFinal.add(BlockID.WOODEN_DOOR);
-        shouldPlaceFinal.add(BlockID.WALL_SIGN);
-        shouldPlaceFinal.add(BlockID.IRON_DOOR);
-        shouldPlaceFinal.add(BlockID.CACTUS);
-        shouldPlaceFinal.add(BlockID.REED);
-        shouldPlaceFinal.add(BlockID.CAKE_BLOCK);
-        shouldPlaceFinal.add(BlockID.PISTON_EXTENSION);
-        shouldPlaceFinal.add(BlockID.PISTON_MOVING_PIECE);
-        shouldPlaceFinal.add(BlockID.STANDING_BANNER);
-        shouldPlaceFinal.add(BlockID.WALL_BANNER);
+        shouldPlaceFinal.set(BlockID.SIGN_POST);
+        shouldPlaceFinal.set(BlockID.WOODEN_DOOR);
+        shouldPlaceFinal.set(BlockID.WALL_SIGN);
+        shouldPlaceFinal.set(BlockID.IRON_DOOR);
+        shouldPlaceFinal.set(BlockID.CACTUS);
+        shouldPlaceFinal.set(BlockID.REED);
+        shouldPlaceFinal.set(BlockID.CAKE_BLOCK);
+        shouldPlaceFinal.set(BlockID.PISTON_EXTENSION);
+        shouldPlaceFinal.set(BlockID.PISTON_MOVING_PIECE);
+        shouldPlaceFinal.set(BlockID.STANDING_BANNER);
+        shouldPlaceFinal.set(BlockID.WALL_BANNER);
     }
 
     /**
@@ -536,11 +657,11 @@ public enum BlockType {
      * @return whether the block is in the final queue
      */
     public static boolean shouldPlaceFinal(int id) {
-        return shouldPlaceFinal.contains(id);
+        return shouldPlaceFinal.get(id);
     }
 
     /**
-     * HashSet for canPassThrough.
+     * The vanilla block IDs for canPassThrough.
      */
     private static final Set<Integer> canPassThrough = new HashSet<Integer>();
     static {
@@ -606,7 +727,7 @@ public enum BlockType {
      * @return true if the block can be passed through
      */
     public static boolean canPassThrough(int id) {
-        return canPassThrough.contains(id);
+        return canPassThrough.contains(id) || modded(id, moddedPassable);
     }
 
     /**
@@ -617,7 +738,7 @@ public enum BlockType {
      * @return true if the block can be passed through
      */
     public static boolean canPassThrough(int id, int data) {
-        return canPassThrough.contains(-16 * id - data) || canPassThrough.contains(id);
+        return canPassThrough.contains(-16 * id - data) || canPassThrough.contains(id) || modded(id, moddedPassable);
     }
 
     /**
@@ -641,7 +762,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for centralTopLimit.
+     * The vanilla values for centralTopLimit.
      */
     private static final Map<Integer, Double> centralTopLimit = new HashMap<Integer, Double>();
     static {
@@ -739,7 +860,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for usesData.
+     * The vanilla block IDs for usesData.
      */
     private static final Set<Integer> usesData = new HashSet<Integer>();
     static {
@@ -884,19 +1005,19 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isContainerBlock.
+     * The vanilla block IDs for isContainerBlock.
      */
-    private static final Set<Integer> isContainerBlock = new HashSet<Integer>();
+    private static final BitSet isContainerBlock = new BitSet();
     static {
-        isContainerBlock.add(BlockID.DISPENSER);
-        isContainerBlock.add(BlockID.FURNACE);
-        isContainerBlock.add(BlockID.BURNING_FURNACE);
-        isContainerBlock.add(BlockID.CHEST);
-        isContainerBlock.add(BlockID.BREWING_STAND);
-        isContainerBlock.add(BlockID.TRAPPED_CHEST);
-        isContainerBlock.add(BlockID.HOPPER);
-        isContainerBlock.add(BlockID.DROPPER);
-        // isContainerBlock.add(BlockID.ENDER_CHEST); // ender chest has no own inventory, don't add this here
+        isContainerBlock.set(BlockID.DISPENSER);
+        isContainerBlock.set(BlockID.FURNACE);
+        isContainerBlock.set(BlockID.BURNING_FURNACE);
+        isContainerBlock.set(BlockID.CHEST);
+        isContainerBlock.set(BlockID.BREWING_STAND);
+        isContainerBlock.set(BlockID.TRAPPED_CHEST);
+        isContainerBlock.set(BlockID.HOPPER);
+        isContainerBlock.set(BlockID.DROPPER);
+        // isContainerBlock.set(BlockID.ENDER_CHEST); // ender chest has no own inventory, don't add this here
     }
 
     /**
@@ -906,7 +1027,7 @@ public enum BlockType {
      * @return true if the block is a container
      */
     public static boolean isContainerBlock(int id) {
-        return isContainerBlock.contains(id);
+        return isContainerBlock.get(id);
     }
 
     /**
@@ -915,11 +1036,11 @@ public enum BlockType {
      * @return true if the block is a container block
      */
     public boolean isContainerBlock() {
-        return isContainerBlock.contains(id);
+        return isContainerBlock.get(id);
     }
 
     /**
-     * HashSet for isRedstoneBlock.
+     * The vanilla block IDs for isRedstoneBlock.
      */
     private static final Set<Integer> isRedstoneBlock = new HashSet<Integer>();
     static {
@@ -977,7 +1098,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for canTransferRedstone.
+     * The vanilla block IDs for canTransferRedstone.
      */
     private static final Set<Integer> canTransferRedstone = new HashSet<Integer>();
     static {
@@ -1018,7 +1139,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isRedstoneSource.
+     * The vanilla block IDs for isRedstoneSource.
      */
     private static final Set<Integer> isRedstoneSource = new HashSet<Integer>();
     static {
@@ -1058,7 +1179,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isRailBlock.
+     * The vanilla block IDs for isRailBlock.
      */
     private static final Set<Integer> isRailBlock = new HashSet<Integer>();
     static {
@@ -1088,7 +1209,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isNaturalBlock.
+     * The vanilla block IDs for isNaturalTerrainBlock.
      */
     private static final Set<Integer> isNaturalTerrainBlock = new HashSet<Integer>();
     static {
@@ -1130,7 +1251,7 @@ public enum BlockType {
      */
     @Deprecated
     public static boolean isNaturalTerrainBlock(int id) {
-        return isNaturalTerrainBlock.contains(id);
+        return isNaturalTerrainBlock.contains(id) || modded(id, moddedNatural);
     }
 
     /**
@@ -1141,7 +1262,8 @@ public enum BlockType {
      * @return true if the block type is naturally occurring
      */
     public static boolean isNaturalTerrainBlock(int id, int data) {
-        return isNaturalTerrainBlock.contains(-16 * id - data) || isNaturalTerrainBlock.contains(id);
+        return isNaturalTerrainBlock.contains(-16 * id - data) || isNaturalTerrainBlock.contains(id)
+            || modded(id, moddedNatural);
     }
 
     /**
@@ -1164,7 +1286,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for emitsLight.
+     * The vanilla block IDs for emitsLight.
      */
     private static final Set<Integer> emitsLight = new HashSet<Integer>();
     static {
@@ -1202,7 +1324,7 @@ public enum BlockType {
     }
 
     /**
-     * HashSet for isTranslucent.
+     * The vanilla block IDs for isTranslucent.
      */
     private static final Set<Integer> isTranslucent = new HashSet<Integer>();
     static {
@@ -1330,7 +1452,7 @@ public enum BlockType {
      * @return true if the block type lets light through
      */
     public static boolean isTranslucent(int id) {
-        return isTranslucent.contains(id);
+        return isTranslucent.contains(id) || modded(id, moddedTranslucent);
     }
 
     /**

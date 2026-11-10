@@ -65,7 +65,7 @@ public class RecursivePickaxe implements BlockTool {
             return true;
         }
 
-        EditSession editSession = session.createEditSession(player);
+        EditSession editSession = ToolEdits.start(session, player);
         editSession.getSurvivalExtent()
             .setToolUse(config.superPickaxeManyDrop);
 
@@ -83,8 +83,7 @@ public class RecursivePickaxe implements BlockTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            editSession.flushQueue();
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession);
         }
 
         return true;

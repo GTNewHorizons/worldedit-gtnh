@@ -27,7 +27,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.regions.polyhedron.Edge;
 import com.sk89q.worldedit.regions.polyhedron.Triangle;
@@ -77,14 +76,6 @@ public class ConvexPolyhedralRegion extends AbstractRegion {
      * @param world the world
      */
     public ConvexPolyhedralRegion(@Nullable World world) {
-        super(world);
-    }
-
-    /**
-     * @deprecated cast {@code world} to {@link World}
-     */
-    @Deprecated
-    public ConvexPolyhedralRegion(LocalWorld world) {
         super(world);
     }
 

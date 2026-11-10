@@ -21,7 +21,6 @@ import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.world.World;
@@ -50,11 +49,6 @@ public class EllipsoidRegion extends AbstractRegion {
      */
     public EllipsoidRegion(Vector pos1, Vector pos2) {
         this(null, pos1, pos2);
-    }
-
-    @Deprecated
-    public EllipsoidRegion(LocalWorld world, Vector center, Vector radius) {
-        this((World) world, center, radius);
     }
 
     /**

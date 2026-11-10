@@ -16,23 +16,27 @@
 
 package com.sk89q.worldedit.command;
 
-import static com.sk89q.minecraft.util.commands.Logging.LogMode.REGION;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.minecraft.util.commands.Logging;
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.CommandDispatcher;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.LogMode;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.snapshot.InvalidSnapshotException;
 import com.sk89q.worldedit.world.snapshot.Snapshot;
@@ -40,28 +44,28 @@ import com.sk89q.worldedit.world.snapshot.SnapshotRestore;
 import com.sk89q.worldedit.world.storage.ChunkStore;
 import com.sk89q.worldedit.world.storage.MissingWorldException;
 
-public class SnapshotUtilCommands {
+public final class SnapshotUtilCommands {
+
+    private SnapshotUtilCommands() {}
+
+    // spotless:off
+    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
+        Nodes.register(dispatcher, literal("/restore", "Restore the selection from a snapshot")
+                .executes(run("worldedit.snapshots.restore", LogMode.REGION,
+                        c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), null)))
+                .then(word("snapshot")
+                        .executes(run("worldedit.snapshots.restore", LogMode.REGION,
+                                c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.string("snapshot"))))));
+    }
+    // spotless:on
 
     private static final Logger logger = Logger.getLogger("Minecraft.WorldEdit");
 
-    private final WorldEdit we;
+    private static void restore(WorldEdit worldEdit, final Player player, LocalSession session, EditSession editSession,
+        String snapshotName) throws WorldEditException {
 
-    public SnapshotUtilCommands(WorldEdit we) {
-        this.we = we;
-    }
-
-    @Command(
-        aliases = { "restore", "/restore" },
-        usage = "[snapshot]",
-        desc = "Restore the selection from a snapshot",
-        min = 0,
-        max = 1)
-    @Logging(REGION)
-    @CommandPermissions("worldedit.snapshots.restore")
-    public void restore(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        LocalConfiguration config = we.getConfiguration();
+        LocalConfiguration config = WorldEdit.getInstance()
+            .getConfiguration();
 
         if (config.snapshotRepo == null) {
             player.printError("Snapshot/backup restore is not configured.");
@@ -71,9 +75,9 @@ public class SnapshotUtilCommands {
         Region region = session.getSelection(player.getWorld());
         Snapshot snapshot;
 
-        if (args.argsLength() > 0) {
+        if (snapshotName != null) {
             try {
-                snapshot = config.snapshotRepo.getSnapshot(args.getString(0));
+                snapshot = config.snapshotRepo.getSnapshot(snapshotName);
             } catch (InvalidSnapshotException e) {
                 player.printError("That snapshot does not exist or is not available.");
                 return;
@@ -87,7 +91,7 @@ public class SnapshotUtilCommands {
             try {
                 snapshot = config.snapshotRepo.getDefaultSnapshot(
                     player.getWorld()
-                        .getName());
+                        .getDirectoryName());
 
                 if (snapshot == null) {
                     player.printError("No snapshots were found. See console for details.");
@@ -125,34 +129,50 @@ public class SnapshotUtilCommands {
             return;
         }
 
-        try {
-            // Restore snapshot
-            SnapshotRestore restore = new SnapshotRestore(chunkStore, editSession, region);
-            // player.print(restore.getChunksAffected() + " chunk(s) will be loaded.");
+        // Each chunk is read from the snapshot in a step of its own, so this can take a while.
+        final ChunkStore store = chunkStore;
+        final SnapshotRestore restore = new SnapshotRestore(chunkStore, editSession, region);
+        worldEdit.getOperationScheduler()
+            .submit(player, editSession, restore, new OperationCompletion() {
 
-            restore.restore();
-
-            if (restore.hadTotalFailure()) {
-                String error = restore.getLastErrorMessage();
-                if (error != null) {
-                    player.printError("Errors prevented any blocks from being restored.");
-                    player.printError("Last error: " + error);
-                } else {
-                    player.printError("No chunks could be loaded. (Bad archive?)");
+                @Override
+                public void onSuccess() {
+                    close(store);
+                    if (restore.hadTotalFailure()) {
+                        String error = restore.getLastErrorMessage();
+                        if (error != null) {
+                            player.printError("Errors prevented any blocks from being restored.");
+                            player.printError("Last error: " + error);
+                        } else {
+                            player.printError("No chunks could be loaded. (Bad archive?)");
+                        }
+                    } else {
+                        player.print(
+                            String.format(
+                                "Restored; %d missing chunks and %d other errors.",
+                                restore.getMissingChunks()
+                                    .size(),
+                                restore.getErrorChunks()
+                                    .size()));
+                    }
                 }
-            } else {
-                player.print(
-                    String.format(
-                        "Restored; %d " + "missing chunks and %d other errors.",
-                        restore.getMissingChunks()
-                            .size(),
-                        restore.getErrorChunks()
-                            .size()));
-            }
-        } finally {
-            try {
-                chunkStore.close();
-            } catch (IOException ignored) {}
-        }
+
+                @Override
+                public void onFailure(WorldEditException e) {
+                    close(store);
+                    player.printError(OperationCompletion.messageOf(e));
+                }
+
+                @Override
+                public void onCancelled(boolean started) {
+                    close(store);
+                }
+            });
+    }
+
+    private static void close(ChunkStore store) {
+        try {
+            store.close();
+        } catch (IOException ignored) {}
     }
 }

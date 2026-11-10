@@ -16,7 +16,6 @@
 
 package com.sk89q.worldedit.forge;
 
-import net.minecraft.command.ICommand;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.WorldSettings.GameType;
 
@@ -26,7 +25,10 @@ public interface ForgePermissionsProvider {
 
     public boolean hasPermission(EntityPlayerMP player, String permission);
 
-    public void registerPermission(ICommand command, String permission);
+    /**
+     * Tell the permission system about every node WorldEdit declared, once the commands are registered.
+     */
+    default void registerNodes() {}
 
     public static class VanillaPermissionsProvider implements ForgePermissionsProvider {
 
@@ -45,8 +47,5 @@ public interface ForgePermissionsProvider {
                 .func_152596_g(player.getGameProfile())
                 || (configuration.creativeEnable && player.theItemInWorldManager.getGameType() == GameType.CREATIVE);
         }
-
-        @Override
-        public void registerPermission(ICommand command, String permission) {}
     }
 }

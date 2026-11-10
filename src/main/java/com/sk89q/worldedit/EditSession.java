@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -72,13 +73,16 @@ import com.sk89q.worldedit.function.mask.MaskUnion;
 import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.mask.NoiseFilter2D;
 import com.sk89q.worldedit.function.mask.RegionMask;
+import com.sk89q.worldedit.function.operation.AffectedCounter;
 import com.sk89q.worldedit.function.operation.ChangeSetExecutor;
+import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.OperationQueue;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.pattern.BlockPattern;
-import com.sk89q.worldedit.function.pattern.Patterns;
+import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.function.util.RegionOffset;
 import com.sk89q.worldedit.function.visitor.DownwardVisitor;
 import com.sk89q.worldedit.function.visitor.LayerVisitor;
@@ -86,7 +90,6 @@ import com.sk89q.worldedit.function.visitor.NonRisingVisitor;
 import com.sk89q.worldedit.function.visitor.RecursiveVisitor;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.history.UndoContext;
-import com.sk89q.worldedit.history.change.BlockChange;
 import com.sk89q.worldedit.history.changeset.BlockOptimizedHistory;
 import com.sk89q.worldedit.history.changeset.ChangeSet;
 import com.sk89q.worldedit.internal.expression.Expression;
@@ -97,8 +100,6 @@ import com.sk89q.worldedit.math.interpolation.KochanekBartelsInterpolation;
 import com.sk89q.worldedit.math.interpolation.Node;
 import com.sk89q.worldedit.math.noise.RandomNoise;
 import com.sk89q.worldedit.math.transform.AffineTransform;
-import com.sk89q.worldedit.patterns.Pattern;
-import com.sk89q.worldedit.patterns.SingleBlockPattern;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.EllipsoidRegion;
 import com.sk89q.worldedit.regions.FlatRegion;
@@ -110,7 +111,7 @@ import com.sk89q.worldedit.regions.shape.RegionShape;
 import com.sk89q.worldedit.regions.shape.WorldEditExpressionEnvironment;
 import com.sk89q.worldedit.util.Countable;
 import com.sk89q.worldedit.util.TreeGenerator;
-import com.sk89q.worldedit.util.collection.DoubleArrayList;
+import com.sk89q.worldedit.util.collection.PackedBlockList;
 import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.world.NullWorld;
 import com.sk89q.worldedit.world.World;
@@ -161,40 +162,7 @@ public class EditSession implements Extent {
     private final Extent bypassHistory;
     private final Extent bypassNone;
 
-    @SuppressWarnings("deprecation")
     private Mask oldMask;
-
-    /**
-     * Create a new instance.
-     *
-     * @param world     a world
-     * @param maxBlocks the maximum number of blocks that can be changed, or -1 to use no limit
-     * @deprecated use {@link WorldEdit#getEditSessionFactory()} to create {@link EditSession}s
-     */
-    @SuppressWarnings("deprecation")
-    @Deprecated
-    public EditSession(LocalWorld world, int maxBlocks) {
-        this(world, maxBlocks, null);
-    }
-
-    /**
-     * Create a new instance.
-     *
-     * @param world     a world
-     * @param maxBlocks the maximum number of blocks that can be changed, or -1 to use no limit
-     * @param blockBag  the block bag to set, or null to use none
-     * @deprecated use {@link WorldEdit#getEditSessionFactory()} to create {@link EditSession}s
-     */
-    @Deprecated
-    public EditSession(LocalWorld world, int maxBlocks, @Nullable BlockBag blockBag) {
-        this(
-            WorldEdit.getInstance()
-                .getEventBus(),
-            world,
-            maxBlocks,
-            blockBag,
-            new EditSessionEvent(world, null, maxBlocks, null));
-    }
 
     /**
      * Construct the object with a maximum number of blocks and a block bag.
@@ -227,6 +195,7 @@ public class EditSession implements Extent {
 
             // This extent can be skipped by calling rawSetBlock()
             extent = reorderExtent = new MultiStageReorder(extent, false);
+            reorderExtent.setHistory(changeSet);
             extent = wrapExtent(extent, eventBus, event, Stage.BEFORE_REORDER);
 
             // These extents can be skipped by calling smartSetBlock()
@@ -318,7 +287,32 @@ public class EditSession implements Extent {
         if (isQueueEnabled()) {
             flushQueue();
         }
-        reorderExtent.setEnabled(true);
+        reorderExtent.setEnabled(false);
+    }
+
+    /**
+     * Whether blocks are waiting in the queue, so that flushing would write to the world.
+     *
+     * @return true if blocks are waiting
+     */
+    public boolean hasQueuedBlocks() {
+        return reorderExtent.hasPendingBlocks();
+    }
+
+    /**
+     * Get how many blocks are waiting in the queue.
+     *
+     * @return the number of blocks
+     */
+    public int queuedBlockCount() {
+        return reorderExtent.pendingBlockCount();
+    }
+
+    /**
+     * Throw away all blocks waiting in the queue without writing them.
+     */
+    public void discardQueue() {
+        reorderExtent.discard();
     }
 
     /**
@@ -341,21 +335,6 @@ public class EditSession implements Extent {
             maskingExtent.setMask(Masks.alwaysTrue());
         } else {
             maskingExtent.setMask(mask);
-        }
-    }
-
-    /**
-     * Set the mask.
-     *
-     * @param mask the mask
-     * @deprecated Use {@link #setMask(Mask)}
-     */
-    @Deprecated
-    public void setMask(com.sk89q.worldedit.masks.Mask mask) {
-        if (mask == null) {
-            setMask((Mask) null);
-        } else {
-            setMask(Masks.wrap(mask));
         }
     }
 
@@ -460,42 +439,6 @@ public class EditSession implements Extent {
     }
 
     /**
-     * Get a block type at the given position.
-     *
-     * @param position the position
-     * @return the block type
-     * @deprecated Use {@link #getLazyBlock(Vector)} or {@link #getBlock(Vector)}
-     */
-    @Deprecated
-    public int getBlockType(Vector position) {
-        return world.getBlockType(position);
-    }
-
-    /**
-     * Get a block data at the given position.
-     *
-     * @param position the position
-     * @return the block data
-     * @deprecated Use {@link #getLazyBlock(Vector)} or {@link #getBlock(Vector)}
-     */
-    @Deprecated
-    public int getBlockData(Vector position) {
-        return world.getBlockData(position);
-    }
-
-    /**
-     * Gets the block type at a position.
-     *
-     * @param position the position
-     * @return a block
-     * @deprecated Use {@link #getBlock(Vector)}
-     */
-    @Deprecated
-    public BaseBlock rawGetBlock(Vector position) {
-        return getBlock(position);
-    }
-
-    /**
      * Returns the highest solid 'terrain' block which can occur naturally.
      *
      * @param x    the X coordinate
@@ -521,8 +464,9 @@ public class EditSession implements Extent {
     public int getHighestTerrainBlock(int x, int z, int minY, int maxY, boolean naturalOnly) {
         for (int y = maxY; y >= minY; --y) {
             Vector pt = new Vector(x, y, z);
-            int id = getBlockType(pt);
-            int data = getBlockData(pt);
+            BaseBlock block = getLazyBlock(pt);
+            int id = block.getType();
+            int data = block.getData();
             if (naturalOnly ? BlockType.isNaturalTerrainBlock(id, data) : !BlockType.canPassThrough(id, data)) {
                 return y;
             }
@@ -602,9 +546,8 @@ public class EditSession implements Extent {
      * @return Whether the block changed -- not entirely dependable
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public boolean setBlock(Vector position, Pattern pattern) throws MaxChangedBlocksException {
-        return setBlock(position, pattern.next(position));
+        return setBlock(position, pattern.apply(position));
     }
 
     /**
@@ -616,7 +559,6 @@ public class EditSession implements Extent {
      * @return the number of changed blocks
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     private int setBlocks(Set<Vector> vset, Pattern pattern) throws MaxChangedBlocksException {
         int affected = 0;
         for (Vector v : vset) {
@@ -635,7 +577,6 @@ public class EditSession implements Extent {
      * @return whether a block was changed
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public boolean setChanceBlockIfAir(Vector position, BaseBlock block, double probability)
         throws MaxChangedBlocksException {
         return Math.random() <= probability && setBlockIfAir(position, block);
@@ -648,9 +589,7 @@ public class EditSession implements Extent {
      * @param block    the block to set
      * @return if block was changed
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
-     * @deprecated Use your own method
      */
-    @Deprecated
     public boolean setBlockIfAir(Vector position, BaseBlock block) throws MaxChangedBlocksException {
         return getBlock(position).isAir() && setBlock(position, block);
     }
@@ -662,28 +601,26 @@ public class EditSession implements Extent {
     }
 
     /**
-     * Insert a contrived block change into the history.
-     *
-     * @param position the position
-     * @param existing the previous block at that position
-     * @param block    the new block
-     * @deprecated Get the change set with {@link #getChangeSet()} and add the change with that
-     */
-    @Deprecated
-    public void rememberChange(Vector position, BaseBlock existing, BaseBlock block) {
-        changeSet.add(new BlockChange(position.toBlockVector(), existing, block));
-    }
-
-    /**
      * Restores all blocks to their initial state.
      *
      * @param editSession a new {@link EditSession} to perform the undo in
      */
     public void undo(EditSession editSession) {
+        Operations.completeBlindly(undoOperation(editSession));
+        editSession.flushQueue();
+    }
+
+    /**
+     * Build the operation that {@link #undo(EditSession)} runs, without running it or flushing the
+     * edit session it writes to.
+     *
+     * @param editSession a new {@link EditSession} to perform the undo in
+     * @return the operation
+     */
+    public Operation undoOperation(EditSession editSession) {
         UndoContext context = new UndoContext();
         context.setExtent(editSession.bypassHistory);
-        Operations.completeBlindly(ChangeSetExecutor.createUndo(changeSet, context));
-        editSession.flushQueue();
+        return ChangeSetExecutor.createUndo(changeSet, context);
     }
 
     /**
@@ -692,10 +629,21 @@ public class EditSession implements Extent {
      * @param editSession a new {@link EditSession} to perform the redo in
      */
     public void redo(EditSession editSession) {
+        Operations.completeBlindly(redoOperation(editSession));
+        editSession.flushQueue();
+    }
+
+    /**
+     * Build the operation that {@link #redo(EditSession)} runs, without running it or flushing the
+     * edit session it writes to.
+     *
+     * @param editSession a new {@link EditSession} to perform the redo in
+     * @return the operation
+     */
+    public Operation redoOperation(EditSession editSession) {
         UndoContext context = new UndoContext();
         context.setExtent(editSession.bypassHistory);
-        Operations.completeBlindly(ChangeSetExecutor.createRedo(changeSet, context));
-        editSession.flushQueue();
+        return ChangeSetExecutor.createRedo(changeSet, context);
     }
 
     /**
@@ -781,10 +729,9 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int fillXZ(Vector origin, BaseBlock block, double radius, int depth, boolean recursive)
         throws MaxChangedBlocksException {
-        return fillXZ(origin, new SingleBlockPattern(block), radius, depth, recursive);
+        return fillXZ(origin, new BlockPattern(block), radius, depth, recursive);
     }
 
     /**
@@ -798,7 +745,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int fillXZ(Vector origin, Pattern pattern, double radius, int depth, boolean recursive)
         throws MaxChangedBlocksException {
         checkNotNull(origin);
@@ -814,7 +760,7 @@ public class EditSession implements Extent {
             Masks.negate(new ExistingBlockMask(this)));
 
         // Want to replace blocks
-        BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
+        BlockReplace replace = new BlockReplace(this, pattern);
 
         // Pick how we're going to visit blocks
         RecursiveVisitor visitor;
@@ -842,7 +788,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int removeAbove(Vector position, int apothem, int height) throws MaxChangedBlocksException {
         checkNotNull(position);
         checkArgument(apothem >= 1, "apothem >= 1");
@@ -852,7 +797,7 @@ public class EditSession implements Extent {
             getWorld(), // Causes clamping of Y range
             position.add(-apothem + 1, 0, -apothem + 1),
             position.add(apothem - 1, height - 1, apothem - 1));
-        Pattern pattern = new SingleBlockPattern(new BaseBlock(BlockID.AIR));
+        Pattern pattern = new BlockPattern(new BaseBlock(BlockID.AIR));
         return setBlocks(region, pattern);
     }
 
@@ -865,7 +810,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int removeBelow(Vector position, int apothem, int height) throws MaxChangedBlocksException {
         checkNotNull(position);
         checkArgument(apothem >= 1, "apothem >= 1");
@@ -875,7 +819,7 @@ public class EditSession implements Extent {
             getWorld(), // Causes clamping of Y range
             position.add(-apothem + 1, 0, -apothem + 1),
             position.add(apothem - 1, -height + 1, apothem - 1));
-        Pattern pattern = new SingleBlockPattern(new BaseBlock(BlockID.AIR));
+        Pattern pattern = new BlockPattern(new BaseBlock(BlockID.AIR));
         return setBlocks(region, pattern);
     }
 
@@ -888,7 +832,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int removeNear(Vector position, int blockType, int apothem) throws MaxChangedBlocksException {
         checkNotNull(position);
         checkArgument(apothem >= 1, "apothem >= 1");
@@ -899,7 +842,7 @@ public class EditSession implements Extent {
             getWorld(), // Causes clamping of Y range
             position.add(adjustment.multiply(-1)),
             position.add(adjustment));
-        Pattern pattern = new SingleBlockPattern(new BaseBlock(BlockID.AIR));
+        Pattern pattern = new BlockPattern(new BaseBlock(BlockID.AIR));
         return replaceBlocks(region, mask, pattern);
     }
 
@@ -911,9 +854,8 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int setBlocks(Region region, BaseBlock block) throws MaxChangedBlocksException {
-        return setBlocks(region, new SingleBlockPattern(block));
+        return setBlocks(region, new BlockPattern(block));
     }
 
     /**
@@ -924,15 +866,32 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int setBlocks(Region region, Pattern pattern) throws MaxChangedBlocksException {
+        RegionVisitor visitor = setBlocksOperation(region, pattern);
+        Operations.completeLegacy(visitor);
+        return visitor.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #setBlocks(Region, Pattern)} runs, without running it, so a
+     * caller can hand it to an
+     * {@link com.sk89q.worldedit.util.operation.OperationScheduler OperationScheduler} instead.
+     *
+     * <p>
+     * This and the other operation factories work on a copy of the region. The region is usually
+     * the player's live selection, which can change before a scheduled operation has finished.
+     * </p>
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor setBlocksOperation(Region region, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
-        RegionVisitor visitor = new RegionVisitor(region, replace);
-        Operations.completeLegacy(visitor);
-        return visitor.getAffected();
+        BlockReplace replace = new BlockReplace(this, pattern);
+        return new RegionVisitor(region.clone(), replace);
     }
 
     /**
@@ -941,15 +900,14 @@ public class EditSession implements Extent {
      *
      * @param region      the region to replace the blocks within
      * @param filter      a list of block types to match, or null to use
-     *                    {@link com.sk89q.worldedit.masks.ExistingBlockMask}
+     *                    {@link com.sk89q.worldedit.function.mask.ExistingBlockMask}
      * @param replacement the replacement block
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int replaceBlocks(Region region, Set<BaseBlock> filter, BaseBlock replacement)
         throws MaxChangedBlocksException {
-        return replaceBlocks(region, filter, new SingleBlockPattern(replacement));
+        return replaceBlocks(region, filter, new BlockPattern(replacement));
     }
 
     /**
@@ -957,12 +915,12 @@ public class EditSession implements Extent {
      * returned by a given pattern.
      *
      * @param region  the region to replace the blocks within
-     * @param filter  a list of block types to match, or null to use {@link com.sk89q.worldedit.masks.ExistingBlockMask}
+     * @param filter  a list of block types to match, or null to use
+     *                {@link com.sk89q.worldedit.function.mask.ExistingBlockMask}
      * @param pattern the pattern that provides the new blocks
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int replaceBlocks(Region region, Set<BaseBlock> filter, Pattern pattern) throws MaxChangedBlocksException {
         Mask mask = filter == null ? new ExistingBlockMask(this) : new FuzzyBlockMask(this, filter);
         return replaceBlocks(region, mask, pattern);
@@ -978,17 +936,29 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int replaceBlocks(Region region, Mask mask, Pattern pattern) throws MaxChangedBlocksException {
+        RegionVisitor visitor = replaceBlocksOperation(region, mask, pattern);
+        Operations.completeLegacy(visitor);
+        return visitor.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #replaceBlocks(Region, Mask, Pattern)} runs, without running
+     * it.
+     *
+     * @param region  the region
+     * @param mask    the mask that blocks must match to be replaced
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor replaceBlocksOperation(Region region, Mask mask, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(mask);
         checkNotNull(pattern);
 
-        BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
+        BlockReplace replace = new BlockReplace(this, pattern);
         RegionMaskingFilter filter = new RegionMaskingFilter(mask, replace);
-        RegionVisitor visitor = new RegionVisitor(region, filter);
-        Operations.completeLegacy(visitor);
-        return visitor.getAffected();
+        return new RegionVisitor(region.clone(), filter);
     }
 
     /**
@@ -1001,7 +971,6 @@ public class EditSession implements Extent {
      * @return the number of blocks placed
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int center(Region region, Pattern pattern) throws MaxChangedBlocksException {
         checkNotNull(region);
         checkNotNull(pattern);
@@ -1022,9 +991,8 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeCuboidFaces(Region region, BaseBlock block) throws MaxChangedBlocksException {
-        return makeCuboidFaces(region, new SingleBlockPattern(block));
+        return makeCuboidFaces(region, new BlockPattern(block));
     }
 
     /**
@@ -1035,14 +1003,25 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeCuboidFaces(Region region, Pattern pattern) throws MaxChangedBlocksException {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        CuboidRegion cuboid = CuboidRegion.makeCuboid(region);
-        Region faces = cuboid.getFaces();
-        return setBlocks(faces, pattern);
+        return setBlocks(cuboid(region).getFaces(), pattern);
+    }
+
+    /**
+     * Build the operation that {@link #makeCuboidFaces(Region, Pattern)} runs, without running it.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor makeCuboidFacesOperation(Region region, Pattern pattern) {
+        checkNotNull(region);
+        checkNotNull(pattern);
+
+        return setBlocksOperation(cuboid(region).getFaces(), pattern);
     }
 
     /**
@@ -1055,7 +1034,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeFaces(final Region region, Pattern pattern) throws MaxChangedBlocksException {
         checkNotNull(region);
         checkNotNull(pattern);
@@ -1076,9 +1054,8 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeCuboidWalls(Region region, BaseBlock block) throws MaxChangedBlocksException {
-        return makeCuboidWalls(region, new SingleBlockPattern(block));
+        return makeCuboidWalls(region, new BlockPattern(block));
     }
 
     /**
@@ -1090,14 +1067,29 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeCuboidWalls(Region region, Pattern pattern) throws MaxChangedBlocksException {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        CuboidRegion cuboid = CuboidRegion.makeCuboid(region);
-        Region faces = cuboid.getWalls();
-        return setBlocks(faces, pattern);
+        return setBlocks(cuboid(region).getWalls(), pattern);
+    }
+
+    /**
+     * Build the operation that {@link #makeCuboidWalls(Region, Pattern)} runs, without running it.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public RegionVisitor makeCuboidWallsOperation(Region region, Pattern pattern) {
+        checkNotNull(region);
+        checkNotNull(pattern);
+
+        return setBlocksOperation(cuboid(region).getWalls(), pattern);
+    }
+
+    private static CuboidRegion cuboid(Region region) {
+        return CuboidRegion.makeCuboid(region);
     }
 
     /**
@@ -1110,7 +1102,6 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int makeWalls(final Region region, Pattern pattern) throws MaxChangedBlocksException {
         checkNotNull(region);
         checkNotNull(pattern);
@@ -1148,11 +1139,10 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int overlayCuboidBlocks(Region region, BaseBlock block) throws MaxChangedBlocksException {
         checkNotNull(block);
 
-        return overlayCuboidBlocks(region, new SingleBlockPattern(block));
+        return overlayCuboidBlocks(region, new BlockPattern(block));
     }
 
     /**
@@ -1164,21 +1154,34 @@ public class EditSession implements Extent {
      * @return number of blocks affected
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-    @SuppressWarnings("deprecation")
     public int overlayCuboidBlocks(Region region, Pattern pattern) throws MaxChangedBlocksException {
+        CountedOperation operation = overlayCuboidBlocksOperation(region, pattern);
+        Operations.completeLegacy(operation);
+        return operation.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #overlayCuboidBlocks(Region, Pattern)} runs, without running
+     * it. The count is kept by the ground function rather than by the visitor, so the two are
+     * paired up in a {@link CountedOperation}.
+     *
+     * @param region  the region
+     * @param pattern the pattern that provides the replacement block
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public CountedOperation overlayCuboidBlocksOperation(Region region, Pattern pattern) {
         checkNotNull(region);
         checkNotNull(pattern);
 
-        BlockReplace replace = new BlockReplace(this, Patterns.wrap(pattern));
+        BlockReplace replace = new BlockReplace(this, pattern);
         RegionOffset offset = new RegionOffset(new Vector(0, 1, 0), replace);
         GroundFunction ground = new GroundFunction(new ExistingBlockMask(this), offset);
         LayerVisitor visitor = new LayerVisitor(
-            asFlatRegion(region),
+            asFlatRegion(region.clone()),
             minimumBlockY(region),
             maximumBlockY(region),
             ground);
-        Operations.completeLegacy(visitor);
-        return ground.getAffected();
+        return new CountedOperation(visitor, ground);
     }
 
     /**
@@ -1215,18 +1218,37 @@ public class EditSession implements Extent {
         checkNotNull(dir);
         checkArgument(count >= 1, "count >= 1 required");
 
+        ForwardExtentCopy copy = stackCuboidRegionOperation(region, dir, count, copyAir);
+        Operations.completeLegacy(copy);
+        return copy.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #stackCuboidRegion(Region, Vector, int, boolean)} runs,
+     * without running it.
+     *
+     * @param region  the region to stack
+     * @param dir     the direction to stack
+     * @param count   the number of times to stack
+     * @param copyAir true to copy air blocks
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public ForwardExtentCopy stackCuboidRegionOperation(Region region, Vector dir, int count, boolean copyAir) {
+        checkNotNull(region);
+        checkNotNull(dir);
+        checkArgument(count >= 1, "count >= 1 required");
+
         Vector size = region.getMaximumPoint()
             .subtract(region.getMinimumPoint())
             .add(1, 1, 1);
         Vector to = region.getMinimumPoint();
-        ForwardExtentCopy copy = new ForwardExtentCopy(this, region, this, to);
+        ForwardExtentCopy copy = new ForwardExtentCopy(this, region.clone(), this, to);
         copy.setRepetitions(count);
         copy.setTransform(new AffineTransform().translate(dir.multiply(size)));
         if (!copyAir) {
             copy.setSourceMask(new ExistingBlockMask(this));
         }
-        Operations.completeLegacy(copy);
-        return copy.getAffected();
+        return copy;
     }
 
     /**
@@ -1246,31 +1268,51 @@ public class EditSession implements Extent {
         checkNotNull(dir);
         checkArgument(distance >= 1, "distance >= 1 required");
 
+        CountedOperation operation = moveRegionOperation(region, dir, distance, copyAir, replacement);
+        Operations.completeLegacy(operation);
+        return operation.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #moveRegion(Region, Vector, int, boolean, BaseBlock)} runs,
+     * without running it.
+     *
+     * @param region      the region to move
+     * @param dir         the direction
+     * @param distance    the distance to move
+     * @param copyAir     true to copy air blocks
+     * @param replacement the replacement block to fill in after moving, or null to use air
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public CountedOperation moveRegionOperation(Region region, Vector dir, int distance, boolean copyAir,
+        BaseBlock replacement) {
+        checkNotNull(region);
+        checkNotNull(dir);
+        checkArgument(distance >= 1, "distance >= 1 required");
+
         Vector to = region.getMinimumPoint();
 
         // Remove the original blocks
-        com.sk89q.worldedit.function.pattern.Pattern pattern = replacement != null ? new BlockPattern(replacement)
+        Pattern pattern = replacement != null ? new BlockPattern(replacement)
             : new BlockPattern(new BaseBlock(BlockID.AIR));
         BlockReplace remove = new BlockReplace(this, pattern);
 
-        // Copy to a buffer so we don't destroy our original before we can copy all the blocks from it
-        ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(region));
-        ForwardExtentCopy copy = new ForwardExtentCopy(this, region, buffer, to);
+        // Copy to a buffer so the original is not destroyed before every block is copied from it
+        Region source = region.clone();
+        ForgetfulExtentBuffer buffer = new ForgetfulExtentBuffer(this, new RegionMask(source));
+        ForwardExtentCopy copy = new ForwardExtentCopy(this, source, buffer, to);
         copy.setTransform(new AffineTransform().translate(dir.multiply(distance)));
         copy.setSourceFunction(remove); // Remove
-        copy.setRemovingEntities(true);
         if (!copyAir) {
             copy.setSourceMask(new ExistingBlockMask(this));
         }
+        copy.setRemovingEntities(true);
 
         // Then we need to copy the buffer to the world
         BlockReplace replace = new BlockReplace(this, buffer);
         RegionVisitor visitor = new RegionVisitor(buffer.asRegion(), replace);
 
-        OperationQueue operation = new OperationQueue(copy, visitor);
-        Operations.completeLegacy(operation);
-
-        return copy.getAffected();
+        return new CountedOperation(new OperationQueue(copy, visitor), copy);
     }
 
     /**
@@ -1633,7 +1675,7 @@ public class EditSession implements Extent {
 
                 for (int y = world.getMaxY(); y >= 1; --y) {
                     Vector pt = new Vector(x, y, z);
-                    int id = getBlockType(pt);
+                    int id = getLazyBlock(pt).getType();
 
                     switch (id) {
                         case BlockID.ICE:
@@ -1691,7 +1733,7 @@ public class EditSession implements Extent {
 
                 for (int y = world.getMaxY(); y >= 1; --y) {
                     Vector pt = new Vector(x, y, z);
-                    int id = getBlockType(pt);
+                    int id = getLazyBlock(pt).getType();
 
                     if (id == BlockID.AIR) {
                         continue;
@@ -1730,20 +1772,6 @@ public class EditSession implements Extent {
     /**
      * Make dirt green.
      *
-     * @param position a position
-     * @param radius   a radius
-     * @return number of blocks affected
-     * @throws MaxChangedBlocksException thrown if too many blocks are changed
-     * @deprecated Use {@link #green(Vector, double, boolean)}.
-     */
-    @Deprecated
-    public int green(Vector position, double radius) throws MaxChangedBlocksException {
-        return green(position, radius, true);
-    }
-
-    /**
-     * Make dirt green.
-     *
      * @param position       a position
      * @param radius         a radius
      * @param onlyNormalDirt only affect normal dirt (data value 0)
@@ -1769,8 +1797,9 @@ public class EditSession implements Extent {
 
                 loop: for (int y = world.getMaxY(); y >= 1; --y) {
                     final Vector pt = new Vector(x, y, z);
-                    final int id = getBlockType(pt);
-                    final int data = getBlockData(pt);
+                    final BaseBlock block = getLazyBlock(pt);
+                    final int id = block.getType();
+                    final int data = block.getData();
 
                     switch (id) {
                         case BlockID.DIRT:
@@ -1901,7 +1930,7 @@ public class EditSession implements Extent {
                     for (int z = minZ; z <= maxZ; ++z) {
                         Vector pt = new Vector(x, y, z);
 
-                        int id = getBlockType(pt);
+                        int id = getLazyBlock(pt).getType();
 
                         if (map.containsKey(id)) {
                             map.get(id)
@@ -1916,7 +1945,7 @@ public class EditSession implements Extent {
             }
         } else {
             for (Vector pt : region) {
-                int id = getBlockType(pt);
+                int id = getLazyBlock(pt).getType();
 
                 if (map.containsKey(id)) {
                     map.get(id)
@@ -1962,7 +1991,8 @@ public class EditSession implements Extent {
                     for (int z = minZ; z <= maxZ; ++z) {
                         Vector pt = new Vector(x, y, z);
 
-                        BaseBlock blk = new BaseBlock(getBlockType(pt), getBlockData(pt));
+                        BaseBlock lazy = getLazyBlock(pt);
+                        BaseBlock blk = new BaseBlock(lazy.getType(), lazy.getData());
 
                         if (map.containsKey(blk)) {
                             map.get(blk)
@@ -1977,7 +2007,8 @@ public class EditSession implements Extent {
             }
         } else {
             for (Vector pt : region) {
-                BaseBlock blk = new BaseBlock(getBlockType(pt), getBlockData(pt));
+                BaseBlock lazy = getLazyBlock(pt);
+                BaseBlock blk = new BaseBlock(lazy.getType(), lazy.getData());
 
                 if (map.containsKey(blk)) {
                     map.get(blk)
@@ -2038,50 +2069,136 @@ public class EditSession implements Extent {
 
     public int deformRegion(final Region region, final Vector zero, final Vector unit, final String expressionString)
         throws ExpressionException, MaxChangedBlocksException {
-        final Expression expression = Expression.compile(expressionString, "x", "y", "z");
+        Deform deform = deformOperation(region, zero, unit, expressionString);
+        try {
+            Operations.complete(deform);
+        } catch (DeformFailedException e) {
+            throw (ExpressionException) e.getCause();
+        } catch (MaxChangedBlocksException e) {
+            throw e;
+        } catch (WorldEditException e) {
+            throw new RuntimeException(e);
+        }
+        return deform.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #deformRegion(Region, Vector, Vector, String)} runs, without
+     * running it.
+     *
+     * @param region           the region to deform, which is copied
+     * @param zero             the coordinate origin
+     * @param unit             the scale of the coordinates
+     * @param expressionString the expression to evaluate for each block
+     * @return the operation, which also carries the affected count once it has run
+     * @throws ExpressionException if the expression doesn't compile
+     */
+    public Deform deformOperation(Region region, Vector zero, Vector unit, String expressionString)
+        throws ExpressionException {
+        Expression expression = Expression.compile(expressionString, "x", "y", "z");
         expression.optimize();
+        return new Deform(region.clone(), zero, unit, expression);
+    }
 
-        final RValue x = expression.getVariable("x", false);
-        final RValue y = expression.getVariable("y", false);
-        final RValue z = expression.getVariable("z", false);
+    /**
+     * Moves each block of a region to where an expression says, in two passes: every source block is
+     * read first, and only then is anything written, so that no block is read after being moved.
+     */
+    public final class Deform implements Operation, AffectedCounter {
 
-        final WorldEditExpressionEnvironment environment = new WorldEditExpressionEnvironment(this, unit, zero);
-        expression.setEnvironment(environment);
+        private final Region region;
+        private final Vector zero;
+        private final Vector unit;
+        private final Expression expression;
+        private final RValue x;
+        private final RValue y;
+        private final RValue z;
+        private final WorldEditExpressionEnvironment environment;
+        private final PackedBlockList moves = new PackedBlockList(1);
+        private Iterator<BlockVector> reading;
+        private Iterator<Map.Entry<BlockVector, BaseBlock>> writing;
+        private int affected;
 
-        final DoubleArrayList<BlockVector, BaseBlock> queue = new DoubleArrayList<BlockVector, BaseBlock>(false);
-
-        for (BlockVector position : region) {
-            // offset, scale
-            final Vector scaled = position.subtract(zero)
-                .divide(unit);
-
-            // transform
-            expression.evaluate(scaled.getX(), scaled.getY(), scaled.getZ());
-
-            final BlockVector sourcePosition = environment.toWorld(x.getValue(), y.getValue(), z.getValue());
-
-            // read block from world
-            // TODO: use getBlock here once the reflection is out of the way
-            final BaseBlock material = new BaseBlock(
-                world.getBlockType(sourcePosition),
-                world.getBlockData(sourcePosition));
-
-            // queue operation
-            queue.put(position, material);
+        private Deform(Region region, Vector zero, Vector unit, Expression expression) throws ExpressionException {
+            this.region = region;
+            this.zero = zero;
+            this.unit = unit;
+            this.expression = expression;
+            this.x = expression.getVariable("x", false);
+            this.y = expression.getVariable("y", false);
+            this.z = expression.getVariable("z", false);
+            this.environment = new WorldEditExpressionEnvironment(EditSession.this, unit, zero);
+            expression.setEnvironment(environment);
         }
 
-        int affected = 0;
-        for (Map.Entry<BlockVector, BaseBlock> entry : queue) {
-            BlockVector position = entry.getKey();
-            BaseBlock material = entry.getValue();
+        @Override
+        public int getAffected() {
+            return affected;
+        }
 
-            // set at new position
-            if (setBlock(position, material)) {
-                ++affected;
+        @Override
+        public Operation resume(RunContext run) throws WorldEditException {
+            if (reading == null) {
+                reading = region.iterator();
             }
+
+            while (reading.hasNext()) {
+                BlockVector position = reading.next();
+                Vector scaled = position.subtract(zero)
+                    .divide(unit);
+                BlockVector source;
+                try {
+                    expression.evaluate(scaled.getX(), scaled.getY(), scaled.getZ());
+                    source = environment.toWorld(x.getValue(), y.getValue(), z.getValue());
+                } catch (ExpressionException e) {
+                    throw new DeformFailedException(e);
+                }
+
+                // The full block, so that chests and machines keep their contents.
+                moves.add(position, world.getBlock(source));
+
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+
+            if (writing == null) {
+                writing = moves.drain();
+            }
+
+            while (writing.hasNext()) {
+                Map.Entry<BlockVector, BaseBlock> entry = writing.next();
+                if (setBlock(entry.getKey(), entry.getValue())) {
+                    ++affected;
+                }
+
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+
+            return null;
         }
 
-        return affected;
+        @Override
+        public void cancel() {
+            moves.clear();
+        }
+
+        @Override
+        public void addStatusMessages(List<String> messages) {
+            messages.add(affected + " blocks deformed");
+        }
+    }
+
+    /**
+     * Thrown by a {@link Deform} whose expression fails while running.
+     */
+    public static final class DeformFailedException extends WorldEditException {
+
+        private DeformFailedException(ExpressionException cause) {
+            super(cause.getMessage(), cause);
+        }
     }
 
     /**
@@ -2157,7 +2274,7 @@ public class EditSession implements Extent {
                 }
             }
 
-            if (setBlock(position, pattern.next(position))) {
+            if (setBlock(position, pattern.apply(position))) {
                 ++affected;
             }
         }
@@ -2331,7 +2448,8 @@ public class EditSession implements Extent {
 
         while (!queue.isEmpty()) {
             final BlockVector current = queue.removeFirst();
-            if (!BlockType.canPassThrough(getBlockType(current), getBlockData(current))) {
+            BaseBlock block = getLazyBlock(current);
+            if (!BlockType.canPassThrough(block.getType(), block.getData())) {
                 continue;
             }
 

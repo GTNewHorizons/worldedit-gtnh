@@ -61,7 +61,7 @@ public class AreaPickaxe implements BlockTool {
             return true;
         }
 
-        EditSession editSession = session.createEditSession(player);
+        EditSession editSession = ToolEdits.start(session, player);
         editSession.getSurvivalExtent()
             .setToolUse(config.superPickaxeManyDrop);
 
@@ -70,7 +70,8 @@ public class AreaPickaxe implements BlockTool {
                 for (int y = oy - range; y <= oy + range; ++y) {
                     for (int z = oz - range; z <= oz + range; ++z) {
                         Vector pos = new Vector(x, y, z);
-                        if (editSession.getBlockType(pos) != initialType) {
+                        if (editSession.getLazyBlock(pos)
+                            .getType() != initialType) {
                             continue;
                         }
 
@@ -88,8 +89,7 @@ public class AreaPickaxe implements BlockTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            editSession.flushQueue();
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession);
         }
 
         return true;

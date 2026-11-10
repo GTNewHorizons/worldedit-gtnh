@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.world.World;
@@ -144,14 +143,6 @@ public interface Region extends Iterable<BlockVector>, Cloneable {
      * @param world the world, which may be null
      */
     public void setWorld(@Nullable World world);
-
-    /**
-     * Sets the world that the selection is in.
-     *
-     * @param world the world, which may be null
-     */
-    @Deprecated
-    public void setWorld(@Nullable LocalWorld world);
 
     /**
      * Make a clone of the region.

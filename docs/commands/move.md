@@ -1,0 +1,37 @@
+# `//move`
+
+Move the blocks in your selection.
+
+## Usage
+
+```
+//move [-sa] [<count> [<direction> [<leave-block>]]]
+```
+
+## Arguments
+
+| Argument | Meaning |
+|---|---|
+| `count` | How many blocks to move by. At least 1, and 1 by default. |
+| `direction` | The [direction](../directions.md). By default, the direction you are looking in. |
+| `leave-block` | The [block](../patterns.md#blocks) to leave behind. Air by default. |
+
+## Flags
+
+Flags go right after the command, before the arguments.
+
+| Flag | Meaning |
+|---|---|
+| `-s` | Move the selection along with the blocks. |
+| `-a` | Skip air, so it does not overwrite what is at the destination. Only the blocks that moved are replaced by `leave-block`. |
+
+## Examples
+
+| Command | What it does |
+|---|---|
+| `//move 10` | Move 10 blocks towards where you look. |
+| `//move -s 5 up` | Move 5 blocks up and bring the selection along. |
+| `//move -a 10 north` | Move a tree or a ship next to something else without cutting a box out of it. |
+| `//move 3 north stone` | Move 3 blocks north and leave stone behind. |
+
+[All commands](../README.md)

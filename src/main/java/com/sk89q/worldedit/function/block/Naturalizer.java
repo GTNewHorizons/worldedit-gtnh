@@ -24,8 +24,8 @@ import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.function.LayerFunction;
-import com.sk89q.worldedit.masks.BlockMask;
-import com.sk89q.worldedit.masks.Mask;
+import com.sk89q.worldedit.function.mask.BlockMask;
+import com.sk89q.worldedit.function.mask.Mask;
 
 /**
  * Makes a layer of grass on top, three layers of dirt below, and smooth stone
@@ -38,7 +38,7 @@ public class Naturalizer implements LayerFunction {
     private final BaseBlock grass = new BaseBlock(BlockID.GRASS);
     private final BaseBlock dirt = new BaseBlock(BlockID.DIRT);
     private final BaseBlock stone = new BaseBlock(BlockID.STONE);
-    private final Mask mask = new BlockMask(grass, dirt, stone);
+    private final Mask mask;
     private int affected = 0;
 
     /**
@@ -49,6 +49,7 @@ public class Naturalizer implements LayerFunction {
     public Naturalizer(EditSession editSession) {
         checkNotNull(editSession);
         this.editSession = editSession;
+        this.mask = new BlockMask(editSession, grass, dirt, stone);
     }
 
     /**
@@ -62,12 +63,12 @@ public class Naturalizer implements LayerFunction {
 
     @Override
     public boolean isGround(Vector position) {
-        return mask.matches(editSession, position);
+        return mask.test(position);
     }
 
     @Override
     public boolean apply(Vector position, int depth) throws WorldEditException {
-        if (mask.matches(editSession, position)) {
+        if (mask.test(position)) {
             affected++;
             switch (depth) {
                 case 0:

@@ -26,7 +26,7 @@ import com.sk89q.worldedit.world.World;
 public class DirectLightingScheduler implements LightingScheduler {
 
     @Override
-    public boolean schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion) {
+    public void schedule(World world, Iterable<BlockVector2D> chunks, Player player, Runnable completion) {
         if (world != null && chunks != null) {
             world.fixLighting(chunks);
         }
@@ -34,7 +34,5 @@ public class DirectLightingScheduler implements LightingScheduler {
         if (completion != null) {
             completion.run();
         }
-
-        return true;
     }
 }

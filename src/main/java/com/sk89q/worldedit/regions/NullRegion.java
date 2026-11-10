@@ -24,7 +24,6 @@ import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.world.World;
@@ -109,11 +108,6 @@ public class NullRegion implements Region {
     @Override
     public void setWorld(World world) {
         this.world = world;
-    }
-
-    @Override
-    public void setWorld(LocalWorld world) {
-        setWorld((World) world);
     }
 
     @Override

@@ -19,12 +19,9 @@ package com.sk89q.worldedit.forge;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
@@ -32,13 +29,15 @@ import javax.annotation.Nullable;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S21PacketChunkData;
+import net.minecraft.server.management.PlayerManager;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.LongHashMap;
-import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
@@ -65,6 +64,7 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
+import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItem;
@@ -72,6 +72,7 @@ import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.LazyBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
+import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.internal.Constants;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.util.Direction;
@@ -138,6 +139,18 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
+    public String getDirectoryName() {
+        return getWorld().getSaveHandler()
+            .getWorldDirectoryName();
+    }
+
+    @Nullable
+    @Override
+    public String getDimensionFolder() {
+        return getWorld().provider.getSaveFolder();
+    }
+
+    @Override
     public boolean useItem(Vector position, BaseItem item, Direction face) {
         Item nativeItem = Item.getItemById(item.getType());
         ItemStack stack = new ItemStack(nativeItem, 1, item.getData());
@@ -152,6 +165,34 @@ public class ForgeWorld extends AbstractWorld {
             0,
             0,
             0);
+    }
+
+    /** How far outside the block being written its drops may appear. */
+    private static final double DROP_MARGIN = 0.1;
+
+    private static World writingWorld;
+    private static int writingX;
+    private static int writingY;
+    private static int writingZ;
+
+    /**
+     * Whether something appearing at the given place comes out of the block WorldEdit is replacing
+     * right now on the server thread. Items and experience it drops are duplicates of what history
+     * keeps. Anything further away is left alone, such as a neighbour popping off or items in a chunk
+     * that the write happened to load.
+     *
+     * @return true if it is inside the block being written
+     */
+    static boolean isDropOfWrittenBlock(World world, double x, double y, double z) {
+        return world == writingWorld && isInsideBlock(writingX, writingY, writingZ, x, y, z);
+    }
+
+    static boolean isInsideBlock(int blockX, int blockY, int blockZ, double x, double y, double z) {
+        return x >= blockX - DROP_MARGIN && x <= blockX + 1 + DROP_MARGIN
+            && y >= blockY - DROP_MARGIN
+            && y <= blockY + 1 + DROP_MARGIN
+            && z >= blockZ - DROP_MARGIN
+            && z <= blockZ + 1 + DROP_MARGIN;
     }
 
     @Override
@@ -172,16 +213,38 @@ public class ForgeWorld extends AbstractWorld {
             previousId = Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15));
         }
 
-        boolean successful = chunk.func_150807_a(x & 15, y, z & 15, Block.getBlockById(block.getId()), block.getData());
+        Block target = Block.getBlockById(block.getId());
 
-        // Create the TileEntity
-        if (successful) {
-            CompoundTag tag = block.getNbtData();
-            if (tag != null) {
-                NBTTagCompound nativeTag = NBTConverter.toNative(tag);
-                nativeTag.setString("id", block.getNbtId());
-                TileEntityUtils.setTileEntity(getWorld(), position, nativeTag);
-            }
+        // Replacing a block runs its breakBlock, and many mods drop whatever their tile entity holds
+        // there: AE2 cable buses drop every part and facade, not just inventories. The edit keeps its
+        // own copy for undo, so the items it spawns during the write are discarded.
+        boolean successful;
+        writingWorld = world;
+        writingX = x;
+        writingY = y;
+        writingZ = z;
+        try {
+            successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
+        } finally {
+            writingWorld = null;
+        }
+
+        // Some blocks pick their own metadata when added, such as dispensers and furnaces facing away
+        // from their neighbours, which would undo the facing that was copied.
+        if (successful && chunk.getBlock(x & 15, y, z & 15) == target
+            && chunk.getBlockMetadata(x & 15, y, z & 15) != block.getData()) {
+            chunk.setBlockMetadata(x & 15, y, z & 15, block.getData());
+        }
+
+        // Create the TileEntity. The chunk ignores a write of the block already there, but its
+        // contents can still be different.
+        CompoundTag tag = block.getNbtData();
+        if (tag != null && (successful || (chunk.getBlock(x & 15, y, z & 15) == target
+            && chunk.getBlockMetadata(x & 15, y, z & 15) == block.getData()))) {
+            NBTTagCompound nativeTag = NBTConverter.toNative(tag);
+            nativeTag.setString("id", block.getNbtId());
+            TileEntityUtils.setTileEntity(getWorld(), position, nativeTag);
+            successful = true;
         }
 
         if (notifyAndLight) {
@@ -256,6 +319,7 @@ public class ForgeWorld extends AbstractWorld {
         return new BaseBiome(getWorld().getBiomeGenForCoords(position.getBlockX(), position.getBlockZ()).biomeID);
     }
 
+    // EndlessIDs (ForgeWorldMixin) overwrites this for its 16-bit biome IDs. Keep the signature.
     @Override
     public boolean setBiome(Vector2D position, BaseBiome biome) {
         checkNotNull(position);
@@ -291,100 +355,65 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
-    public boolean regenerate(Region region, EditSession editSession) {
-        BaseBlock[] history = new BaseBlock[256 * (getMaxY() + 1)];
+    public Operation regenerate(Region region, EditSession editSession) {
+        World world = getWorld();
+        IChunkProvider provider = world.getChunkProvider();
+        if (!(provider instanceof ChunkProviderServer)) {
+            return null;
+        }
 
-        for (Vector2D chunk : region.getChunks()) {
-            Vector min = new Vector(chunk.getBlockX() * 16, 0, chunk.getBlockZ() * 16);
+        return new ForgeRegeneration(world, (ChunkProviderServer) provider, region.clone(), editSession, getMaxY());
+    }
 
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y < getMaxY() + 1; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        Vector pt = min.add(x, y, z);
-                        int index = y * 16 * 16 + z * 16 + x;
-                        history[index] = editSession.getBlock(pt);
-                    }
-                }
-            }
-            try {
-                Set<Vector2D> chunks = region.getChunks();
-                IChunkProvider provider = getWorld().getChunkProvider();
-                if (!(provider instanceof ChunkProviderServer)) {
-                    return false;
-                }
-                ChunkProviderServer chunkServer = (ChunkProviderServer) provider;
-                Field u;
-                try {
-                    u = ChunkProviderServer.class.getDeclaredField("field_73248_b"); // chunksToUnload
-                } catch (NoSuchFieldException e) {
-                    u = ChunkProviderServer.class.getDeclaredField("chunksToUnload");
-                }
-                u.setAccessible(true);
-                Set<?> unloadQueue = (Set<?>) u.get(chunkServer);
-                Field m;
-                try {
-                    m = ChunkProviderServer.class.getDeclaredField("field_73244_f"); // loadedChunkHashMap
-                } catch (NoSuchFieldException e) {
-                    m = ChunkProviderServer.class.getDeclaredField("loadedChunkHashMap");
-                }
-                m.setAccessible(true);
-                LongHashMap loadedMap = (LongHashMap) m.get(chunkServer);
-                Field lc;
-                try {
-                    lc = ChunkProviderServer.class.getDeclaredField("field_73245_g"); // loadedChunkHashMap
-                } catch (NoSuchFieldException e) {
-                    lc = ChunkProviderServer.class.getDeclaredField("loadedChunks");
-                }
-                lc.setAccessible(true);
-                @SuppressWarnings("unchecked")
-                List<Chunk> loaded = (List<Chunk>) lc.get(chunkServer);
-                Field p;
-                try {
-                    p = ChunkProviderServer.class.getDeclaredField("field_73246_d"); // currentChunkProvider
-                } catch (NoSuchFieldException e) {
-                    p = ChunkProviderServer.class.getDeclaredField("currentChunkProvider");
-                }
-                p.setAccessible(true);
-                IChunkProvider chunkProvider = (IChunkProvider) p.get(chunkServer);
+    /**
+     * Send regenerated chunks to the players watching them. A new chunk object reaches clients
+     * through nothing else, so without this they keep showing the old terrain.
+     */
+    static void resendChunks(World world, List<Vector2D> chunks) {
+        if (!(world instanceof WorldServer)) {
+            return;
+        }
 
-                for (Vector2D coord : chunks) {
-                    long pos = ChunkCoordIntPair.chunkXZ2Int(coord.getBlockX(), coord.getBlockZ());
-                    Chunk mcChunk;
-                    if (chunkServer.chunkExists(coord.getBlockX(), coord.getBlockZ())) {
-                        mcChunk = chunkServer.loadChunk(coord.getBlockX(), coord.getBlockZ());
-                        mcChunk.onChunkUnload();
-                    }
-                    unloadQueue.remove(pos);
-                    loadedMap.remove(pos);
-                    mcChunk = chunkProvider.provideChunk(coord.getBlockX(), coord.getBlockZ());
-                    loadedMap.add(pos, mcChunk);
-                    loaded.add(mcChunk);
-                    if (mcChunk != null) {
-                        mcChunk.onChunkLoad();
-                        mcChunk.populateChunk(chunkProvider, chunkProvider, coord.getBlockX(), coord.getBlockZ());
-                    }
+        PlayerManager playerManager = ((WorldServer) world).getPlayerManager();
+
+        for (Vector2D coord : chunks) {
+            int chunkX = coord.getBlockX();
+            int chunkZ = coord.getBlockZ();
+            Chunk chunk = null;
+            Packet unload = null;
+            Packet data = null;
+
+            for (Object entity : world.playerEntities) {
+                if (!(entity instanceof EntityPlayerMP)) {
+                    continue;
                 }
-            } catch (Throwable t) {
-                logger.log(Level.WARNING, "Failed to generate chunk", t);
-                return false;
-            }
 
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y < getMaxY() + 1; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        Vector pt = min.add(x, y, z);
-                        int index = y * 16 * 16 + z * 16 + x;
+                EntityPlayerMP player = (EntityPlayerMP) entity;
+                if (!playerManager.isPlayerWatchingChunk(player, chunkX, chunkZ)) {
+                    continue;
+                }
 
-                        if (!region.contains(pt)) editSession.smartSetBlock(pt, history[index]);
-                        else {
-                            editSession.rememberChange(pt, history[index], editSession.rawGetBlock(pt));
-                        }
+                if (chunk == null) {
+                    chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
+                    unload = new S21PacketChunkData(chunk, true, 0);
+                    data = new S21PacketChunkData(chunk, true, 65535);
+                }
+
+                // Unloading drops the client's old chunk and its tile entities. Its own chunk is
+                // skipped because unloading that would remove and respawn the local player.
+                if (player.chunkCoordX != chunkX || player.chunkCoordZ != chunkZ) {
+                    player.playerNetServerHandler.sendPacket(unload);
+                }
+                player.playerNetServerHandler.sendPacket(data);
+
+                for (Object tile : chunk.chunkTileEntityMap.values()) {
+                    Packet description = ((TileEntity) tile).getDescriptionPacket();
+                    if (description != null) {
+                        player.playerNetServerHandler.sendPacket(description);
                     }
                 }
             }
         }
-
-        return false;
     }
 
     @Nullable
@@ -452,23 +481,71 @@ public class ForgeWorld extends AbstractWorld {
     @Override
     public BaseBlock getBlock(Vector position) {
         World world = getWorld();
-        int id = Block.getIdFromBlock(world.getBlock(position.getBlockX(), position.getBlockY(), position.getBlockZ()));
-        int data = world.getBlockMetadata(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        TileEntity tile = getWorld().getTileEntity(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-
-        if (tile != null) {
-            return new TileEntityBaseBlock(id, data, tile);
-        } else {
-            return new BaseBlock(id, data);
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(world, x, y, z);
+        if (chunk == null) {
+            return new BaseBlock(0);
         }
+
+        Block block = chunk.getBlock(x & 15, y, z & 15);
+        int data = chunk.getBlockMetadata(x & 15, y, z & 15);
+        int id = Block.getIdFromBlock(block);
+        if (block.hasTileEntity(data)) {
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (tile != null) {
+                return new TileEntityBaseBlock(id, data, tile);
+            }
+        }
+        return new BaseBlock(id, data);
     }
 
     @Override
     public BaseBlock getLazyBlock(Vector position) {
         World world = getWorld();
-        int id = Block.getIdFromBlock(world.getBlock(position.getBlockX(), position.getBlockY(), position.getBlockZ()));
-        int data = world.getBlockMetadata(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        return new LazyBlock(id, data, this, position);
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(world, x, y, z);
+        if (chunk == null) {
+            return new LazyBlock(0, 0, this, position);
+        }
+        return new LazyBlock(
+            Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15)),
+            chunk.getBlockMetadata(x & 15, y, z & 15),
+            this,
+            position);
+    }
+
+    @Override
+    public int getBlockType(Vector position) {
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(getWorld(), x, y, z);
+        return chunk != null ? Block.getIdFromBlock(chunk.getBlock(x & 15, y, z & 15)) : 0;
+    }
+
+    @Override
+    public int getBlockData(Vector position) {
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(getWorld(), x, y, z);
+        return chunk != null ? chunk.getBlockMetadata(x & 15, y, z & 15) : 0;
+    }
+
+    /**
+     * Get the chunk holding a position, looked up once for both the block and its metadata where the
+     * world's own getters each look it up again. Null outside the world, where those return air.
+     */
+    @Nullable
+    private static Chunk chunkAt(World world, int x, int y, int z) {
+        if (y < 0 || y >= 256 || x < -30000000 || z < -30000000 || x >= 30000000 || z >= 30000000) {
+            return null;
+        }
+        return world.getChunkFromChunkCoords(x >> 4, z >> 4);
     }
 
     @Override
@@ -491,6 +568,33 @@ public class ForgeWorld extends AbstractWorld {
         } else {
             return false;
         }
+    }
+
+    /**
+     * Fast mode writes without telling clients or updating light, so send the new blocks now and
+     * send the chunks again once they have been relit.
+     */
+    @Override
+    public void fixAfterFastMode(Iterable<BlockVector2D> chunks) {
+        final List<Vector2D> changed = new ArrayList<Vector2D>();
+        for (BlockVector2D chunk : chunks) {
+            changed.add(chunk);
+        }
+
+        resendChunks(getWorld(), changed);
+
+        WorldEdit.getInstance()
+            .getLightingScheduler()
+            .schedule(this, chunks, null, new Runnable() {
+
+                @Override
+                public void run() {
+                    World world = worldRef.get();
+                    if (world != null) {
+                        resendChunks(world, changed);
+                    }
+                }
+            });
     }
 
     @Override
