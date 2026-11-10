@@ -39,7 +39,7 @@ import cpw.mods.fml.common.gameevent.TickEvent;
  * server's own block resend.
  * </p>
  */
-final class ClickedBlockRefresher {
+public final class ClickedBlockRefresher {
 
     private final List<Refresh> pending = new ArrayList<Refresh>();
     private boolean registered;
