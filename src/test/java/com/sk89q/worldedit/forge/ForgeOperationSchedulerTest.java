@@ -3,6 +3,8 @@ package com.sk89q.worldedit.forge;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -256,6 +258,27 @@ public class ForgeOperationSchedulerTest {
         verify(session).flushQueue();
         assertEquals(Collections.singletonList("finalize"), events);
         assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aSmallImmediateEditThatCrashesIsStillFinalized() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(500);
+        doThrow(new IllegalStateException("mod block misbehaved")).doNothing()
+            .when(session)
+            .flushQueue();
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).discardQueue();
+        verify(owner).printError(anyString());
+        assertEquals(Collections.singletonList("finalize"), events);
     }
 
     @Test

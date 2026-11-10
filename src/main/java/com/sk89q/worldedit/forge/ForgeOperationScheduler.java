@@ -66,6 +66,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
      */
     private static final int SMALL_EDIT_BLOCKS = 2048;
 
+    private static final String CRASHED = "An unexpected error stopped this edit. See the server log.";
+
     private static final Logger logger = Logger.getLogger(ForgeOperationScheduler.class.getCanonicalName());
 
     private final Deque<Job> queue = new ArrayDeque<Job>();
@@ -100,7 +102,14 @@ public class ForgeOperationScheduler implements OperationScheduler {
         if (editSession.queuedBlockCount() <= SMALL_EDIT_BLOCKS) {
             // Few enough to fit in one tick, and waiting would only make the next brush stroke or
             // command run into "still running".
-            editSession.flushQueue();
+            try {
+                editSession.flushQueue();
+            } catch (RuntimeException e) {
+                // The task still runs, so that what was written is remembered and can be undone.
+                logger.log(Level.WARNING, "Failed to write an edit", e);
+                owner.printError(CRASHED);
+                abandon(editSession, null, "Failed to clean up after a failed write");
+            }
             task.run();
             return;
         }
@@ -347,19 +356,19 @@ public class ForgeOperationScheduler implements OperationScheduler {
         if (job.committing) {
             // Nothing writes the rest, so drop it like a cancel does. That also records the blocks
             // cleared ahead of their write, which undo could not bring back otherwise.
-            abandon(job, failed, "Failed to clean up after a failed commit");
+            abandon(job.editSession, failed, "Failed to clean up after a failed commit");
         }
     }
 
-    private void abandon(Job job, Operation operation, String warning) {
+    private void abandon(EditSession editSession, Operation operation, String warning) {
         try {
             if (operation != null) {
                 operation.cancel();
             }
             // History keeps the edit session alive, which must not keep its queue alive too.
-            job.editSession.discardQueue();
+            editSession.discardQueue();
             // With nothing left to write, this only runs the follow-up work such as fast mode's.
-            job.editSession.flushQueue();
+            editSession.flushQueue();
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, warning, e);
         }
@@ -388,7 +397,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
     }
 
     private void stop(Job job) {
-        abandon(job, job.operation, "Failed to cancel an operation");
+        abandon(job.editSession, job.operation, "Failed to cancel an operation");
     }
 
     private void notifyCancelled(Job job) {
@@ -412,7 +421,7 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private static final class OperationCrashedException extends WorldEditException {
 
         private OperationCrashedException(RuntimeException cause) {
-            super("An unexpected error stopped this edit. See the server log.", cause);
+            super(CRASHED, cause);
         }
     }
 

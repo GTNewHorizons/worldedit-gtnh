@@ -167,16 +167,32 @@ public class ForgeWorld extends AbstractWorld {
             0);
     }
 
-    private static boolean writingBlock;
+    /** How far outside the block being written its drops may appear. */
+    private static final double DROP_MARGIN = 0.1;
+
+    private static World writingWorld;
+    private static int writingX;
+    private static int writingY;
+    private static int writingZ;
 
     /**
-     * Whether WorldEdit is in the middle of replacing a block on the server thread, during which any
-     * items or experience the old block drops are duplicates of what history keeps.
+     * Whether something appearing at the given place comes out of the block WorldEdit is replacing
+     * right now on the server thread. Items and experience it drops are duplicates of what history
+     * keeps. Anything further away is left alone, such as a neighbour popping off or items in a chunk
+     * that the write happened to load.
      *
-     * @return true while a block is being written
+     * @return true if it is inside the block being written
      */
-    static boolean isWritingBlock() {
-        return writingBlock;
+    static boolean isDropOfWrittenBlock(World world, double x, double y, double z) {
+        return world == writingWorld && isInsideBlock(writingX, writingY, writingZ, x, y, z);
+    }
+
+    static boolean isInsideBlock(int blockX, int blockY, int blockZ, double x, double y, double z) {
+        return x >= blockX - DROP_MARGIN && x <= blockX + 1 + DROP_MARGIN
+            && y >= blockY - DROP_MARGIN
+            && y <= blockY + 1 + DROP_MARGIN
+            && z >= blockZ - DROP_MARGIN
+            && z <= blockZ + 1 + DROP_MARGIN;
     }
 
     @Override
@@ -201,13 +217,16 @@ public class ForgeWorld extends AbstractWorld {
 
         // Replacing a block runs its breakBlock, and many mods drop whatever their tile entity holds
         // there: AE2 cable buses drop every part and facade, not just inventories. The edit keeps its
-        // own copy for undo, so the items spawned during the write are discarded.
+        // own copy for undo, so the items it spawns during the write are discarded.
         boolean successful;
-        writingBlock = true;
+        writingWorld = world;
+        writingX = x;
+        writingY = y;
+        writingZ = z;
         try {
             successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
         } finally {
-            writingBlock = false;
+            writingWorld = null;
         }
 
         // Some blocks pick their own metadata when added, such as dispensers and furnaces facing away

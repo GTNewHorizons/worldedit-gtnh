@@ -277,8 +277,8 @@ public class ForgeWorldEdit {
      */
     @SubscribeEvent
     public void onEntityJoinWorld(EntityJoinWorldEvent event) {
-        if (!event.world.isRemote && ForgeWorld.isWritingBlock()
-            && (event.entity instanceof EntityItem || event.entity instanceof EntityXPOrb)) {
+        if ((event.entity instanceof EntityItem || event.entity instanceof EntityXPOrb)
+            && ForgeWorld.isDropOfWrittenBlock(event.world, event.entity.posX, event.entity.posY, event.entity.posZ)) {
             event.setCanceled(true);
         }
     }
