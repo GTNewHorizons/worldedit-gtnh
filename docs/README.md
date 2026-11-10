@@ -48,7 +48,6 @@ Server owners can change the limits and defaults, see [configuration](configurat
 | [`//hpos2`](commands/hpos2.md) | Set position 2 to the block you are looking at. |
 | [`//chunk`](commands/chunk.md) | Select a whole chunk. |
 | [`//wand`](commands/wand.md) | Get the selection wand. |
-| [`/toggleeditwand`](commands/toggleeditwand.md) | Turn the wand function on or off. |
 | [`//expand`](commands/expand.md) | Make your selection bigger. |
 | [`//contract`](commands/contract.md) | Make your selection smaller. |
 | [`//shift`](commands/shift.md) | Move your selection without touching any blocks. |

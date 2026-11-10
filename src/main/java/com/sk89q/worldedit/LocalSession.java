@@ -77,7 +77,6 @@ public class LocalSession {
     private transient int clipboardRequests;
     private transient int loadingRequest;
     private transient int historyHolds;
-    private transient boolean toolControl = true;
     private transient boolean superPickaxe = false;
     private transient BlockTool pickaxeMode = new SinglePickaxe();
     private transient Map<Integer, Tool> tools = new HashMap<Integer, Tool>();
@@ -486,24 +485,6 @@ public class LocalSession {
      */
     public boolean isHistoryHeld() {
         return historyHolds > 0;
-    }
-
-    /**
-     * See if tool control is enabled.
-     *
-     * @return true if enabled
-     */
-    public boolean isToolControlEnabled() {
-        return toolControl;
-    }
-
-    /**
-     * Change tool control setting.
-     *
-     * @param toolControl true to enable tool control
-     */
-    public void setToolControl(boolean toolControl) {
-        this.toolControl = toolControl;
     }
 
     /**

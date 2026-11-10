@@ -152,7 +152,6 @@ When a command lists two nodes, either one is enough.
 | `worldedit.tool.replacer` | [`/repl`](commands/repl.md) |
 | `worldedit.tool.tree` | [`/tree`](commands/tree.md) |
 | `worldedit.wand` | [`//wand`](commands/wand.md) |
-| `worldedit.wand.toggle` | [`/toggleeditwand`](commands/toggleeditwand.md) |
 
 These need no permission: [`/brush`](commands/brush.md), [`/none`](commands/none.md), [`/schematic`](commands/schematic.md), [`//searchitem`](commands/searchitem.md), [`//sel`](commands/sel.md), [`/snapshot`](commands/snapshot.md), [`/superpickaxe`](commands/superpickaxe.md), [`//toggleplace`](commands/toggleplace.md), [`/tool`](commands/tool.md), [`/worldedit cui`](commands/worldedit-cui.md), [`/worldedit tz`](commands/worldedit-tz.md), [`/worldedit version`](commands/worldedit-version.md), [`/worldedit`](commands/worldedit.md).
 

@@ -102,9 +102,6 @@ public final class SelectionCommands {
                 .executes(run("worldedit.wand", c -> wand(c.player(), c.flag('n')))),
                 "n");
 
-        Nodes.register(dispatcher, literal("toggleeditwand", "Toggle functionality of the edit wand")
-                .executes(run("worldedit.wand.toggle", c -> toggleWand(c.player(), c.session(), c))));
-
         Nodes.register(dispatcher, literal("/expand", "Expand the selection area").executes(Nodes.USAGE)
                 .then(literal("vert")
                         .executes(run("worldedit.selection.expand", LogMode.REGION, c -> expandVertical(c.player(), c.session()))))
@@ -330,17 +327,6 @@ public final class SelectionCommands {
             player.print("Left click: jump to where you look; Right click: pass through walls");
         } else {
             player.print("Left click: select pos #1; Right click: select pos #2");
-        }
-    }
-
-    private static void toggleWand(Player player, LocalSession session, CommandCall args) throws Exception {
-
-        session.setToolControl(!session.isToolControlEnabled());
-
-        if (session.isToolControlEnabled()) {
-            player.print("Edit wand enabled.");
-        } else {
-            player.print("Edit wand disabled.");
         }
     }
 

@@ -65,7 +65,6 @@ public class WandTest {
         when(worldEdit.getEventBus()).thenReturn(new EventBus());
         SessionManager sessions = mock(SessionManager.class);
         LocalSession session = mock(LocalSession.class);
-        when(session.isToolControlEnabled()).thenReturn(true);
         when(session.getRegionSelector(any(World.class))).thenReturn(selector);
         when(sessions.get(any())).thenReturn(session);
         when(worldEdit.getSessionManager()).thenReturn(sessions);

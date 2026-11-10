@@ -330,10 +330,6 @@ public class PlatformManager {
 
             if (event.getType() == Interaction.HIT) {
                 if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
-                    if (!session.isToolControlEnabled()) {
-                        return;
-                    }
-
                     if (!actor.hasPermission("worldedit.selection.pos")) {
                         return;
                     }
@@ -385,10 +381,6 @@ public class PlatformManager {
 
             } else if (event.getType() == Interaction.OPEN) {
                 if (holdsWand(player, getConfiguration().wandItem, Player.SELECTION_WAND)) {
-                    if (!session.isToolControlEnabled()) {
-                        return;
-                    }
-
                     if (!actor.hasPermission("worldedit.selection.pos")) {
                         return;
                     }
