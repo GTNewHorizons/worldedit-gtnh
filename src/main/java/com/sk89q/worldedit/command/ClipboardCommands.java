@@ -43,6 +43,7 @@ import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.math.transform.AffineTransform;
+import com.sk89q.worldedit.math.transform.Transform;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.RegionSelector;
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector;
@@ -191,6 +192,8 @@ public final class ClipboardCommands {
             .ignoreAirBlocks(ignoreAirBlocks)
             .build();
         final World world = player.getWorld();
+        // Read now: a //rotate typed while the paste waits must not change what it selects.
+        final Transform transform = holder.getTransform();
 
         // The selection and the message have to wait until the paste has actually happened.
         worldEdit.getOperationScheduler()
@@ -207,13 +210,9 @@ public final class ClipboardCommands {
                             .subtract(clipboard.getOrigin());
                         RegionSelector selector = new CuboidRegionSelector(
                             world,
-                            to.add(
-                                holder.getTransform()
-                                    .apply(min))
+                            to.add(transform.apply(min))
                                 .round(),
-                            to.add(
-                                holder.getTransform()
-                                    .apply(max))
+                            to.add(transform.apply(max))
                                 .round());
                         session.setRegionSelector(world, selector);
                         selector.learnChanges();

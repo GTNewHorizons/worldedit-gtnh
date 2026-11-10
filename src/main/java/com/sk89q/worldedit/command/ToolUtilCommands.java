@@ -78,6 +78,10 @@ public final class ToolUtilCommands {
     // spotless:on
 
     static void togglePickaxe(Player player, LocalSession session, String newState) {
+        if (newState != null && !"on".equals(newState) && !"off".equals(newState)) {
+            player.printError("Use on or off, or nothing to toggle.");
+            return;
+        }
         if (session.hasSuperPickAxe()) {
             if ("on".equals(newState)) {
                 player.printError("Super pick axe already enabled.");

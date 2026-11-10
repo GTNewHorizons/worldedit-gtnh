@@ -383,7 +383,7 @@ public final class CommandCall {
         BaseBiome biome = Biomes.findBiomeByName(knownBiomes, input, biomeRegistry);
         if (biome == null) {
             throw new CommandFailure(
-                String.format("Can't recognize biome type '%s' -- use /biomelist to list available types", input));
+                String.format("Can't recognize biome type '%s' -- use //biomelist to list available types", input));
         }
         return biome;
     }

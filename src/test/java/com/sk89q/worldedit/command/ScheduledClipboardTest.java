@@ -232,6 +232,25 @@ public class ScheduledClipboardTest {
     }
 
     @Test
+    public void aRotateTypedWhileThePasteWaitsDoesNotChangeItsSelection() throws Exception {
+        CuboidRegion small = new CuboidRegion(new Vector(0, 0, 0), new Vector(4, 1, 2));
+        ClipboardCommands.copy(worldEdit, player, session, newSession(), small, false, null);
+        runToCompletion();
+        doReturn(new Vector(100, 0, 100)).when(session)
+            .getPlacementPosition(player);
+
+        ClipboardCommands.paste(worldEdit, player, session, newSession(), false, false, true);
+        session.getClipboard()
+            .setTransform(new AffineTransform().rotateY(90));
+        runToCompletion();
+
+        Region selected = session.getRegionSelector(world)
+            .getRegion();
+        assertEquals(5, selected.getWidth());
+        assertEquals(3, selected.getLength());
+    }
+
+    @Test
     public void aCancelledCopyPutsThePreviousClipboardBack() throws Exception {
         ClipboardHolder previous = new ClipboardHolder(
             new BlockArrayClipboard(selection.clone()),

@@ -119,13 +119,13 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static int maxSuperPickaxeSize;
 
-        @Config.Comment("The radius of /butcher when none is typed. -1 means all loaded chunks.")
+        @Config.Comment("The radius of //butcher when none is typed. -1 means all loaded chunks.")
         @Config.DefaultInt(-1)
         @Config.RangeInt(min = -1)
         @Config.Reloadable(RELOAD)
         public static int butcherDefaultRadius;
 
-        @Config.Comment("The largest radius of /butcher. -1 means no limit.")
+        @Config.Comment("The largest radius of //butcher. -1 means no limit.")
         @Config.DefaultInt(-1)
         @Config.RangeInt(min = -1)
         @Config.Reloadable(RELOAD)
@@ -216,7 +216,7 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static int navigationWandDistance;
 
-        @Config.Comment("Place glass under players who use /up or /ceil, unless they ask otherwise.")
+        @Config.Comment("Place glass under players who use //up or //ceil, unless they ask otherwise.")
         @Config.DefaultBoolean(true)
         @Config.Reloadable(RELOAD)
         public static boolean navigationUseGlass;
