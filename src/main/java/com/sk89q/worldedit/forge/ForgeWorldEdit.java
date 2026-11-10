@@ -46,7 +46,6 @@ import com.sk89q.worldedit.blocks.BlockType;
 import com.sk89q.worldedit.command.brigadier.CommandRegistry;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
-import com.sk89q.worldedit.extension.platform.permission.PermissionNodes;
 import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.CarpentersBlocksBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
@@ -183,7 +182,7 @@ public class ForgeWorldEdit {
         // GTNHLib creates a new command dispatcher for each server, right before this. Not any later: on Thermos it
         // wraps the registered commands when the server is starting.
         CommandRegistry.registerAll(WorldEdit.getInstance());
-        registerNodes(provider);
+        provider.registerNodes();
 
         previousLightingScheduler = WorldEdit.getInstance()
             .getLightingScheduler();
@@ -444,14 +443,7 @@ public class ForgeWorldEdit {
         this.provider = provider;
         // Other mods install theirs after the commands declared their nodes.
         if (platform != null) {
-            registerNodes(provider);
-        }
-    }
-
-    private static void registerNodes(ForgePermissionsProvider provider) {
-        provider.registerNodes();
-        for (String node : PermissionNodes.all()) {
-            provider.registerPermission(null, node);
+            provider.registerNodes();
         }
     }
 

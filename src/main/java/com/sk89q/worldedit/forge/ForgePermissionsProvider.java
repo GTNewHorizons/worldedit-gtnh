@@ -20,6 +20,8 @@ import net.minecraft.command.ICommand;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.WorldSettings.GameType;
 
+import com.sk89q.worldedit.extension.platform.permission.PermissionNodes;
+
 import cpw.mods.fml.common.FMLCommonHandler;
 
 public interface ForgePermissionsProvider {
@@ -29,12 +31,16 @@ public interface ForgePermissionsProvider {
     /**
      * Tell the permission system about every node WorldEdit declared, once the commands are registered.
      */
-    default void registerNodes() {}
+    default void registerNodes() {
+        for (String node : PermissionNodes.all()) {
+            registerPermission(null, node);
+        }
+    }
 
     /**
-     * Called once per declared node, for providers written against the older API (ForgeEssentials).
+     * Kept for providers written against the older API (ForgeEssentials).
      *
-     * @param command always null, kept for binary compatibility
+     * @param command always null
      */
     default void registerPermission(ICommand command, String permission) {}
 
