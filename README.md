@@ -12,7 +12,7 @@ Requires [GTNHLib](https://github.com/GTNewHorizons/GTNHLib).
 running while a large `//set`, `//copy`, `//paste`, `//undo` or `//regen` goes through. [`//cancel`](docs/commands/cancel.md)
 stops your queued edits, and whatever was already done can be undone. Schematics load on a background thread.
 
-**Restore from ServerUtilities backups.** [`//restore`](docs/commands/restore.md) reads the backups ServerUtilities
+**Restore from ServerUtilities backups.** [`/restore`](docs/commands/restore.md) reads the backups ServerUtilities
 already makes, with no extra setup: select an area, pick a backup with [`/snapshot`](docs/commands/snapshot.md), and
 put that area back the way it was.
 
