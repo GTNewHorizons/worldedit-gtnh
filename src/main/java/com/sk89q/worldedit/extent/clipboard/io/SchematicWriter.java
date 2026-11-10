@@ -145,7 +145,8 @@ public class SchematicWriter implements ClipboardWriter {
                     >> 1] = (byte) (((index & 1) == 0) ? addBlocks2[index >> 1] & 0xF0 | (block.getType() >> 12) & 0xF
                         : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
             }
-            blockMapping.put(
+            putMapping(
+                blockMapping,
                 Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
                 new ShortTag((short) block.getId()));
 
@@ -203,7 +204,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 id = nbtData.getShort(idPtr[0]);
                             }
 
-                            itemMapping.put(
+                            putMapping(
+                                itemMapping,
                                 Item.itemRegistry.getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
                                 new ShortTag(id));
 
@@ -222,7 +224,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
                                     .get("bottomMaterial") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    itemMapping.put(
+                                    putMapping(
+                                        itemMapping,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
                                         new ShortTag((short) _id));
                                 }
@@ -230,7 +233,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("topMaterial") && nbtData.getValue()
                                     .get("topMaterial") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    itemMapping.put(
+                                    putMapping(
+                                        itemMapping,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
                                         new ShortTag((short) _id));
                                 }
@@ -238,7 +242,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("frame") && nbtData.getValue()
                                     .get("frame") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    itemMapping.put(
+                                    putMapping(
+                                        itemMapping,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
                                         new ShortTag((short) _id));
                                 }
@@ -246,7 +251,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("block") && nbtData.getValue()
                                     .get("block") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    blockMapping.put(
+                                    putMapping(
+                                        blockMapping,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
                                         new ShortTag((short) _id));
                                 }
@@ -254,7 +260,8 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("item") && nbtData.getValue()
                                     .get("item") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    itemMapping.put(
+                                    putMapping(
+                                        itemMapping,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
                                         new ShortTag((short) _id));
                                 }
@@ -357,5 +364,15 @@ public class SchematicWriter implements ClipboardWriter {
     @Override
     public void close() throws IOException {
         outputStream.close();
+    }
+
+    /**
+     * Record a registry name for an ID. Some tile entities store numbers that look like item IDs but
+     * aren't, or name items that are no longer registered, so IDs without a name are left out.
+     */
+    private static void putMapping(Map<String, Tag> mapping, String name, ShortTag id) {
+        if (name != null) {
+            mapping.put(name, id);
+        }
     }
 }
