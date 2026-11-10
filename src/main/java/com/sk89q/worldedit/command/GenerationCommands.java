@@ -88,7 +88,7 @@ public final class GenerationCommands {
                                                 sphere(c.player(), c.session(), c.editSession(), c.pattern("pattern"), c.string("radius"), c.yesNo("raised"), c.flag('h'))))))),
                 "h");
 
-        Nodes.register(dispatcher, literal("forestgen", "Generate a forest")
+        Nodes.register(dispatcher, literal("/forestgen", "Generate a forest")
                 .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
                         forestGen(c.player(), c.session(), c.editSession(), 10, TreeType.TREE, 5)))
                 .then(integer("size")
@@ -101,7 +101,7 @@ public final class GenerationCommands {
                                         .executes(run("worldedit.generation.forest", LogMode.POSITION, c ->
                                                 forestGen(c.player(), c.session(), c.editSession(), c.integer("size"), c.treeType("type"), c.decimal("density"))))))));
 
-        Nodes.register(dispatcher, literal("pumpkins", "Generate pumpkin patches")
+        Nodes.register(dispatcher, literal("/pumpkins", "Generate pumpkin patches")
                 .executes(run("worldedit.generation.pumpkins", LogMode.POSITION, c ->
                         pumpkins(c.player(), c.session(), c.editSession(), 10)))
                 .then(integer("size")

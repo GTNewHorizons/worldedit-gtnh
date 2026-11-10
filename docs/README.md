@@ -19,7 +19,7 @@ Big edits run over several ticks, so the server keeps going. You get a message w
 | `[-h]` | A flag: a letter that switches something on |
 | `[-m <mask>]` | A flag followed by a value |
 
-- **Slashes.** Many commands start with two slashes, like `//set`. That is part of their name. Commands that start with one slash can also be typed with two.
+- **Slashes.** Every command starts with two slashes, like `//set`, so that its name can't clash with another mod's. The only exception is [`/worldedit`](commands/worldedit.md), which works with one or two.
 - **Flags come first.** Put flags right after the command, before the other arguments: `//sphere -h stone 5`. Letters can be combined, so `-ao` is the same as `-a -o`.
 - **Values with spaces** go in quotes: `//gmask "stone >dirt"`. A few arguments, such as formulas, take the rest of the line and need no quotes.
 - **Numbers can be math.** Anywhere a number is asked for you can type a formula, like `//stack 2*8`. See [expressions](expressions.md). Whole numbers cut off decimals, so `5/2` is 2. A few arguments that mix numbers with other things take plain numbers only: the radius of `//sphere` and `//cyl`, coordinates such as in `//pos1`, the reverse amount of `//expand` and `//contract`, and the page after `-p`.
@@ -97,8 +97,8 @@ Server owners can change the limits and defaults, see [configuration](configurat
 | [`//hpyramid`](commands/hpyramid.md) | Generate a hollow pyramid. |
 | [`//generate`](commands/generate.md) | Fill your selection according to a formula. |
 | [`//generatebiome`](commands/generatebiome.md) | Set the biome of your selection according to a formula. |
-| [`/forestgen`](commands/forestgen.md) | Generate a forest around you. |
-| [`/pumpkins`](commands/pumpkins.md) | Generate pumpkin patches around you. |
+| [`//forestgen`](commands/forestgen.md) | Generate a forest around you. |
+| [`//pumpkins`](commands/pumpkins.md) | Generate pumpkin patches around you. |
 
 ### Clipboard
 
@@ -109,18 +109,18 @@ Server owners can change the limits and defaults, see [configuration](configurat
 | [`//paste`](commands/paste.md) | Paste your clipboard. |
 | [`//rotate`](commands/rotate.md) | Rotate your clipboard. |
 | [`//flip`](commands/flip.md) | Mirror your clipboard. |
-| [`/clearclipboard`](commands/clearclipboard.md) | Empty your clipboard. |
+| [`//clearclipboard`](commands/clearclipboard.md) | Empty your clipboard. |
 
 ### Schematics
 
 | Command | What it does |
 |---|---|
-| [`/schematic`](commands/schematic.md) | Save and load schematic files. |
-| [`/schematic load`](commands/schematic-load.md) | Load a schematic into your clipboard. |
-| [`/schematic save`](commands/schematic-save.md) | Save your clipboard to a schematic. |
-| [`/schematic delete`](commands/schematic-delete.md) | Delete a saved schematic. |
-| [`/schematic formats`](commands/schematic-formats.md) | List the schematic formats. |
-| [`/schematic list`](commands/schematic-list.md) | List the saved schematics. |
+| [`//schematic`](commands/schematic.md) | Save and load schematic files. |
+| [`//schematic load`](commands/schematic-load.md) | Load a schematic into your clipboard. |
+| [`//schematic save`](commands/schematic-save.md) | Save your clipboard to a schematic. |
+| [`//schematic delete`](commands/schematic-delete.md) | Delete a saved schematic. |
+| [`//schematic formats`](commands/schematic-formats.md) | List the schematic formats. |
+| [`//schematic list`](commands/schematic-list.md) | List the saved schematics. |
 
 ### History
 
@@ -159,97 +159,96 @@ Server owners can change the limits and defaults, see [configuration](configurat
 | [`//thaw`](commands/thaw.md) | Remove the snow around you. |
 | [`//green`](commands/green.md) | Turn the dirt around you into grass. |
 | [`//ex`](commands/ex.md) | Put out the fire around you. |
-| [`/butcher`](commands/butcher.md) | Kill mobs around you. |
-| [`/remove`](commands/remove.md) | Remove entities of a type around you. |
+| [`//butcher`](commands/butcher.md) | Kill mobs around you. |
+| [`//remove`](commands/remove.md) | Remove entities of a type around you. |
 | [`//calc`](commands/calc.md) | Calculate a formula. |
 
 ### Tools
 
 | Command | What it does |
 |---|---|
-| [`/tool`](commands/tool.md) | Bind a function to the item in your hand. |
-| [`/none`](commands/none.md) | Unbind the tool from the item in your hand. |
-| [`/info`](commands/info.md) | Bind the block information tool. |
-| [`/tree`](commands/tree.md) | Bind the tree tool. |
-| [`/repl`](commands/repl.md) | Bind the block replacer tool. |
-| [`/cycler`](commands/cycler.md) | Bind the data value cycler tool. |
-| [`/floodfill`](commands/floodfill.md) | Bind the flood fill tool. |
-| [`/deltree`](commands/deltree.md) | Bind the floating tree remover. |
-| [`/farwand`](commands/farwand.md) | Bind a selection wand that works at a distance. |
-| [`/lrbuild`](commands/lrbuild.md) | Bind the long range building tool. |
+| [`//tool`](commands/tool.md) | Bind a function to the item in your hand. |
+| [`//tool none`](commands/tool-none.md) | Unbind the tool from the item in your hand. |
+| [`//tool info`](commands/tool-info.md) | Bind the block information tool. |
+| [`//tool tree`](commands/tool-tree.md) | Bind the tree tool. |
+| [`//tool repl`](commands/tool-repl.md) | Bind the block replacer tool. |
+| [`//tool cycler`](commands/tool-cycler.md) | Bind the data value cycler tool. |
+| [`//tool floodfill`](commands/tool-floodfill.md) | Bind the flood fill tool. |
+| [`//tool deltree`](commands/tool-deltree.md) | Bind the floating tree remover. |
+| [`//tool farwand`](commands/tool-farwand.md) | Bind a selection wand that works at a distance. |
+| [`//tool lrbuild`](commands/tool-lrbuild.md) | Bind the long range building tool. |
 
 ### Super pickaxe
 
 | Command | What it does |
 |---|---|
-| [`/superpickaxe`](commands/superpickaxe.md) | Choose how the super pickaxe works. |
-| [`//`](commands/superpickaxe-toggle.md) | Turn the super pickaxe on or off. |
-| [`/superpickaxe single`](commands/superpickaxe-single.md) | Break one block at a time. |
-| [`/superpickaxe area`](commands/superpickaxe-area.md) | Break a cube of blocks. |
-| [`/superpickaxe recursive`](commands/superpickaxe-recursive.md) | Break all connected blocks of the same type. |
+| [`//superpickaxe`](commands/superpickaxe.md) | Turn the super pickaxe on or off, or choose how it works. Also typed `//`. |
+| [`//superpickaxe single`](commands/superpickaxe-single.md) | Break one block at a time. |
+| [`//superpickaxe area`](commands/superpickaxe-area.md) | Break a cube of blocks. |
+| [`//superpickaxe recursive`](commands/superpickaxe-recursive.md) | Break all connected blocks of the same type. |
 
 ### Brushes
 
 | Command | What it does |
 |---|---|
-| [`/brush`](commands/brush.md) | Bind a brush to the item in your hand. |
-| [`/brush sphere`](commands/brush-sphere.md) | Paint spheres. |
-| [`/brush cylinder`](commands/brush-cylinder.md) | Paint cylinders. |
-| [`/brush clipboard`](commands/brush-clipboard.md) | Paste your clipboard where you click. |
-| [`/brush smooth`](commands/brush-smooth.md) | Smooth the terrain where you click. |
-| [`/brush ex`](commands/brush-ex.md) | Put out fire where you click. |
-| [`/brush gravity`](commands/brush-gravity.md) | Make blocks fall where you click. |
-| [`/brush butcher`](commands/brush-butcher.md) | Kill mobs where you click. |
-| [`/brush set`](commands/brush-set.md) | Fill a shape where you click. |
-| [`/brush apply`](commands/brush-apply.md) | Apply a function to every block of a shape. |
-| [`/brush paint`](commands/brush-paint.md) | Apply a function to the surfaces in a shape. |
-| [`/brush forest`](commands/brush-forest.md) | Plant trees on the surfaces in a shape. |
-| [`/brush deform`](commands/brush-deform.md) | Reshape terrain with a formula where you click. |
-| [`/brush raise`](commands/brush-raise.md) | Raise terrain by one block where you click. |
-| [`/brush lower`](commands/brush-lower.md) | Lower terrain by one block where you click. |
-| [`/mask`](commands/brush-mask.md) | Limit the brush in your hand to a mask. |
-| [`/mat`](commands/brush-material.md) | Change the material of the brush in your hand. |
-| [`/range`](commands/brush-range.md) | Change how far the brush in your hand reaches. |
-| [`/size`](commands/brush-size.md) | Change the size of the brush in your hand. |
+| [`//brush`](commands/brush.md) | Bind a brush to the item in your hand. |
+| [`//brush sphere`](commands/brush-sphere.md) | Paint spheres. |
+| [`//brush cylinder`](commands/brush-cylinder.md) | Paint cylinders. |
+| [`//brush clipboard`](commands/brush-clipboard.md) | Paste your clipboard where you click. |
+| [`//brush smooth`](commands/brush-smooth.md) | Smooth the terrain where you click. |
+| [`//brush ex`](commands/brush-ex.md) | Put out fire where you click. |
+| [`//brush gravity`](commands/brush-gravity.md) | Make blocks fall where you click. |
+| [`//brush butcher`](commands/brush-butcher.md) | Kill mobs where you click. |
+| [`//brush set`](commands/brush-set.md) | Fill a shape where you click. |
+| [`//brush apply`](commands/brush-apply.md) | Apply a function to every block of a shape. |
+| [`//brush paint`](commands/brush-paint.md) | Apply a function to the surfaces in a shape. |
+| [`//brush forest`](commands/brush-forest.md) | Plant trees on the surfaces in a shape. |
+| [`//brush deform`](commands/brush-deform.md) | Reshape terrain with a formula where you click. |
+| [`//brush raise`](commands/brush-raise.md) | Raise terrain by one block where you click. |
+| [`//brush lower`](commands/brush-lower.md) | Lower terrain by one block where you click. |
+| [`//brush mask`](commands/brush-mask.md) | Limit the brush in your hand to a mask. |
+| [`//brush material`](commands/brush-material.md) | Change the material of the brush in your hand. |
+| [`//brush range`](commands/brush-range.md) | Change how far the brush in your hand reaches. |
+| [`//brush size`](commands/brush-size.md) | Change the size of the brush in your hand. |
 
 ### Navigation
 
 | Command | What it does |
 |---|---|
-| [`/unstuck`](commands/unstuck.md) | Get out of a block you are stuck in. |
-| [`/ascend`](commands/ascend.md) | Go up a floor. |
-| [`/descend`](commands/descend.md) | Go down a floor. |
-| [`/ceil`](commands/ceil.md) | Go up to the ceiling above you. |
-| [`/up`](commands/up.md) | Go straight up. |
-| [`/thru`](commands/thru.md) | Pass through the wall in front of you. |
-| [`/jumpto`](commands/jumpto.md) | Teleport to the block you are looking at. |
+| [`//unstuck`](commands/unstuck.md) | Get out of a block you are stuck in. |
+| [`//ascend`](commands/ascend.md) | Go up a floor. |
+| [`//descend`](commands/descend.md) | Go down a floor. |
+| [`//ceil`](commands/ceil.md) | Go up to the ceiling above you. |
+| [`//up`](commands/up.md) | Go straight up. |
+| [`//thru`](commands/thru.md) | Pass through the wall in front of you. |
+| [`//jumpto`](commands/jumpto.md) | Teleport to the block you are looking at. |
 
 ### Biomes
 
 | Command | What it does |
 |---|---|
-| [`/biomelist`](commands/biomelist.md) | List the biomes. |
-| [`/biomeinfo`](commands/biomeinfo.md) | Show the biomes in your selection. |
+| [`//biomelist`](commands/biomelist.md) | List the biomes. |
+| [`//biomeinfo`](commands/biomeinfo.md) | Show the biomes in your selection. |
 | [`//setbiome`](commands/setbiome.md) | Change the biome of your selection. |
 
 ### Chunks
 
 | Command | What it does |
 |---|---|
-| [`/chunkinfo`](commands/chunkinfo.md) | Show which chunk you are in. |
-| [`/listchunks`](commands/listchunks.md) | List the chunks in your selection. |
+| [`//chunkinfo`](commands/chunkinfo.md) | Show which chunk you are in. |
+| [`//listchunks`](commands/listchunks.md) | List the chunks in your selection. |
 
 ### Snapshots
 
 | Command | What it does |
 |---|---|
-| [`/snapshot`](commands/snapshot.md) | Choose a backup to restore from. |
-| [`/snapshot list`](commands/snapshot-list.md) | List the available snapshots. |
-| [`/snapshot use`](commands/snapshot-use.md) | Choose a snapshot by name. |
-| [`/snapshot sel`](commands/snapshot-sel.md) | Choose a snapshot by its number in the list. |
-| [`/snapshot before`](commands/snapshot-before.md) | Choose the last snapshot before a date. |
-| [`/snapshot after`](commands/snapshot-after.md) | Choose the first snapshot after a date. |
-| [`/restore`](commands/restore.md) | Restore your selection from a snapshot. |
+| [`//snapshot`](commands/snapshot.md) | Choose a backup to restore from. |
+| [`//snapshot list`](commands/snapshot-list.md) | List the available snapshots. |
+| [`//snapshot use`](commands/snapshot-use.md) | Choose a snapshot by name. |
+| [`//snapshot sel`](commands/snapshot-sel.md) | Choose a snapshot by its number in the list. |
+| [`//snapshot before`](commands/snapshot-before.md) | Choose the last snapshot before a date. |
+| [`//snapshot after`](commands/snapshot-after.md) | Choose the first snapshot after a date. |
+| [`//restore`](commands/restore.md) | Restore your selection from a snapshot. |
 
 ### WorldEdit
 

@@ -1,11 +1,11 @@
-# `/superpickaxe area`
+# `//superpickaxe area`
 
 Break a cube of blocks.
 
 ## Usage
 
 ```
-/superpickaxe area <radius>
+//superpickaxe area <radius>
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Break a cube of blocks.
 
 | Command | What it does |
 |---|---|
-| `/sp area 3` | Break everything within 3 blocks. |
+| `//sp area 3` | Break everything within 3 blocks. |
 
 [All commands](../README.md)

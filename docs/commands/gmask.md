@@ -10,8 +10,6 @@ From now on, edits only change blocks that match. Use it without a mask to turn 
 //gmask [<mask>]
 ```
 
-Also typed: `/gmask`
-
 ## Arguments
 
 | Argument | Meaning |

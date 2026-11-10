@@ -15,7 +15,7 @@ A block is written by name or by ID, optionally with a data value after a colon.
 | `hand` | The block you are holding |
 | `pos1` | The block at position 1 of your selection |
 
-To find a name or ID, use [`//searchitem`](commands/searchitem.md), or bind the [`/info`](commands/info.md) tool and click a block in the world.
+To find a name or ID, use [`//searchitem`](commands/searchitem.md), or bind the [`//tool info`](commands/tool-info.md) tool and click a block in the world.
 
 ## Patterns
 

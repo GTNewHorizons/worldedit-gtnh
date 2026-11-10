@@ -45,10 +45,10 @@ public final class ChunkCommands {
 
     // spotless:off
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("chunkinfo")
+        Nodes.register(dispatcher, literal("/chunkinfo")
                 .executes(run("worldedit.chunkinfo", ChunkCommands::chunkInfo)));
 
-        Nodes.register(dispatcher, literal("listchunks")
+        Nodes.register(dispatcher, literal("/listchunks")
                 .executes(run("worldedit.listchunks", ChunkCommands::listChunks)));
     }
     // spotless:on

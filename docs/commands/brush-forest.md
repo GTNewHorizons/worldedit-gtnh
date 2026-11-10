@@ -1,11 +1,11 @@
-# `/brush forest`
+# `//brush forest`
 
 Plant trees on the surfaces in a shape.
 
 ## Usage
 
 ```
-/brush forest <shape> <size> <density> <tree>
+//brush forest <shape> <size> <density> <tree>
 ```
 
 ## Arguments
@@ -21,6 +21,6 @@ Plant trees on the surfaces in a shape.
 
 | Command | What it does |
 |---|---|
-| `/br forest sphere 10 5 birch` | Paint a birch forest. |
+| `//br forest sphere 10 5 birch` | Paint a birch forest. |
 
 [All commands](../README.md)

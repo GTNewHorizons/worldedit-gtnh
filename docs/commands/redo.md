@@ -10,8 +10,6 @@ Refused while an edit of yours is still running. Wait for it or use [//cancel](c
 //redo [<times> [<player>]]
 ```
 
-Also typed: `/redo`
-
 ## Arguments
 
 | Argument | Meaning |

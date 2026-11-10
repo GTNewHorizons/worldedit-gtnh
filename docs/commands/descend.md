@@ -1,14 +1,14 @@
-# `/descend`
+# `//descend`
 
 Go down a floor.
 
 ## Usage
 
 ```
-/descend [<levels>]
+//descend [<levels>]
 ```
 
-Also typed: `/desc`
+Also typed: `//desc`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/desc`
 
 | Command | What it does |
 |---|---|
-| `/descend` | Go down one floor. |
+| `//descend` | Go down one floor. |
 
 [All commands](../README.md)

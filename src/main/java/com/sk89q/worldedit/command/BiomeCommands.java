@@ -68,13 +68,13 @@ public final class BiomeCommands {
 
     // spotless:off
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("biomelist")
+        Nodes.register(dispatcher, literal("/biomelist")
                 .executes(run("worldedit.biome.list", c -> biomeList(c.player(), 1)))
                 .then(integer("page", 1)
                         .executes(run("worldedit.biome.list", c -> biomeList(c.player(), c.integer("page"))))),
-                "biomels");
+                "/biomels");
 
-        Nodes.registerWithFlags(dispatcher, literal("biomeinfo")
+        Nodes.registerWithFlags(dispatcher, literal("/biomeinfo")
                 .executes(run("worldedit.biome.info", c -> biomeInfo(c.player(), c.session(), c.flag('t'), c.flag('p')))),
                 "pt");
 

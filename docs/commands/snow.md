@@ -8,8 +8,6 @@ Cover the area around you in snow.
 //snow [<radius>]
 ```
 
-Also typed: `/snow`
-
 ## Arguments
 
 | Argument | Meaning |

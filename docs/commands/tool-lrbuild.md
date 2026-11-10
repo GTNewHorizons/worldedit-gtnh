@@ -1,4 +1,4 @@
-# `/lrbuild`
+# `//tool lrbuild`
 
 Bind the long range building tool.
 
@@ -7,7 +7,7 @@ Place and remove blocks at a distance.
 ## Usage
 
 ```
-/lrbuild <leftclick> <rightclick>
+//tool lrbuild <leftclick> <rightclick>
 ```
 
 ## Arguments
@@ -21,6 +21,6 @@ Place and remove blocks at a distance.
 
 | Command | What it does |
 |---|---|
-| `/lrbuild air stone` | Left click removes, right click builds. |
+| `//tool lrbuild air stone` | Left click removes, right click builds. |
 
 [All commands](../README.md)

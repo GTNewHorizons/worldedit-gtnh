@@ -33,22 +33,14 @@ import com.sk89q.worldedit.WorldEdit;
 public class CommandDocsTest {
 
     private static final Set<String> GROUPS = new HashSet<>(
-        Arrays.asList("brush", "schematic", "snapshot", "superpickaxe", "tool", "worldedit"));
+        Arrays.asList("/brush", "/schematic", "/snapshot", "/superpickaxe", "/tool", "worldedit"));
 
     /** Commands whose name would not make a clear or unique file name. */
     private static final Map<String, String> PAGE_NAMES = new HashMap<>();
 
-    static {
-        PAGE_NAMES.put("/", "superpickaxe-toggle");
-        PAGE_NAMES.put("size", "brush-size");
-        PAGE_NAMES.put("mask", "brush-mask");
-        PAGE_NAMES.put("mat", "brush-material");
-        PAGE_NAMES.put("range", "brush-range");
-    }
-
     private static CommandDispatcher<ICommandSender> buildTree() {
         CommandDispatcher<ICommandSender> dispatcher = new CommandDispatcher<>();
-        CommandRegistry.registerAll(dispatcher, mock(WorldEdit.class), false);
+        CommandRegistry.registerAll(dispatcher, mock(WorldEdit.class));
         return dispatcher;
     }
 
@@ -127,6 +119,20 @@ public class CommandDocsTest {
             dir = dir.getParentFile();
         }
         throw new AssertionError("docs/commands not found from " + System.getProperty("user.dir"));
+    }
+
+    @Test
+    public void everyCommandStartsWithTwoSlashes() {
+        List<String> single = new ArrayList<>();
+        for (CommandNode<ICommandSender> node : buildTree().getRoot()
+            .getChildren()) {
+            String name = node.getName();
+            // Typed with one slash too, so that a mod clash can always be worked around
+            if (!name.startsWith("/") && !name.equals("worldedit") && !name.equals("we")) {
+                single.add("/" + name);
+            }
+        }
+        assertEquals("Commands that can be typed with one slash: " + single, 0, single.size());
     }
 
     @Test

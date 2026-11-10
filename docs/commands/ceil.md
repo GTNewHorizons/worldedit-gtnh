@@ -1,4 +1,4 @@
-# `/ceil`
+# `//ceil`
 
 Go up to the ceiling above you.
 
@@ -7,7 +7,7 @@ Puts a glass block under your feet if the server is set up to do so.
 ## Usage
 
 ```
-/ceil [-fg] [<clearance>]
+//ceil [-fg] [<clearance>]
 ```
 
 ## Arguments
@@ -29,6 +29,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/ceil` | Go up to the ceiling. |
+| `//ceil` | Go up to the ceiling. |
 
 [All commands](../README.md)

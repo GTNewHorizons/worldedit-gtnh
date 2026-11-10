@@ -1,11 +1,11 @@
-# `/brush raise`
+# `//brush raise`
 
 Raise terrain by one block where you click.
 
 ## Usage
 
 ```
-/brush raise <shape> <size>
+//brush raise <shape> <size>
 ```
 
 ## Arguments
@@ -19,6 +19,6 @@ Raise terrain by one block where you click.
 
 | Command | What it does |
 |---|---|
-| `/br raise sphere 5` | Build up a hill. |
+| `//br raise sphere 5` | Build up a hill. |
 
 [All commands](../README.md)

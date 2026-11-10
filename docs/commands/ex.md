@@ -8,7 +8,7 @@ Put out the fire around you.
 //ex [<radius>]
 ```
 
-Also typed: `/ex`, `/ext`, `/extinguish`
+Also typed: `//ext`, `//extinguish`
 
 ## Arguments
 

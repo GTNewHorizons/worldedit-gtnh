@@ -1,4 +1,4 @@
-# `/schematic load`
+# `//schematic load`
 
 Load a schematic into your clipboard.
 
@@ -7,7 +7,7 @@ Also typed `//load`. Paste it afterwards with [//paste](paste.md).
 ## Usage
 
 ```
-/schematic load <filename-or-format> [<filename>]
+//schematic load <filename-or-format> [<filename>]
 ```
 
 ## Arguments
@@ -21,7 +21,7 @@ Also typed `//load`. Paste it afterwards with [//paste](paste.md).
 
 | Command | What it does |
 |---|---|
-| `/schem load house` | Load `house.schematic`. |
-| `/schem load mcedit house` | Load it with an explicit format. |
+| `//schem load house` | Load `house.schematic`. |
+| `//schem load mcedit house` | Load it with an explicit format. |
 
 [All commands](../README.md)

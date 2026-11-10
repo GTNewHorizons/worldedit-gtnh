@@ -1,6 +1,6 @@
 # Tree types
 
-Used by [`//forest`](commands/forest.md), [`/forestgen`](commands/forestgen.md), the [`/tree`](commands/tree.md) tool and the [forest brush](commands/brush-forest.md).
+Used by [`//forest`](commands/forest.md), [`//forestgen`](commands/forestgen.md), the [`//tool tree`](commands/tool-tree.md) tool and the [forest brush](commands/brush-forest.md).
 
 | Tree | Names you can type |
 |---|---|

@@ -1,17 +1,17 @@
-# `/superpickaxe single`
+# `//superpickaxe single`
 
 Break one block at a time.
 
 ## Usage
 
 ```
-/superpickaxe single
+//superpickaxe single
 ```
 
 ## Examples
 
 | Command | What it does |
 |---|---|
-| `/sp single` | Instantly break the block you hit. |
+| `//sp single` | Instantly break the block you hit. |
 
 [All commands](../README.md)

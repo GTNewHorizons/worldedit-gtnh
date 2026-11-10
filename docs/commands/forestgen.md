@@ -1,11 +1,11 @@
-# `/forestgen`
+# `//forestgen`
 
 Generate a forest around you.
 
 ## Usage
 
 ```
-/forestgen [<size> [<type> [<density>]]]
+//forestgen [<size> [<type> [<density>]]]
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Generate a forest around you.
 
 | Command | What it does |
 |---|---|
-| `/forestgen 20 birch 10` | A dense birch forest. |
+| `//forestgen 20 birch 10` | A dense birch forest. |
 
 [All commands](../README.md)

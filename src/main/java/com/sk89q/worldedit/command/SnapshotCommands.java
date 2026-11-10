@@ -54,7 +54,7 @@ public final class SnapshotCommands {
 
     // spotless:off
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("snapshot", "Commands for choosing the snapshot to restore from").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/snapshot", "Commands for choosing the snapshot to restore from").executes(Nodes.USAGE)
                 .then(Nodes.sub("snapshot", "list", "List snapshots")
                         .executes(run("worldedit.snapshots.list", c -> list(c.player(), 5)))
                         .then(integer("num")
@@ -71,7 +71,7 @@ public final class SnapshotCommands {
                 .then(literal("after", "Choose the nearest snapshot after a date").executes(Nodes.USAGE)
                         .then(text("date")
                                 .executes(run("worldedit.snapshots.restore", c -> after(c.player(), c.session(), c.string("date")))))),
-                "snap");
+                "/snap");
     }
     // spotless:on
 
@@ -108,7 +108,7 @@ public final class SnapshotCommands {
                                 .getName());
                 }
 
-                player.print("Use /snap use [snapshot] or /snap use latest.");
+                player.print("Use //snapshot use [snapshot] or //snapshot use latest.");
             } else {
                 player.printError("No snapshots are available. See console for details.");
 

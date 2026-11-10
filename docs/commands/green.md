@@ -8,8 +8,6 @@ Turn the dirt around you into grass.
 //green [-f] [<radius>]
 ```
 
-Also typed: `/green`
-
 ## Arguments
 
 | Argument | Meaning |

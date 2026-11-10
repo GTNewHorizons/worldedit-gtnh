@@ -1,11 +1,11 @@
-# `/snapshot use`
+# `//snapshot use`
 
 Choose a snapshot by name.
 
 ## Usage
 
 ```
-/snapshot use <snapshot>
+//snapshot use <snapshot>
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Choose a snapshot by name.
 
 | Command | What it does |
 |---|---|
-| `/snap use latest` | Use the newest. |
+| `//snap use latest` | Use the newest. |
 
 [All commands](../README.md)

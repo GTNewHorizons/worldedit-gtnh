@@ -91,7 +91,6 @@ final class LegacyConfigImport {
      */
     static void apply(Properties old) {
         bool(old, "profile", v -> WorldEditConfig.General.profile = v);
-        bool(old, "no-double-slash", v -> WorldEditConfig.General.noDoubleSlash = v);
         bool(old, "log-commands", v -> WorldEditConfig.General.logCommands = v);
         string(old, "log-file", v -> WorldEditConfig.General.logFile = v);
 

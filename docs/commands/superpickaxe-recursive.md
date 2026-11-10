@@ -1,14 +1,14 @@
-# `/superpickaxe recursive`
+# `//superpickaxe recursive`
 
 Break all connected blocks of the same type.
 
 ## Usage
 
 ```
-/superpickaxe recursive <radius>
+//superpickaxe recursive <radius>
 ```
 
-Also typed: `/superpickaxe recur`
+Also typed: `//superpickaxe recur`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/superpickaxe recur`
 
 | Command | What it does |
 |---|---|
-| `/sp recursive 10` | Break a whole vein. |
+| `//sp recursive 10` | Break a whole vein. |
 
 [All commands](../README.md)

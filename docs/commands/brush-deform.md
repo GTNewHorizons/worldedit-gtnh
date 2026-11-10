@@ -1,4 +1,4 @@
-# `/brush deform`
+# `//brush deform`
 
 Reshape terrain with a formula where you click.
 
@@ -7,7 +7,7 @@ See [expressions](../expressions.md).
 ## Usage
 
 ```
-/brush deform [-ro] <shape> <size> <expression>
+//brush deform [-ro] <shape> <size> <expression>
 ```
 
 ## Arguments
@@ -31,6 +31,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br deform sphere 8 y-=0.2` | Pull terrain up a little. |
+| `//br deform sphere 8 y-=0.2` | Pull terrain up a little. |
 
 [All commands](../README.md)

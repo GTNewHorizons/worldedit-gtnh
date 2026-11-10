@@ -155,7 +155,7 @@ public final class SelectionCommands {
                 .executes(run(null, c -> select(c.player(), c.session(), c)))
                 .then(word("type", "cuboid", "extend", "poly", "ellipsoid", "sphere", "cyl", "convex")
                         .executes(run(null, c -> select(c.player(), c.session(), c)))),
-                "d", ";", "/desel", "/deselect");
+                "d", "/;", "/desel", "/deselect");
     }
     // spotless:on
 

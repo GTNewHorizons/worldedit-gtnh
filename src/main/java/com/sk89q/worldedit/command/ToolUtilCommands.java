@@ -23,7 +23,7 @@ import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import net.minecraft.command.ICommandSender;
 
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.command.brigadier.CommandCall;
 import com.sk89q.worldedit.command.brigadier.Nodes;
@@ -45,37 +45,39 @@ public final class ToolUtilCommands {
     private ToolUtilCommands() {}
 
     // spotless:off
-    public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("/", "Toggle the super pickaxe function")
-                .executes(run("worldedit.superpickaxe", c -> togglePickaxe(c.player(), c.session(), null)))
-                .then(word("state", "on", "off")
-                        .executes(run("worldedit.superpickaxe",
-                                c -> togglePickaxe(c.player(), c.session(), c.string("state"))))),
-                ",");
-
-        Nodes.register(dispatcher, literal("mask", "Set the brush mask")
+    static LiteralCommandNode<ICommandSender> maskNode() {
+        return literal("mask", "Set the brush mask")
                 .executes(run("worldedit.brush.options.mask", c -> mask(c.player(), c.session(), null)))
                 .then(word("mask")
                         .executes(run("worldedit.brush.options.mask",
-                                c -> mask(c.player(), c.session(), c.mask("mask"))))));
+                                c -> mask(c.player(), c.session(), c.mask("mask")))))
+                .build();
+    }
 
-        Nodes.register(dispatcher, literal("mat", "Set the brush material").executes(Nodes.USAGE)
+    static LiteralCommandNode<ICommandSender> materialNode() {
+        return literal("material", "Set the brush material").executes(Nodes.USAGE)
                 .then(word("pattern")
                         .executes(run("worldedit.brush.options.material",
-                                c -> material(c.player(), c.session(), c.pattern("pattern"))))),
-                "material");
+                                c -> material(c.player(), c.session(), c.pattern("pattern")))))
+                .build();
+    }
 
-        Nodes.register(dispatcher, literal("range", "Set the brush range").executes(Nodes.USAGE)
+    static LiteralCommandNode<ICommandSender> rangeNode() {
+        return literal("range", "Set the brush range").executes(Nodes.USAGE)
                 .then(integer("range")
-                        .executes(run("worldedit.brush.options.range", ToolUtilCommands::range))));
+                        .executes(run("worldedit.brush.options.range", ToolUtilCommands::range)))
+                .build();
+    }
 
-        Nodes.register(dispatcher, literal("size", "Set the brush size").executes(Nodes.USAGE)
+    static LiteralCommandNode<ICommandSender> sizeNode() {
+        return literal("size", "Set the brush size").executes(Nodes.USAGE)
                 .then(integer("radius")
-                        .executes(run("worldedit.brush.options.size", ToolUtilCommands::size))));
+                        .executes(run("worldedit.brush.options.size", ToolUtilCommands::size)))
+                .build();
     }
     // spotless:on
 
-    private static void togglePickaxe(Player player, LocalSession session, String newState) {
+    static void togglePickaxe(Player player, LocalSession session, String newState) {
         if (session.hasSuperPickAxe()) {
             if ("on".equals(newState)) {
                 player.printError("Super pick axe already enabled.");

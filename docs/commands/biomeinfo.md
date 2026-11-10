@@ -1,11 +1,11 @@
-# `/biomeinfo`
+# `//biomeinfo`
 
 Show the biomes in your selection.
 
 ## Usage
 
 ```
-/biomeinfo [-pt]
+//biomeinfo [-pt]
 ```
 
 ## Flags
@@ -21,7 +21,7 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/biomeinfo` | The biomes in your selection. |
-| `/biomeinfo -p` | The biome where you stand. |
+| `//biomeinfo` | The biomes in your selection. |
+| `//biomeinfo -p` | The biome where you stand. |
 
 [All commands](../README.md)

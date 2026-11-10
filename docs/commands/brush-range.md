@@ -1,11 +1,11 @@
-# `/range`
+# `//brush range`
 
 Change how far the brush in your hand reaches.
 
 ## Usage
 
 ```
-/range <range>
+//brush range <range>
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Change how far the brush in your hand reaches.
 
 | Command | What it does |
 |---|---|
-| `/range 50` | Reach 50 blocks. |
+| `//brush range 50` | Reach 50 blocks. |
 
 [All commands](../README.md)

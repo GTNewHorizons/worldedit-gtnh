@@ -8,8 +8,6 @@ Remove the blocks below you.
 //removebelow [<size> [<height>]]
 ```
 
-Also typed: `/removebelow`
-
 ## Arguments
 
 | Argument | Meaning |

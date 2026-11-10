@@ -1,11 +1,11 @@
-# `/snapshot list`
+# `//snapshot list`
 
 List the available snapshots.
 
 ## Usage
 
 ```
-/snapshot list [<num>]
+//snapshot list [<num>]
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ List the available snapshots.
 
 | Command | What it does |
 |---|---|
-| `/snap list 20` | Show the last 20. |
+| `//snap list 20` | Show the last 20. |
 
 [All commands](../README.md)

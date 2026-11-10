@@ -72,8 +72,7 @@ public class HistoryCommands {
                         .executes(run("worldedit.history.undo", c -> undo(c.player(), c.session(), c.integer("times"), null)))
                         .then(word("player")
                                 .executes(run("worldedit.history.undo", c ->
-                                        undo(c.player(), c.session(), c.integer("times"), c.string("player")))))),
-                "undo");
+                                        undo(c.player(), c.session(), c.integer("times"), c.string("player")))))));
 
         Nodes.register(dispatcher, literal("/redo")
                 .executes(run("worldedit.history.redo", c -> redo(c.player(), c.session(), 1, null)))
@@ -81,12 +80,10 @@ public class HistoryCommands {
                         .executes(run("worldedit.history.redo", c -> redo(c.player(), c.session(), c.integer("times"), null)))
                         .then(word("player")
                                 .executes(run("worldedit.history.redo", c ->
-                                        redo(c.player(), c.session(), c.integer("times"), c.string("player")))))),
-                "redo");
+                                        redo(c.player(), c.session(), c.integer("times"), c.string("player")))))));
 
         Nodes.register(dispatcher, literal("/clearhistory")
-                .executes(run("worldedit.history.clear", c -> clearHistory(c.player(), c.session()))),
-                "clearhistory");
+                .executes(run("worldedit.history.clear", c -> clearHistory(c.player(), c.session()))));
     }
     // spotless:on
 

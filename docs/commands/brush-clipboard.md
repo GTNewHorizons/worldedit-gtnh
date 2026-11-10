@@ -1,14 +1,14 @@
-# `/brush clipboard`
+# `//brush clipboard`
 
 Paste your clipboard where you click.
 
 ## Usage
 
 ```
-/brush clipboard [-ap]
+//brush clipboard [-ap]
 ```
 
-Also typed: `/brush copy`
+Also typed: `//brush copy`
 
 ## Flags
 
@@ -23,6 +23,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br clipboard -a` | Stamp the clipboard without air. |
+| `//br clipboard -a` | Stamp the clipboard without air. |
 
 [All commands](../README.md)

@@ -16,15 +16,10 @@
 
 package com.sk89q.worldedit.command.brigadier;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.command.ICommandSender;
 
 import com.gtnewhorizon.gtnhlib.brigadier.BrigadierApi;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.CommandNode;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.command.BiomeCommands;
 import com.sk89q.worldedit.command.BrushCommands;
@@ -42,7 +37,6 @@ import com.sk89q.worldedit.command.SnapshotCommands;
 import com.sk89q.worldedit.command.SnapshotUtilCommands;
 import com.sk89q.worldedit.command.SuperPickaxeCommands;
 import com.sk89q.worldedit.command.ToolCommands;
-import com.sk89q.worldedit.command.ToolUtilCommands;
 import com.sk89q.worldedit.command.UtilityCommands;
 import com.sk89q.worldedit.command.WorldEditCommands;
 
@@ -61,11 +55,11 @@ public final class CommandRegistry {
     /**
      * Must run after GTNHLib has created the dispatcher for the starting server.
      */
-    public static void registerAll(WorldEdit worldEdit, boolean noDoubleSlash) {
-        registerAll(BrigadierApi.getCommandDispatcher(), worldEdit, noDoubleSlash);
+    public static void registerAll(WorldEdit worldEdit) {
+        registerAll(BrigadierApi.getCommandDispatcher(), worldEdit);
     }
 
-    static void registerAll(CommandDispatcher<ICommandSender> dispatcher, WorldEdit worldEdit, boolean noDoubleSlash) {
+    static void registerAll(CommandDispatcher<ICommandSender> dispatcher, WorldEdit worldEdit) {
 
         BiomeCommands.register(dispatcher);
         BrushCommands.register(dispatcher);
@@ -83,41 +77,8 @@ public final class CommandRegistry {
         SnapshotUtilCommands.register(dispatcher);
         SuperPickaxeCommands.register(dispatcher);
         ToolCommands.register(dispatcher);
-        ToolUtilCommands.register(dispatcher);
         UtilityCommands.register(dispatcher);
         WorldEditCommands.register(dispatcher);
 
-        addSlashAliases(dispatcher, noDoubleSlash);
-    }
-
-    /**
-     * Commands such as {@code //undo} are typed with two slashes, and the first one is eaten by Minecraft. So a command
-     * defined without a slash can also be typed {@code //name}, and with the {@code no-double-slash} setting a command
-     * defined with a slash can also be typed {@code /name}.
-     */
-    private static void addSlashAliases(CommandDispatcher<ICommandSender> dispatcher, boolean noDoubleSlash) {
-        List<CommandNode<ICommandSender>> existing = new ArrayList<>(
-            dispatcher.getRoot()
-                .getChildren());
-        for (CommandNode<ICommandSender> node : existing) {
-            String name = node.getName();
-            boolean slashed = name.startsWith("/");
-            if (slashed && !noDoubleSlash) {
-                continue;
-            }
-            String alias = slashed ? name.substring(1) : "/" + name;
-            if (dispatcher.getRoot()
-                .getChild(alias) != null) {
-                continue;
-            }
-            CommandNode<ICommandSender> target = node.getRedirect() != null ? node.getRedirect() : node;
-            dispatcher.getRoot()
-                .addChild(
-                    LiteralArgumentBuilder.<ICommandSender>literal(alias)
-                        .requires(target.getRequirement())
-                        .executes(target.getCommand())
-                        .redirect(target)
-                        .build());
-        }
     }
 }

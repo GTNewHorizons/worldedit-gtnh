@@ -1,11 +1,11 @@
-# `/pumpkins`
+# `//pumpkins`
 
 Generate pumpkin patches around you.
 
 ## Usage
 
 ```
-/pumpkins [<size>]
+//pumpkins [<size>]
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Generate pumpkin patches around you.
 
 | Command | What it does |
 |---|---|
-| `/pumpkins 15` | Scatter pumpkins. |
+| `//pumpkins 15` | Scatter pumpkins. |
 
 [All commands](../README.md)

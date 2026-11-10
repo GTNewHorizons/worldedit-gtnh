@@ -1,13 +1,13 @@
-# `/restore`
+# `//restore`
 
 Restore your selection from a snapshot.
 
-Uses the snapshot you chose with [/snapshot](snapshot.md), or the newest one. It can be undone with [//undo](undo.md).
+Uses the snapshot you chose with [//snapshot](snapshot.md), or the newest one. It can be undone with [//undo](undo.md).
 
 ## Usage
 
 ```
-/restore [<snapshot>]
+//restore [<snapshot>]
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Uses the snapshot you chose with [/snapshot](snapshot.md), or the newest one. It
 
 | Command | What it does |
 |---|---|
-| `/restore` | Restore from the chosen snapshot. |
+| `//restore` | Restore from the chosen snapshot. |
 
 [All commands](../README.md)

@@ -10,8 +10,6 @@ Frees the memory of big edits. You can not undo them afterwards.
 //clearhistory
 ```
 
-Also typed: `/clearhistory`
-
 ## Examples
 
 | Command | What it does |

@@ -178,7 +178,7 @@ public class ForgeWorldEdit {
 
         // GTNHLib creates a new command dispatcher for each server, right before this. Not any later: on Thermos it
         // wraps the registered commands when the server is starting.
-        CommandRegistry.registerAll(WorldEdit.getInstance(), config.noDoubleSlash);
+        CommandRegistry.registerAll(WorldEdit.getInstance());
         provider.registerNodes();
 
         previousLightingScheduler = WorldEdit.getInstance()

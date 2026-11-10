@@ -1,11 +1,11 @@
-# `/brush set`
+# `//brush set`
 
 Fill a shape where you click.
 
 ## Usage
 
 ```
-/brush set <shape> <size> <pattern>
+//brush set <shape> <size> <pattern>
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Fill a shape where you click.
 
 | Command | What it does |
 |---|---|
-| `/br set sphere 5 stone` | Paint stone balls. |
+| `//br set sphere 5 stone` | Paint stone balls. |
 
 [All commands](../README.md)

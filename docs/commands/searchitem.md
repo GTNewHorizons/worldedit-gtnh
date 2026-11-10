@@ -10,7 +10,7 @@ Shows at most 15 results. You can also search by item ID.
 //searchitem [-bi] <query>
 ```
 
-Also typed: `//l`, `//search`, `/searchitem`
+Also typed: `//l`, `//search`
 
 ## Arguments
 

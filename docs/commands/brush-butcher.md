@@ -1,4 +1,4 @@
-# `/brush butcher`
+# `//brush butcher`
 
 Kill mobs where you click.
 
@@ -7,10 +7,10 @@ By default this only kills hostile mobs.
 ## Usage
 
 ```
-/brush butcher [-plangbtfr] [<radius>]
+//brush butcher [-plangbtfr] [<radius>]
 ```
 
-Also typed: `/brush kill`
+Also typed: `//brush kill`
 
 ## Arguments
 
@@ -38,6 +38,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br butcher 10` | Kill hostile mobs at a distance. |
+| `//br butcher 10` | Kill hostile mobs at a distance. |
 
 [All commands](../README.md)

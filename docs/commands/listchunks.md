@@ -1,4 +1,4 @@
-# `/listchunks`
+# `//listchunks`
 
 List the chunks in your selection.
 
@@ -7,13 +7,13 @@ Also shows the region file of each.
 ## Usage
 
 ```
-/listchunks
+//listchunks
 ```
 
 ## Examples
 
 | Command | What it does |
 |---|---|
-| `/listchunks` | List them. |
+| `//listchunks` | List them. |
 
 [All commands](../README.md)

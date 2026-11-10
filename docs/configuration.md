@@ -1,6 +1,6 @@
 # Configuration
 
-For server owners. The settings are in `config/worldedit/worldedit.cfg`, and each option explains itself in a comment. After editing the file, apply it with [`/we reload`](commands/worldedit-reload.md). `noDoubleSlash` and the lists in the `placement` category only apply after a restart. The `permissions` category is explained in [permissions](permissions.md).
+For server owners. The settings are in `config/worldedit/worldedit.cfg`, and each option explains itself in a comment. After editing the file, apply it with [`/we reload`](commands/worldedit-reload.md). The lists in the `placement` category only apply after a restart. The `permissions` category is explained in [permissions](permissions.md).
 
 ## Coming from `worldedit.properties`
 
@@ -13,7 +13,6 @@ To import again, delete `worldedit.cfg` and rename the old file back to `worlded
 | Old key | Category | New option |
 |---|---|---|
 | `profile` | `general` | `profile` |
-| `no-double-slash` | `general` | `noDoubleSlash` |
 | `log-commands` | `general` | `logCommands` |
 | `log-file` | `general` | `logFile` |
 | `use-in-creative` | `permissions` | `useInCreative` |
@@ -43,6 +42,6 @@ To import again, delete `worldedit.cfg` and rename the old file back to `worlded
 | `place-last-blocks` | `placement` | `placeLastBlocks` |
 | `place-normally-blocks` | `placement` | `placeNormallyBlocks` |
 
-`register-help`, `allow-extra-data-values` and the three `use-inventory` options did nothing, and are gone.
+`register-help`, `allow-extra-data-values` and the three `use-inventory` options did nothing, and are gone. `no-double-slash` is gone too: every command now starts with two slashes.
 
 [All commands](README.md)

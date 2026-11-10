@@ -1,4 +1,4 @@
-# `/repl`
+# `//tool repl`
 
 Bind the block replacer tool.
 
@@ -7,7 +7,7 @@ Right clicking a block replaces it. Left clicking takes the clicked block as the
 ## Usage
 
 ```
-/repl <block>
+//tool repl <block>
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Right clicking a block replaces it. Left clicking takes the clicked block as the
 
 | Command | What it does |
 |---|---|
-| `/repl stone` | Replace with stone. |
+| `//tool repl stone` | Replace with stone. |
 
 [All commands](../README.md)

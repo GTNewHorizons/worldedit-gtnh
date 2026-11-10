@@ -10,7 +10,7 @@ Without a type this clears your selection, which is what `//desel` is usually ty
 //sel [-d] [<type>]
 ```
 
-Also typed: `//desel`, `//deselect`, `/;`
+Also typed: `//desel`, `//deselect`, `//;`
 
 ## Arguments
 

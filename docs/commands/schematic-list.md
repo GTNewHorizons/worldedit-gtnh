@@ -1,4 +1,4 @@
-# `/schematic list`
+# `//schematic list`
 
 List the saved schematics.
 
@@ -7,10 +7,10 @@ Shows 9 per page, sorted by name unless you ask otherwise.
 ## Usage
 
 ```
-/schematic list [-dn] [-p <page>]
+//schematic list [-dn] [-p <page>]
 ```
 
-Also typed: `/schematic all`, `/schematic ls`
+Also typed: `//schematic all`, `//schematic ls`
 
 ## Flags
 
@@ -26,7 +26,7 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/schem list` | The first page. |
-| `/schem list -n -p 2` | The second page, newest first. |
+| `//schem list` | The first page. |
+| `//schem list -n -p 2` | The second page, newest first. |
 
 [All commands](../README.md)

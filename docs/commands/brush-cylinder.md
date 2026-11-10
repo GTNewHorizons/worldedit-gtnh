@@ -1,14 +1,14 @@
-# `/brush cylinder`
+# `//brush cylinder`
 
 Paint cylinders.
 
 ## Usage
 
 ```
-/brush cylinder [-h] <pattern> [<radius> [<height>]]
+//brush cylinder [-h] <pattern> [<radius> [<height>]]
 ```
 
-Also typed: `/brush c`, `/brush cyl`
+Also typed: `//brush c`, `//brush cyl`
 
 ## Arguments
 
@@ -30,6 +30,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br cylinder stone 3 5` | Paint stone pillars. |
+| `//br cylinder stone 3 5` | Paint stone pillars. |
 
 [All commands](../README.md)

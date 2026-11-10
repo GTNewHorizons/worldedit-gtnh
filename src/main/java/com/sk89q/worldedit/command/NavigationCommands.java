@@ -47,37 +47,37 @@ public final class NavigationCommands {
 
     // spotless:off
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("unstuck")
+        Nodes.register(dispatcher, literal("/unstuck")
                 .executes(run("worldedit.navigation.unstuck", NavigationCommands::unstuck)),
-                "!");
+                "/!");
 
-        Nodes.register(dispatcher, literal("ascend")
+        Nodes.register(dispatcher, literal("/ascend")
                 .executes(run("worldedit.navigation.ascend", c -> ascend(c.player(), 1)))
                 .then(integer("levels")
                         .executes(run("worldedit.navigation.ascend", c -> ascend(c.player(), c.integer("levels"))))),
-                "asc");
+                "/asc");
 
-        Nodes.register(dispatcher, literal("descend")
+        Nodes.register(dispatcher, literal("/descend")
                 .executes(run("worldedit.navigation.descend", c -> descend(c.player(), 1)))
                 .then(integer("levels")
                         .executes(run("worldedit.navigation.descend", c -> descend(c.player(), c.integer("levels"))))),
-                "desc");
+                "/desc");
 
-        Nodes.registerWithFlags(dispatcher, literal("ceil")
+        Nodes.registerWithFlags(dispatcher, literal("/ceil")
                 .executes(run("worldedit.navigation.ceiling", LogMode.POSITION, c -> ceiling(c, 0)))
                 .then(integer("clearance", 0)
                         .executes(run("worldedit.navigation.ceiling", LogMode.POSITION,
                                 c -> ceiling(c, c.integer("clearance"))))),
                 "fg");
 
-        Nodes.register(dispatcher, literal("thru")
+        Nodes.register(dispatcher, literal("/thru")
                 .executes(run("worldedit.navigation.thru.command", NavigationCommands::thru)));
 
-        Nodes.register(dispatcher, literal("jumpto")
+        Nodes.register(dispatcher, literal("/jumpto")
                 .executes(run("worldedit.navigation.jumpto.command", NavigationCommands::jumpTo)),
-                "j");
+                "/j");
 
-        Nodes.registerWithFlags(dispatcher, literal("up").executes(Nodes.USAGE)
+        Nodes.registerWithFlags(dispatcher, literal("/up").executes(Nodes.USAGE)
                 .then(integer("distance")
                         .executes(run("worldedit.navigation.up", LogMode.POSITION, NavigationCommands::up))),
                 "fg");

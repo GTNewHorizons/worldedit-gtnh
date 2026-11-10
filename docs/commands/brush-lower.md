@@ -1,11 +1,11 @@
-# `/brush lower`
+# `//brush lower`
 
 Lower terrain by one block where you click.
 
 ## Usage
 
 ```
-/brush lower <shape> <size>
+//brush lower <shape> <size>
 ```
 
 ## Arguments
@@ -19,6 +19,6 @@ Lower terrain by one block where you click.
 
 | Command | What it does |
 |---|---|
-| `/br lower sphere 5` | Dig out a valley. |
+| `//br lower sphere 5` | Dig out a valley. |
 
 [All commands](../README.md)

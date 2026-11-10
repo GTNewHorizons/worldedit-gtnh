@@ -1,4 +1,4 @@
-# `/up`
+# `//up`
 
 Go straight up.
 
@@ -7,7 +7,7 @@ Puts a glass block under your feet if the server is set up to do so.
 ## Usage
 
 ```
-/up [-fg] <distance>
+//up [-fg] <distance>
 ```
 
 ## Arguments
@@ -29,6 +29,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/up 20` | Rise 20 blocks. |
+| `//up 20` | Rise 20 blocks. |
 
 [All commands](../README.md)

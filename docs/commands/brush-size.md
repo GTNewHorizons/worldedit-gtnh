@@ -1,13 +1,13 @@
-# `/size`
+# `//brush size`
 
 Change the size of the brush in your hand.
 
-Typed with one slash. The double slash `//size` is [something else](size.md).
+Not to be confused with [`//size`](size.md), which shows information about your selection.
 
 ## Usage
 
 ```
-/size <radius>
+//brush size <radius>
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Typed with one slash. The double slash `//size` is [something else](size.md).
 
 | Command | What it does |
 |---|---|
-| `/size 8` | Use a bigger brush. |
+| `//brush size 8` | Use a bigger brush. |
 
 [All commands](../README.md)

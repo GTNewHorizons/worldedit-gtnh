@@ -1,14 +1,14 @@
-# `/biomelist`
+# `//biomelist`
 
 List the biomes.
 
 ## Usage
 
 ```
-/biomelist [<page>]
+//biomelist [<page>]
 ```
 
-Also typed: `/biomels`
+Also typed: `//biomels`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/biomels`
 
 | Command | What it does |
 |---|---|
-| `/biomelist 2` | The second page. |
+| `//biomelist 2` | The second page. |
 
 [All commands](../README.md)

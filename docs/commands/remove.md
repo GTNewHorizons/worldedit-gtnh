@@ -1,14 +1,14 @@
-# `/remove`
+# `//remove`
 
 Remove entities of a type around you.
 
 ## Usage
 
 ```
-/remove <type> <radius>
+//remove <type> <radius>
 ```
 
-Also typed: `/rem`, `/rement`
+Also typed: `//rem`, `//rement`
 
 ## Arguments
 
@@ -21,7 +21,7 @@ Also typed: `/rem`, `/rement`
 
 | Command | What it does |
 |---|---|
-| `/remove items 20` | Clear dropped items. |
-| `/remove all -1` | Remove all of these everywhere it is loaded. |
+| `//remove items 20` | Clear dropped items. |
+| `//remove all -1` | Remove all of these everywhere it is loaded. |
 
 [All commands](../README.md)

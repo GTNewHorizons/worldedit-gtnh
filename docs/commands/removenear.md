@@ -8,8 +8,6 @@ Remove a type of block around you.
 //removenear <block> [<size>]
 ```
 
-Also typed: `/removenear`
-
 ## Arguments
 
 | Argument | Meaning |

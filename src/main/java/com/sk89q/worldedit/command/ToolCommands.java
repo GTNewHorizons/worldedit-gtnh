@@ -103,18 +103,7 @@ public final class ToolCommands {
                                 .executes(run("worldedit.tool.lrbuild", ToolCommands::longRangeBuild))))
                 .build();
 
-        // The same tools can be bound without the group, as //info or //none
-        Nodes.register(dispatcher, none);
-        Nodes.register(dispatcher, info);
-        Nodes.register(dispatcher, tree);
-        Nodes.register(dispatcher, repl);
-        Nodes.register(dispatcher, cycler);
-        Nodes.register(dispatcher, floodFill, "flood");
-        Nodes.register(dispatcher, delTree);
-        Nodes.register(dispatcher, farWand);
-        Nodes.register(dispatcher, longRangeBuild, "/lrbuild");
-
-        Nodes.register(dispatcher, literal("tool", "Bind functions to held items").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/tool", "Bind functions to held items").executes(Nodes.USAGE)
                 .then(none)
                 .then(info)
                 .then(tree)
@@ -124,8 +113,7 @@ public final class ToolCommands {
                 .then(Nodes.alias("flood", floodFill))
                 .then(delTree)
                 .then(farWand)
-                .then(longRangeBuild)
-                .then(Nodes.alias("/lrbuild", longRangeBuild)));
+                .then(longRangeBuild));
     }
     // spotless:on
 

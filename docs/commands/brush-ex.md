@@ -1,14 +1,14 @@
-# `/brush ex`
+# `//brush ex`
 
 Put out fire where you click.
 
 ## Usage
 
 ```
-/brush ex [<radius>]
+//brush ex [<radius>]
 ```
 
-Also typed: `/brush extinguish`
+Also typed: `//brush extinguish`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/brush extinguish`
 
 | Command | What it does |
 |---|---|
-| `/br ex 10` | A fire extinguisher. |
+| `//br ex 10` | A fire extinguisher. |
 
 [All commands](../README.md)

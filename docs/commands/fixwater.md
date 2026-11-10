@@ -8,8 +8,6 @@ Make the water around you still.
 //fixwater <radius>
 ```
 
-Also typed: `/fixwater`
-
 ## Arguments
 
 | Argument | Meaning |

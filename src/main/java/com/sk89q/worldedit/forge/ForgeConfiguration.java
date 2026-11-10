@@ -92,7 +92,6 @@ public class ForgeConfiguration extends LocalConfiguration {
 
     private void copyValues() {
         profile = WorldEditConfig.General.profile;
-        noDoubleSlash = WorldEditConfig.General.noDoubleSlash;
         logCommands = WorldEditConfig.General.logCommands;
         logFile = WorldEditConfig.General.logFile;
 

@@ -95,13 +95,13 @@ public final class SchematicCommands {
         LiteralCommandNode<ICommandSender> formats = formatsNode("formats");
         LiteralCommandNode<ICommandSender> list = listNode("list");
 
-        Nodes.register(dispatcher, literal("schematic", "Schematic commands for saving/loading areas").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/schematic", "Schematic commands for saving/loading areas").executes(Nodes.USAGE)
                 .then(load)
                 .then(save)
                 .then(delete).then(Nodes.alias("d", delete))
                 .then(formats).then(Nodes.alias("listformats", formats)).then(Nodes.alias("f", formats))
                 .then(list).then(Nodes.alias("all", list)).then(Nodes.alias("ls", list)),
-                "schem");
+                "/schem");
     }
 
     private static LiteralCommandNode<ICommandSender> deleteNode(String name) {

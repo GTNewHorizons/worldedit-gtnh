@@ -90,7 +90,7 @@ public final class ClipboardCommands {
                 .then(word("direction")
                         .executes(run("worldedit.clipboard.flip", c -> flip(c.player(), c.session(), c.direction("direction"))))));
 
-        Nodes.register(dispatcher, literal("clearclipboard", "Clear your clipboard")
+        Nodes.register(dispatcher, literal("/clearclipboard", "Clear your clipboard")
                 .executes(run("worldedit.clipboard.clear", c -> clearClipboard(c.player(), c.session()))));
     }
     // spotless:on

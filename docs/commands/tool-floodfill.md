@@ -1,4 +1,4 @@
-# `/floodfill`
+# `//tool floodfill`
 
 Bind the flood fill tool.
 
@@ -7,10 +7,10 @@ Clicking a block replaces it and all connected blocks of the same kind.
 ## Usage
 
 ```
-/floodfill <pattern> <range>
+//tool floodfill <pattern> <range>
 ```
 
-Also typed: `/flood`
+Also typed: `//tool flood`
 
 ## Arguments
 
@@ -23,6 +23,6 @@ Also typed: `/flood`
 
 | Command | What it does |
 |---|---|
-| `/floodfill stone 10` | Flood fill with stone. |
+| `//tool floodfill stone 10` | Flood fill with stone. |
 
 [All commands](../README.md)

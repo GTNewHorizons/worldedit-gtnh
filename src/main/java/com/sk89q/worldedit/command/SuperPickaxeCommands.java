@@ -20,6 +20,7 @@ import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
 import static com.sk89q.worldedit.command.brigadier.Nodes.decimal;
 import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
 import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
 
 import net.minecraft.command.ICommandSender;
 
@@ -52,14 +53,18 @@ public final class SuperPickaxeCommands {
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
         LiteralCommandNode<ICommandSender> recursive = recursiveNode("recursive");
 
-        Nodes.register(dispatcher, literal("superpickaxe", "Super-pickaxe commands").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/superpickaxe", "Toggle the super pickaxe, or choose how it works")
+                .executes(run("worldedit.superpickaxe", c -> ToolUtilCommands.togglePickaxe(c.player(), c.session(), null)))
+                .then(word("state", "on", "off")
+                        .executes(run("worldedit.superpickaxe",
+                                c -> ToolUtilCommands.togglePickaxe(c.player(), c.session(), c.string("state")))))
                 .then(literal("single", "Enable the single block super pickaxe mode")
                         .executes(run("worldedit.superpickaxe", SuperPickaxeCommands::single)))
                 .then(literal("area", "Enable the area super pickaxe mode").executes(Nodes.USAGE)
                         .then(integer("radius")
                                 .executes(run("worldedit.superpickaxe.area", SuperPickaxeCommands::area))))
                 .then(recursive).then(Nodes.alias("recur", recursive)),
-                "pickaxe", "sp");
+                "/pickaxe", "/sp", "/");
     }
 
     private static LiteralCommandNode<ICommandSender> recursiveNode(String name) {

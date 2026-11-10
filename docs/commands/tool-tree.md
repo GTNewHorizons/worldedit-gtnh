@@ -1,4 +1,4 @@
-# `/tree`
+# `//tool tree`
 
 Bind the tree tool.
 
@@ -7,7 +7,7 @@ Clicking the ground grows a tree.
 ## Usage
 
 ```
-/tree [<type>]
+//tool tree [<type>]
 ```
 
 ## Arguments
@@ -20,6 +20,6 @@ Clicking the ground grows a tree.
 
 | Command | What it does |
 |---|---|
-| `/tree birch` | Plant birch trees. |
+| `//tool tree birch` | Plant birch trees. |
 
 [All commands](../README.md)

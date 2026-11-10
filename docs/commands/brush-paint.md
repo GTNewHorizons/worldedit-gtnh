@@ -1,13 +1,13 @@
-# `/brush paint`
+# `//brush paint`
 
 Apply a function to the surfaces in a shape.
 
 ## Usage
 
 ```
-/brush paint <shape> <size> <density> forest <tree>
-/brush paint <shape> <size> <density> item <item>
-/brush paint <shape> <size> <density> set <pattern>
+//brush paint <shape> <size> <density> forest <tree>
+//brush paint <shape> <size> <density> item <item>
+//brush paint <shape> <size> <density> set <pattern>
 ```
 
 ## Arguments
@@ -25,6 +25,6 @@ Apply a function to the surfaces in a shape.
 
 | Command | What it does |
 |---|---|
-| `/br paint sphere 8 30 set grass` | Scatter grass on surfaces. |
+| `//br paint sphere 8 30 set grass` | Scatter grass on surfaces. |
 
 [All commands](../README.md)

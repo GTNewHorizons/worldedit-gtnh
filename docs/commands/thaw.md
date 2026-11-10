@@ -8,8 +8,6 @@ Remove the snow around you.
 //thaw [<radius>]
 ```
 
-Also typed: `/thaw`
-
 ## Arguments
 
 | Argument | Meaning |

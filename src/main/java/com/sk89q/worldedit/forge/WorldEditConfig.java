@@ -53,11 +53,6 @@ public final class WorldEditConfig {
         @Config.Reloadable(RELOAD)
         public static boolean profile;
 
-        @Config.Comment("Also accept commands such as //set when they are typed with one slash, as /set.")
-        @Config.DefaultBoolean(false)
-        @Config.RequiresMcRestart
-        public static boolean noDoubleSlash;
-
         @Config.Comment("Write the WorldEdit commands players use to the log file below.")
         @Config.DefaultBoolean(false)
         @Config.Reloadable(RELOAD)

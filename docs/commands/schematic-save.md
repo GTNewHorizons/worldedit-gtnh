@@ -1,4 +1,4 @@
-# `/schematic save`
+# `//schematic save`
 
 Save your clipboard to a schematic.
 
@@ -7,7 +7,7 @@ Also typed `//save`. Rotations and flips of the clipboard are saved too.
 ## Usage
 
 ```
-/schematic save <filename-or-format> [<filename>]
+//schematic save <filename-or-format> [<filename>]
 ```
 
 ## Arguments
@@ -21,6 +21,6 @@ Also typed `//save`. Rotations and flips of the clipboard are saved too.
 
 | Command | What it does |
 |---|---|
-| `/schem save house` | Save `house.schematic`. |
+| `//schem save house` | Save `house.schematic`. |
 
 [All commands](../README.md)

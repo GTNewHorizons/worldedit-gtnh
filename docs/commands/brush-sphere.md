@@ -1,14 +1,14 @@
-# `/brush sphere`
+# `//brush sphere`
 
 Paint spheres.
 
 ## Usage
 
 ```
-/brush sphere [-h] <pattern> [<radius>]
+//brush sphere [-h] <pattern> [<radius>]
 ```
 
-Also typed: `/brush s`
+Also typed: `//brush s`
 
 ## Arguments
 
@@ -29,6 +29,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br sphere stone 5` | Paint stone balls. |
+| `//br sphere stone 5` | Paint stone balls. |
 
 [All commands](../README.md)

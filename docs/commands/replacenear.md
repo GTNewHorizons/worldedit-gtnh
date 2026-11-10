@@ -10,8 +10,6 @@ With one word after the size, every block that is not air is replaced by it. Wit
 //replacenear [-f] <size> <from-or-to> [<to>]
 ```
 
-Also typed: `/replacenear`
-
 ## Arguments
 
 | Argument | Meaning |

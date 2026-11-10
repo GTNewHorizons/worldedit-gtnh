@@ -8,8 +8,6 @@ Make the lava around you still.
 //fixlava <radius>
 ```
 
-Also typed: `/fixlava`
-
 ## Arguments
 
 | Argument | Meaning |

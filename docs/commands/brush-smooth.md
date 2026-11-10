@@ -1,11 +1,11 @@
-# `/brush smooth`
+# `//brush smooth`
 
 Smooth the terrain where you click.
 
 ## Usage
 
 ```
-/brush smooth [-n] [<size> [<iterations>]]
+//brush smooth [-n] [<size> [<iterations>]]
 ```
 
 ## Arguments
@@ -27,6 +27,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br smooth 5` | Smooth with a bigger brush. |
+| `//br smooth 5` | Smooth with a bigger brush. |
 
 [All commands](../README.md)

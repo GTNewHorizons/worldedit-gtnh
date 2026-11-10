@@ -1,13 +1,13 @@
-# `/brush apply`
+# `//brush apply`
 
 Apply a function to every block of a shape.
 
 ## Usage
 
 ```
-/brush apply <shape> <size> forest <tree>
-/brush apply <shape> <size> item <item>
-/brush apply <shape> <size> set <pattern>
+//brush apply <shape> <size> forest <tree>
+//brush apply <shape> <size> item <item>
+//brush apply <shape> <size> set <pattern>
 ```
 
 ## Arguments
@@ -24,7 +24,7 @@ Apply a function to every block of a shape.
 
 | Command | What it does |
 |---|---|
-| `/br apply sphere 5 forest oak` | Grow oaks wherever they fit. |
-| `/br apply sphere 5 item minecraft:dye:15` | Bone meal everything. |
+| `//br apply sphere 5 forest oak` | Grow oaks wherever they fit. |
+| `//br apply sphere 5 item minecraft:dye:15` | Bone meal everything. |
 
 [All commands](../README.md)

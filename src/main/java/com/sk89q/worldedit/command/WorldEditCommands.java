@@ -74,7 +74,7 @@ public final class WorldEditCommands {
                         .then(word("timezone")
                                 .executes(run(null, c -> tz(c.player(), c.session(), c.string("timezone"))))))
                 .then(HelpCommand.node("help")),
-                "we");
+                "we", "/worldedit", "/we");
     }
     // spotless:on
 

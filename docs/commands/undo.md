@@ -10,8 +10,6 @@ Refused while an edit of yours is still running. Wait for it or use [//cancel](c
 //undo [<times> [<player>]]
 ```
 
-Also typed: `/undo`
-
 ## Arguments
 
 | Argument | Meaning |

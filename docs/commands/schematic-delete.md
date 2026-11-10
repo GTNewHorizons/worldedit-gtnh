@@ -1,4 +1,4 @@
-# `/schematic delete`
+# `//schematic delete`
 
 Delete a saved schematic.
 
@@ -7,10 +7,10 @@ This can not be undone.
 ## Usage
 
 ```
-/schematic delete <filename>
+//schematic delete <filename>
 ```
 
-Also typed: `/schematic d`
+Also typed: `//schematic d`
 
 ## Arguments
 
@@ -22,6 +22,6 @@ Also typed: `/schematic d`
 
 | Command | What it does |
 |---|---|
-| `/schem delete house` | Delete `house.schematic`. |
+| `//schem delete house` | Delete `house.schematic`. |
 
 [All commands](../README.md)

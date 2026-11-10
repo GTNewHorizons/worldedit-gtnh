@@ -12,7 +12,7 @@ Change the biome of your selection.
 
 | Argument | Meaning |
 |---|---|
-| `biome` | The name of the biome. See [/biomelist](biomelist.md). |
+| `biome` | The name of the biome. See [//biomelist](biomelist.md). |
 
 ## Flags
 

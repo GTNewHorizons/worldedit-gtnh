@@ -1,4 +1,4 @@
-# `/info`
+# `//tool info`
 
 Bind the block information tool.
 
@@ -7,13 +7,13 @@ Clicking a block shows its ID, data value and other details.
 ## Usage
 
 ```
-/info
+//tool info
 ```
 
 ## Examples
 
 | Command | What it does |
 |---|---|
-| `/info` | Bind it to the item in your hand. |
+| `//tool info` | Bind it to the item in your hand. |
 
 [All commands](../README.md)

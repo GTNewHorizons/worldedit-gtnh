@@ -10,8 +10,6 @@ Commands such as [//sphere](sphere.md) and [//paste](paste.md) work from your po
 //toggleplace
 ```
 
-Also typed: `/toggleplace`
-
 ## Examples
 
 | Command | What it does |

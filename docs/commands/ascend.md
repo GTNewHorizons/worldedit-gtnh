@@ -1,14 +1,14 @@
-# `/ascend`
+# `//ascend`
 
 Go up a floor.
 
 ## Usage
 
 ```
-/ascend [<levels>]
+//ascend [<levels>]
 ```
 
-Also typed: `/asc`
+Also typed: `//asc`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/asc`
 
 | Command | What it does |
 |---|---|
-| `/ascend 2` | Go up two floors. |
+| `//ascend 2` | Go up two floors. |
 
 [All commands](../README.md)

@@ -15,7 +15,7 @@ You can also type `/we`.
 /worldedit help [<command>]
 ```
 
-Also typed: `/we`
+Also typed: `/we`. Unlike the other commands, it also works with one slash, so it stays reachable if another mod uses a WorldEdit name. `//worldedit` and `//we` work too.
 
 ## Commands
 

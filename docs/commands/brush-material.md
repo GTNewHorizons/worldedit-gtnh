@@ -1,14 +1,14 @@
-# `/mat`
+# `//brush material`
 
 Change the material of the brush in your hand.
 
 ## Usage
 
 ```
-/mat <pattern>
+//brush material <pattern>
 ```
 
-Also typed: `/material`
+Also typed: `//brush mat`
 
 ## Arguments
 
@@ -20,6 +20,6 @@ Also typed: `/material`
 
 | Command | What it does |
 |---|---|
-| `/mat stone` | Paint with stone from now on. |
+| `//brush material stone` | Paint with stone from now on. |
 
 [All commands](../README.md)

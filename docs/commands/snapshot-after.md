@@ -1,11 +1,11 @@
-# `/snapshot after`
+# `//snapshot after`
 
 Choose the first snapshot after a date.
 
 ## Usage
 
 ```
-/snapshot after <date>
+//snapshot after <date>
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Choose the first snapshot after a date.
 
 | Command | What it does |
 |---|---|
-| `/snap after 2 days ago` | The first one in the last two days. |
+| `//snap after 2 days ago` | The first one in the last two days. |
 
 [All commands](../README.md)

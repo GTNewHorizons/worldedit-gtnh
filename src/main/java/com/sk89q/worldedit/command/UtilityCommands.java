@@ -100,14 +100,12 @@ public final class UtilityCommands {
         Nodes.register(dispatcher, literal("/fixlava", "Fix lava to be stationary").executes(Nodes.USAGE)
                 .then(decimal("radius")
                         .executes(run("worldedit.fixlava", LogMode.PLACEMENT,
-                                c -> fixLiquid(c, 10, 11)))),
-                "fixlava");
+                                c -> fixLiquid(c, 10, 11)))));
 
         Nodes.register(dispatcher, literal("/fixwater", "Fix water to be stationary").executes(Nodes.USAGE)
                 .then(decimal("radius")
                         .executes(run("worldedit.fixwater", LogMode.PLACEMENT,
-                                c -> fixLiquid(c, 8, 9)))),
-                "fixwater");
+                                c -> fixLiquid(c, 8, 9)))));
 
         Nodes.register(dispatcher, literal("/removeabove", "Remove blocks above your head")
                 .executes(run("worldedit.removeabove", LogMode.PLACEMENT, c -> removeAbove(c, 1, null)))
@@ -116,8 +114,7 @@ public final class UtilityCommands {
                                 c -> removeAbove(c, c.integer("size"), null)))
                         .then(integer("height")
                                 .executes(run("worldedit.removeabove", LogMode.PLACEMENT,
-                                        c -> removeAbove(c, c.integer("size"), c.integer("height")))))),
-                "removeabove");
+                                        c -> removeAbove(c, c.integer("size"), c.integer("height")))))));
 
         Nodes.register(dispatcher, literal("/removebelow", "Remove blocks below you")
                 .executes(run("worldedit.removebelow", LogMode.PLACEMENT, c -> removeBelow(c, 1, null)))
@@ -126,16 +123,14 @@ public final class UtilityCommands {
                                 c -> removeBelow(c, c.integer("size"), null)))
                         .then(integer("height")
                                 .executes(run("worldedit.removebelow", LogMode.PLACEMENT,
-                                        c -> removeBelow(c, c.integer("size"), c.integer("height")))))),
-                "removebelow");
+                                        c -> removeBelow(c, c.integer("size"), c.integer("height")))))));
 
         Nodes.register(dispatcher, literal("/removenear", "Remove blocks near you").executes(Nodes.USAGE)
                 .then(word("block")
                         .executes(run("worldedit.removenear", LogMode.PLACEMENT, c -> removeNear(c, 50)))
                         .then(integer("size")
                                 .executes(run("worldedit.removenear", LogMode.PLACEMENT,
-                                        c -> removeNear(c, c.integer("size")))))),
-                "removenear");
+                                        c -> removeNear(c, c.integer("size")))))));
 
         // //replacenear <size> [from-block] <to-pattern>: with two words the first one is the target
         Nodes.registerWithFlags(dispatcher, literal("/replacenear", "Replace nearby blocks").executes(Nodes.USAGE)
@@ -147,44 +142,42 @@ public final class UtilityCommands {
                                         .executes(run("worldedit.replacenear", LogMode.PLACEMENT,
                                                 c -> replaceNear(c, c.string("from-or-to"), c.string("to")))))
                         )),
-                "f", "replacenear");
+                "f");
 
         Nodes.register(dispatcher, literal("/snow", "Simulates snow")
                 .executes(run("worldedit.snow", LogMode.PLACEMENT, c -> snow(c, 10)))
                 .then(decimal("radius")
-                        .executes(run("worldedit.snow", LogMode.PLACEMENT, c -> snow(c, c.decimal("radius"))))),
-                "snow");
+                        .executes(run("worldedit.snow", LogMode.PLACEMENT, c -> snow(c, c.decimal("radius"))))));
 
         Nodes.register(dispatcher, literal("/thaw", "Thaws the area")
                 .executes(run("worldedit.thaw", LogMode.PLACEMENT, c -> thaw(c, 10)))
                 .then(decimal("radius")
-                        .executes(run("worldedit.thaw", LogMode.PLACEMENT, c -> thaw(c, c.decimal("radius"))))),
-                "thaw");
+                        .executes(run("worldedit.thaw", LogMode.PLACEMENT, c -> thaw(c, c.decimal("radius"))))));
 
         Nodes.registerWithFlags(dispatcher, literal("/green", "Greens the area")
                 .executes(run("worldedit.green", LogMode.PLACEMENT, c -> green(c, 10)))
                 .then(decimal("radius")
                         .executes(run("worldedit.green", LogMode.PLACEMENT, c -> green(c, c.decimal("radius"))))),
-                "f", "green");
+                "f");
 
         Nodes.register(dispatcher, literal("/ex", "Extinguish nearby fire")
                 .executes(run("worldedit.extinguish", LogMode.PLACEMENT, c -> extinguish(c, null)))
                 .then(integer("radius")
                         .executes(run("worldedit.extinguish", LogMode.PLACEMENT,
                                 c -> extinguish(c, c.integer("radius"))))),
-                "/ext", "/extinguish", "ex", "ext", "extinguish");
+                "/ext", "/extinguish");
 
-        Nodes.registerWithFlags(dispatcher, literal("butcher", "Kill all or nearby mobs")
+        Nodes.registerWithFlags(dispatcher, literal("/butcher", "Kill all or nearby mobs")
                 .executes(run("worldedit.butcher", LogMode.PLACEMENT, c -> butcher(c, null)))
                 .then(integer("radius")
                         .executes(run("worldedit.butcher", LogMode.PLACEMENT, c -> butcher(c, c.integer("radius"))))),
                 "plangbtfr");
 
-        Nodes.register(dispatcher, literal("remove", "Remove all entities of a type").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/remove", "Remove all entities of a type").executes(Nodes.USAGE)
                 .then(word("type").executes(Nodes.USAGE)
                         .then(integer("radius")
                                 .executes(run("worldedit.remove", LogMode.PLACEMENT, UtilityCommands::remove)))),
-                "rem", "rement");
+                "/rem", "/rement");
 
         Nodes.register(dispatcher, literal("/calc", "Evaluate a mathematical expression").executes(Nodes.USAGE)
                 .then(text("expression")

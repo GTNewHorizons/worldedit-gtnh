@@ -67,7 +67,6 @@ public abstract class LocalConfiguration {
     public int wandItem = ItemID.WOOD_AXE;
     public boolean superPickaxeDrop = true;
     public boolean superPickaxeManyDrop = true;
-    public boolean noDoubleSlash = false;
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;

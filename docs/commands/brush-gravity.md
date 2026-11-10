@@ -1,14 +1,14 @@
-# `/brush gravity`
+# `//brush gravity`
 
 Make blocks fall where you click.
 
 ## Usage
 
 ```
-/brush gravity [-h] [<radius>]
+//brush gravity [-h] [<radius>]
 ```
 
-Also typed: `/brush grav`
+Also typed: `//brush grav`
 
 ## Arguments
 
@@ -28,6 +28,6 @@ Flags go right after the command, before the arguments.
 
 | Command | What it does |
 |---|---|
-| `/br gravity 8` | Drop floating blocks. |
+| `//br gravity 8` | Drop floating blocks. |
 
 [All commands](../README.md)

@@ -1,6 +1,6 @@
 # Masks
 
-A mask says which positions an edit may touch. You use one to say what to replace, as in [`//replace`](commands/replace.md), to limit all your edits with [`//gmask`](commands/gmask.md), or to limit a brush with [`/mask`](commands/brush-mask.md).
+A mask says which positions an edit may touch. You use one to say what to replace, as in [`//replace`](commands/replace.md), to limit all your edits with [`//gmask`](commands/gmask.md), or to limit a brush with [`//brush mask`](commands/brush-mask.md).
 
 ## What you can write
 

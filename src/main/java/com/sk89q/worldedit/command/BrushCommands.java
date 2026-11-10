@@ -177,8 +177,9 @@ public final class BrushCommands {
 
         LiteralCommandNode<ICommandSender> raise = fixedDeform("raise", "Raise one block", "y-=1", "worldedit.brush.raise");
         LiteralCommandNode<ICommandSender> lower = fixedDeform("lower", "Lower one block", "y+=1", "worldedit.brush.lower");
+        LiteralCommandNode<ICommandSender> material = ToolUtilCommands.materialNode();
 
-        Nodes.register(dispatcher, literal("brush", "Brushing commands").executes(Nodes.USAGE)
+        Nodes.register(dispatcher, literal("/brush", "Brushing commands").executes(Nodes.USAGE)
                 .then(sphere).then(Nodes.alias("s", sphere))
                 .then(cylinder).then(Nodes.alias("cyl", cylinder)).then(Nodes.alias("c", cylinder))
                 .then(clipboard).then(Nodes.alias("copy", clipboard))
@@ -192,8 +193,12 @@ public final class BrushCommands {
                 .then(forest)
                 .then(deform)
                 .then(raise)
-                .then(lower),
-                "br");
+                .then(lower)
+                .then(ToolUtilCommands.maskNode())
+                .then(material).then(Nodes.alias("mat", material))
+                .then(ToolUtilCommands.rangeNode())
+                .then(ToolUtilCommands.sizeNode()),
+                "/br");
     }
 
     private static LiteralCommandNode<ICommandSender> fixedDeform(String name, String description, String expression, String permission) {

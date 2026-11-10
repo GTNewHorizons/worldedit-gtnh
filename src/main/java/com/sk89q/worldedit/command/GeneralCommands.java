@@ -69,17 +69,15 @@ public final class GeneralCommands {
         Nodes.register(dispatcher, literal("/gmask")
                 .executes(run("worldedit.global-mask", c -> gmask(c.player(), c.session(), null)))
                 .then(word("mask")
-                        .executes(run("worldedit.global-mask", c -> gmask(c.player(), c.session(), c.mask("mask"))))),
-                "gmask");
+                        .executes(run("worldedit.global-mask", c -> gmask(c.player(), c.session(), c.mask("mask"))))));
 
         Nodes.register(dispatcher, literal("/toggleplace")
-                .executes(run(null, c -> togglePlace(c.player(), c.session()))),
-                "toggleplace");
+                .executes(run(null, c -> togglePlace(c.player(), c.session()))));
 
         Nodes.registerWithFlags(dispatcher, literal("/searchitem").executes(Nodes.USAGE)
                 .then(word("query")
                         .executes(run(null, c -> searchItem(c.actor(), c.string("query"), c.flag('b'), c.flag('i'))))),
-                "bi", "/l", "/search", "searchitem");
+                "bi", "/l", "/search");
     }
     // spotless:on
 

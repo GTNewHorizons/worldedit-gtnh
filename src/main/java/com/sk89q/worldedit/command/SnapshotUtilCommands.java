@@ -50,13 +50,12 @@ public final class SnapshotUtilCommands {
 
     // spotless:off
     public static void register(CommandDispatcher<ICommandSender> dispatcher) {
-        Nodes.register(dispatcher, literal("restore", "Restore the selection from a snapshot")
+        Nodes.register(dispatcher, literal("/restore", "Restore the selection from a snapshot")
                 .executes(run("worldedit.snapshots.restore", LogMode.REGION,
                         c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), null)))
                 .then(word("snapshot")
                         .executes(run("worldedit.snapshots.restore", LogMode.REGION,
-                                c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.string("snapshot"))))),
-                "/restore");
+                                c -> restore(c.worldEdit(), c.player(), c.session(), c.queuedEditSession(), c.string("snapshot"))))));
     }
     // spotless:on
 

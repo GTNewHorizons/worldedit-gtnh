@@ -1,11 +1,11 @@
-# `/snapshot before`
+# `//snapshot before`
 
 Choose the last snapshot before a date.
 
 ## Usage
 
 ```
-/snapshot before <date>
+//snapshot before <date>
 ```
 
 ## Arguments
@@ -18,6 +18,6 @@ Choose the last snapshot before a date.
 
 | Command | What it does |
 |---|---|
-| `/snap before yesterday` | The last one before yesterday. |
+| `//snap before yesterday` | The last one before yesterday. |
 
 [All commands](../README.md)
