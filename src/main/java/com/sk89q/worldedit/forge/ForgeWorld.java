@@ -186,6 +186,16 @@ public class ForgeWorld extends AbstractWorld {
         }
 
         Block target = Block.getBlockById(block.getId());
+
+        // Replacing a block runs its breakBlock, and many mods drop whatever their tile entity holds
+        // there: AE2 cable buses drop every part and facade, not just inventories. The edit keeps its
+        // own copy for undo, so take the tile entity away first and breakBlock finds nothing to drop.
+        Block old = chunk.getBlock(x & 15, y, z & 15);
+        int oldData = chunk.getBlockMetadata(x & 15, y, z & 15);
+        if ((old != target || oldData != block.getData()) && old.hasTileEntity(oldData)) {
+            world.removeTileEntity(x, y, z);
+        }
+
         boolean successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
 
         // Some blocks pick their own metadata when added, such as dispensers and furnaces facing away
