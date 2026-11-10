@@ -167,6 +167,18 @@ public class ForgeWorld extends AbstractWorld {
             0);
     }
 
+    private static boolean writingBlock;
+
+    /**
+     * Whether WorldEdit is in the middle of replacing a block on the server thread, during which any
+     * items or experience the old block drops are duplicates of what history keeps.
+     *
+     * @return true while a block is being written
+     */
+    static boolean isWritingBlock() {
+        return writingBlock;
+    }
+
     @Override
     public boolean setBlock(Vector position, BaseBlock block, boolean notifyAndLight) throws WorldEditException {
         checkNotNull(position);
@@ -189,14 +201,14 @@ public class ForgeWorld extends AbstractWorld {
 
         // Replacing a block runs its breakBlock, and many mods drop whatever their tile entity holds
         // there: AE2 cable buses drop every part and facade, not just inventories. The edit keeps its
-        // own copy for undo, so take the tile entity away first and breakBlock finds nothing to drop.
-        Block old = chunk.getBlock(x & 15, y, z & 15);
-        int oldData = chunk.getBlockMetadata(x & 15, y, z & 15);
-        if ((old != target || oldData != block.getData()) && old.hasTileEntity(oldData)) {
-            world.removeTileEntity(x, y, z);
+        // own copy for undo, so the items spawned during the write are discarded.
+        boolean successful;
+        writingBlock = true;
+        try {
+            successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
+        } finally {
+            writingBlock = false;
         }
-
-        boolean successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
 
         // Some blocks pick their own metadata when added, such as dispensers and furnaces facing away
         // from their neighbours, which would undo the facing that was copied.

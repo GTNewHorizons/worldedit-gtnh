@@ -22,12 +22,15 @@ import static net.minecraftforge.event.entity.player.PlayerInteractEvent.Action;
 import java.io.File;
 import java.util.Map;
 
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
 
@@ -264,6 +267,18 @@ public class ForgeWorldEdit {
         if (WorldEdit.getInstance()
             .getPlatformManager()
             .isUsingWand(wrap((EntityPlayerMP) event.getPlayer()))) {
+            event.setCanceled(true);
+        }
+    }
+
+    /**
+     * Discard what a block drops while WorldEdit replaces it. Removing its tile entity beforehand would
+     * do the same, but mods whose breakBlock expects their tile entity can crash on that.
+     */
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        if (!event.world.isRemote && ForgeWorld.isWritingBlock()
+            && (event.entity instanceof EntityItem || event.entity instanceof EntityXPOrb)) {
             event.setCanceled(true);
         }
     }
