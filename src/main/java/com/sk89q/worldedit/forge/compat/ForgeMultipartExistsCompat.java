@@ -27,7 +27,6 @@ import net.minecraft.world.World;
 import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.jnbt.CompoundTagBuilder;
 import com.sk89q.jnbt.ListTag;
-import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.extent.transform.BlockTransformHook;
 import com.sk89q.worldedit.math.transform.AffineTransform;
@@ -169,40 +168,12 @@ public class ForgeMultipartExistsCompat implements ForgeMultipartCompat, BlockTr
         return edge;
     }
 
-    private static final Vector[] SIDE_VECTORS = { new Vector(0, -1, 0), new Vector(0, 1, 0), new Vector(0, 0, -1),
-        new Vector(0, 0, 1), new Vector(-1, 0, 0), new Vector(1, 0, 0) };
-
-    /**
-     * Where the transform sends each side, worked out the way block directions are elsewhere, by
-     * transforming the side's direction.
-     */
     static int[] sideMap(AffineTransform transform) {
-        int[] sides = new int[6];
-        Vector zero = transform.apply(Vector.ZERO);
-        for (int side = 0; side < 6; side++) {
-            Vector moved = transform.apply(SIDE_VECTORS[side])
-                .subtract(zero);
-            int best = side;
-            double bestDot = Double.NEGATIVE_INFINITY;
-            for (int candidate = 0; candidate < 6; candidate++) {
-                double dot = moved.dot(SIDE_VECTORS[candidate]);
-                if (dot > bestDot) {
-                    bestDot = dot;
-                    best = candidate;
-                }
-            }
-            sides[side] = best;
-        }
-        return sides;
+        return SideMaps.sideMap(transform);
     }
 
     private static boolean isIdentity(int[] sides) {
-        for (int side = 0; side < 6; side++) {
-            if (sides[side] != side) {
-                return false;
-            }
-        }
-        return true;
+        return SideMaps.isIdentity(sides);
     }
 
     /**
