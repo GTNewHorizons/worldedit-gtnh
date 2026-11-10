@@ -101,7 +101,8 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
         BaseBlock lazyBlock = getLazyBlock(location);
         boolean changed = !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
         boolean replacingAttached = changed
-            && (BlockType.shouldPlaceLast(lazyBlock.getType()) || BlockType.shouldPlaceFinal(lazyBlock.getType()));
+            && (BlockType.shouldPlaceLast(lazyBlock.getType()) || BlockType.shouldPlaceFinal(lazyBlock.getType())
+                || BlockType.isAttachedByContents(lazyBlock));
 
         // Destroy torches, etc. first, whatever replaces them. They would fall off if what they're
         // attached to went away while they were still waiting for their turn. This waits for the
@@ -111,7 +112,7 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
             detach.add(location, AIR);
         }
 
-        if (BlockType.shouldPlaceLast(block.getType())) {
+        if (BlockType.shouldPlaceLast(block.getType()) || BlockType.isAttachedByContents(block)) {
             // Place torches, etc. last
             stage2.add(location, block);
             return changed;

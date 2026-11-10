@@ -592,6 +592,22 @@ public enum BlockType {
         return (id >= BlockID.WATER && id <= BlockID.STATIONARY_LAVA) || modded(id, moddedLiquid);
     }
 
+    /**
+     * Checks whether a block attaches to others because of what its tile entity holds, such as a
+     * multipart holding ProjectRed wires rather than only microblocks.
+     *
+     * @param block the block; its tile entity data is only read for IDs where it matters
+     * @return true if it should be placed with the attached blocks
+     */
+    public static boolean isAttachedByContents(BaseBlock block) {
+        BlockPlacementRules rules = placementRules;
+        int id = block.getType();
+        if (rules == null || id <= LAST_VANILLA_ID || !rules.dependsOnContents(id)) {
+            return false;
+        }
+        return block.getNbtData() != null && rules.isAttached(block);
+    }
+
     private static boolean isModdedAttached(int id) {
         if (placementRules == null || id <= LAST_VANILLA_ID) {
             return false;

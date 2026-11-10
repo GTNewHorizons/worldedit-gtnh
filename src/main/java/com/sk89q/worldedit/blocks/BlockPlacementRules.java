@@ -30,4 +30,27 @@ public interface BlockPlacementRules {
      * @return true if it should be written after ordinary blocks
      */
     boolean isAttached(int id);
+
+    /**
+     * Whether blocks with this ID may attach to others because of what their tile entity holds, which
+     * {@link #isAttached(BaseBlock)} then decides per block. Asked for every block written, so it must be
+     * cheap.
+     *
+     * @param id the block ID
+     * @return true if the contents decide
+     */
+    default boolean dependsOnContents(int id) {
+        return false;
+    }
+
+    /**
+     * Whether a block attaches to others because of what its tile entity holds, for an ID that
+     * {@link #dependsOnContents(int)} accepted.
+     *
+     * @param block the block, with its tile entity data
+     * @return true if it should be written after ordinary blocks
+     */
+    default boolean isAttached(BaseBlock block) {
+        return false;
+    }
 }

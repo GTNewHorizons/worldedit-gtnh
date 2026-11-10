@@ -35,6 +35,8 @@ import net.minecraft.block.BlockTorch;
 import net.minecraft.block.BlockTrapDoor;
 import net.minecraft.block.material.Material;
 
+import com.sk89q.jnbt.CompoundTag;
+import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockPlacementRules;
 
 /**
@@ -43,6 +45,10 @@ import com.sk89q.worldedit.blocks.BlockPlacementRules;
 final class ForgeBlockPlacementRules implements BlockPlacementRules {
 
     private static final String MULTIPART_BLOCK = "ForgeMultipart:block";
+    private static final int UNKNOWN = -2;
+    private static final int ABSENT = -1;
+
+    private int multipartId = UNKNOWN;
 
     private final Set<String> placeLast;
     private final Set<String> placeNormally;
@@ -67,13 +73,37 @@ final class ForgeBlockPlacementRules implements BlockPlacementRules {
             return false;
         }
 
-        // Its material says solid, but the parts inside, such as ProjectRed wires and gates, drop
-        // themselves if a neighbour changes while the block they sit on is missing.
-        if (MULTIPART_BLOCK.equals(name)) {
-            return true;
-        }
-
         return isAttached(block);
+    }
+
+    @Override
+    public boolean dependsOnContents(int id) {
+        if (multipartId == UNKNOWN) {
+            Block multipart = Block.getBlockFromName(MULTIPART_BLOCK);
+            multipartId = multipart != null ? Block.getIdFromBlock(multipart) : ABSENT;
+        }
+        return id == multipartId;
+    }
+
+    /**
+     * A multipart holding only microblocks is a solid block, and is what ProjectRed wires and gates
+     * usually sit on. Any other part, such as a wire, gate or torch, drops itself if a neighbour changes
+     * while the block it sits on is missing, so that block goes in with the attached ones: after its
+     * supports, and removed before them.
+     */
+    @Override
+    public boolean isAttached(BaseBlock block) {
+        CompoundTag nbt = block.getNbtData();
+        if (nbt == null) {
+            return false;
+        }
+        for (CompoundTag part : nbt.getList("parts", CompoundTag.class)) {
+            if (!part.getString("id")
+                .startsWith("mcr_")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isAttached(Block block) {
