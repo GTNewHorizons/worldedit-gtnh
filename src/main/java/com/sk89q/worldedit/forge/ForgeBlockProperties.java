@@ -60,6 +60,11 @@ final class ForgeBlockProperties implements ModdedBlockProperties {
     }
 
     @Override
+    public String getName(int id) {
+        return Block.blockRegistry.getNameForObject(Block.getBlockById(id));
+    }
+
+    @Override
     public boolean isNaturalTerrain(int id) {
         Block block = Block.getBlockById(id);
         String name = Block.blockRegistry.getNameForObject(block);

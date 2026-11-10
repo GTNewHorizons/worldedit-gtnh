@@ -47,6 +47,11 @@ public class ModdedBlockPropertiesTest {
         public boolean isNaturalTerrain(int id) {
             return id == MODDED_STONE;
         }
+
+        @Override
+        public String getName(int id) {
+            return id == MODDED_STONE ? "gregtech:gt.blockstones" : null;
+        }
     };
 
     @After
@@ -96,6 +101,17 @@ public class ModdedBlockPropertiesTest {
         }
 
         assertEquals(Integer.valueOf(1), asked.get(MODDED_FLOWER));
+    }
+
+    @Test
+    public void namesComeFromVanillaOrTheRegistry() {
+        assertEquals("Unknown", BlockType.nameOf(MODDED_STONE));
+
+        BlockType.setModdedProperties(properties);
+
+        assertEquals("Stone", BlockType.nameOf(BlockID.STONE));
+        assertEquals("gregtech:gt.blockstones", BlockType.nameOf(MODDED_STONE));
+        assertEquals("Unknown", BlockType.nameOf(MODDED_FLOWER));
     }
 
     @Test

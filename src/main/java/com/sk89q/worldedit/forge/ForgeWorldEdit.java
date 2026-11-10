@@ -100,6 +100,7 @@ public class ForgeWorldEdit {
     private ModRotationBlockTransformHook modRotationHook;
     private ForgeLightingScheduler lightingScheduler;
     private ForgeOperationScheduler operationScheduler;
+    private ClickedBlockRefresher clickedBlockRefresher;
     private OperationScheduler previousOperationScheduler;
     private LightingScheduler previousLightingScheduler;
 
@@ -194,6 +195,9 @@ public class ForgeWorldEdit {
             .getOperationScheduler();
         operationScheduler = new ForgeOperationScheduler();
         operationScheduler.register();
+
+        clickedBlockRefresher = new ClickedBlockRefresher();
+        clickedBlockRefresher.register();
         WorldEdit.getInstance()
             .setOperationScheduler(operationScheduler);
     }
@@ -201,6 +205,12 @@ public class ForgeWorldEdit {
     @EventHandler
     public void serverStopping(FMLServerStoppingEvent event) {
         BlockType.setPlacementRules(null);
+        BlockType.setModdedProperties(null);
+
+        if (clickedBlockRefresher != null) {
+            clickedBlockRefresher.unregister();
+            clickedBlockRefresher = null;
+        }
 
         if (lightingScheduler != null) {
             lightingScheduler.shutdown();
@@ -264,6 +274,10 @@ public class ForgeWorldEdit {
 
                     if (we.handleArmSwing(player)) {
                         event.setCanceled(true);
+                    }
+
+                    if (event.isCanceled() && clickedBlockRefresher != null) {
+                        clickedBlockRefresher.refresh(playerMP, event.x, event.y, event.z);
                     }
 
                     break;

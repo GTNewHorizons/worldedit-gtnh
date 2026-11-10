@@ -16,6 +16,8 @@
 
 package com.sk89q.worldedit.blocks;
 
+import javax.annotation.Nullable;
+
 /**
  * Answers the questions {@link BlockType} has hand-written vanilla tables for, for the blocks those
  * tables don't cover. {@link BlockType} asks once per ID and remembers the answers.
@@ -53,4 +55,13 @@ public interface ModdedBlockProperties {
      * @return true if it is natural terrain
      */
     boolean isNaturalTerrain(int id);
+
+    /**
+     * The block's registry name, such as {@code gregtech:gt.blockores}.
+     *
+     * @param id the block ID
+     * @return the name, or null if it has none
+     */
+    @Nullable
+    String getName(int id);
 }

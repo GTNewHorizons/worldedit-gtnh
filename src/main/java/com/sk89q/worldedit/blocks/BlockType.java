@@ -567,6 +567,22 @@ public enum BlockType {
     }
 
     /**
+     * Get a block's name to show players: the vanilla name, or the registry name of a modded block.
+     *
+     * @param id the ID of the block
+     * @return the name, or "Unknown"
+     */
+    public static String nameOf(int id) {
+        BlockType type = fromID(id);
+        if (type != null) {
+            return type.getName();
+        }
+        ModdedBlockProperties properties = moddedProperties;
+        String name = properties != null && id > LAST_VANILLA_ID ? properties.getName(id) : null;
+        return name != null ? name : "Unknown";
+    }
+
+    /**
      * Checks whether a block is a liquid.
      *
      * @param id the ID of the block

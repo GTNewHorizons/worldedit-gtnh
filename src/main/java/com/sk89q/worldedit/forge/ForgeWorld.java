@@ -188,6 +188,13 @@ public class ForgeWorld extends AbstractWorld {
         Block target = Block.getBlockById(block.getId());
         boolean successful = chunk.func_150807_a(x & 15, y, z & 15, target, block.getData());
 
+        // Some blocks pick their own metadata when added, such as dispensers and furnaces facing away
+        // from their neighbours, which would undo the facing that was copied.
+        if (successful && chunk.getBlock(x & 15, y, z & 15) == target
+            && chunk.getBlockMetadata(x & 15, y, z & 15) != block.getData()) {
+            chunk.setBlockMetadata(x & 15, y, z & 15, block.getData());
+        }
+
         // Create the TileEntity. The chunk ignores a write of the block already there, but its
         // contents can still be different.
         CompoundTag tag = block.getNbtData();
