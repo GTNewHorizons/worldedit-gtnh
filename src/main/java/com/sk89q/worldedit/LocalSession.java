@@ -82,7 +82,6 @@ public class LocalSession {
     private transient BlockTool pickaxeMode = new SinglePickaxe();
     private transient Map<Integer, Tool> tools = new HashMap<Integer, Tool>();
     private transient int maxBlocksChanged = -1;
-    private transient boolean useInventory;
     private transient Snapshot snapshot;
     private transient boolean hasCUISupport = false;
     private transient int cuiVersion = -1;
@@ -586,21 +585,6 @@ public class LocalSession {
     }
 
     /**
-     * Get a block bag for a player.
-     *
-     * @param player the player to get the block bag for
-     * @return a block bag
-     */
-    @Nullable
-    public BlockBag getBlockBag(Player player) {
-        checkNotNull(player);
-        if (!useInventory) {
-            return null;
-        }
-        return player.getInventoryBlockBag();
-    }
-
-    /**
      * Get the snapshot that has been selected.
      *
      * @return the snapshot
@@ -686,24 +670,6 @@ public class LocalSession {
         }
 
         this.tools.put(item, tool);
-    }
-
-    /**
-     * Returns whether inventory usage is enabled for this session.
-     *
-     * @return if inventory is being used
-     */
-    public boolean isUsingInventory() {
-        return useInventory;
-    }
-
-    /**
-     * Set the state of inventory usage.
-     *
-     * @param useInventory if inventory is to be used
-     */
-    public void setUseInventory(boolean useInventory) {
-        this.useInventory = useInventory;
     }
 
     /**
@@ -881,12 +847,10 @@ public class LocalSession {
     public EditSession createEditSession(Player player) {
         checkNotNull(player);
 
-        BlockBag blockBag = getBlockBag(player);
-
         // Create an edit session
         EditSession editSession = WorldEdit.getInstance()
             .getEditSessionFactory()
-            .getEditSession(player.isPlayer() ? player.getWorld() : null, getBlockChangeLimit(), blockBag, player);
+            .getEditSession(player.isPlayer() ? player.getWorld() : null, getBlockChangeLimit(), null, player);
         editSession.setFastMode(fastMode);
         Request.request()
             .setEditSession(editSession);

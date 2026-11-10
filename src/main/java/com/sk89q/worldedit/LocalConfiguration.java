@@ -68,9 +68,6 @@ public abstract class LocalConfiguration {
     public boolean superPickaxeDrop = true;
     public boolean superPickaxeManyDrop = true;
     public boolean noDoubleSlash = false;
-    public boolean useInventory = false;
-    public boolean useInventoryOverride = false;
-    public boolean useInventoryCreativeOverride = false;
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;

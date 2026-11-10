@@ -39,7 +39,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.event.platform.ConfigurationLoadEvent;
 import com.sk89q.worldedit.session.storage.JsonFileSessionStore;
 import com.sk89q.worldedit.session.storage.SessionStore;
@@ -201,13 +200,6 @@ public class SessionManager {
                 }
             }
         }
-
-        // Have the session use inventory if it's enabled and the owner
-        // doesn't have an override
-        session.setUseInventory(
-            config.useInventory && !(config.useInventoryOverride
-                && (owner.hasPermission("worldedit.inventory.unrestricted") || (config.useInventoryCreativeOverride
-                    && (!(owner instanceof Player) || ((Player) owner).hasCreativeMode())))));
 
         return session;
     }

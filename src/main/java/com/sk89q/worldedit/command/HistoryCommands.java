@@ -229,7 +229,7 @@ public class HistoryCommands {
             LocalSession held = hold(target, session);
 
             final LocalSession history = target;
-            EditSession writer = target.createHistorySession(undone, session.getBlockBag(player), player);
+            EditSession writer = target.createHistorySession(undone, null, player);
             schedule(player, writer, undone.undoOperation(writer), "Undo successful.", "//undo", new Runnable() {
 
                 @Override
@@ -264,7 +264,7 @@ public class HistoryCommands {
             LocalSession held = hold(target, session);
 
             final LocalSession history = target;
-            EditSession writer = target.createHistorySession(redone, session.getBlockBag(player), player);
+            EditSession writer = target.createHistorySession(redone, null, player);
             schedule(player, writer, redone.redoOperation(writer), "Redo successful.", "//redo", new Runnable() {
 
                 @Override

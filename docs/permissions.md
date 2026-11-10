@@ -163,7 +163,6 @@ These need no permission: [`/brush`](commands/brush.md), [`/none`](commands/none
 | `worldedit.anyblock` | Use the blocks the configuration disallows. |
 | `worldedit.butcher.pets`, `.npcs`, `.golems`, `.animals`, `.ambient`, `.tagged`, `.armorstands` | The matching flags of [`/butcher`](commands/butcher.md). `.lightning` is checked for `-l`, which does nothing at the moment. |
 | `worldedit.history.undo.other`, `worldedit.history.redo.other` | Undo or redo another player's edits, with [`//undo`](commands/undo.md) and [`//redo`](commands/redo.md). |
-| `worldedit.inventory.unrestricted` | Build without using items from your inventory, when the configuration makes players use theirs and allows this override. |
 | `worldedit.limit.unrestricted` | Ignore the configured limits on changed blocks and on selection points, and turn off your own limit with [`//limit`](commands/limit.md). |
 | `worldedit.navigation.jumpto.tool` | Jump to where you look by left clicking with the navigation wand (the compass by default). |
 | `worldedit.navigation.thru.tool` | Pass through walls by right clicking with the navigation wand. |

@@ -8,7 +8,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -86,8 +85,6 @@ public class CancelledHistoryTest {
         when(world.setBlock(any(Vector.class), any(BaseBlock.class), anyBoolean())).thenAnswer(write);
 
         session = spy(new LocalSession());
-        doReturn(null).when(session)
-            .getBlockBag(any(Player.class));
         doAnswer(new Answer<EditSession>() {
 
             @Override
@@ -227,10 +224,7 @@ public class CancelledHistoryTest {
     }
 
     private LocalSession adminSession() {
-        LocalSession adminSession = spy(new LocalSession());
-        doReturn(null).when(adminSession)
-            .getBlockBag(any(Player.class));
-        return adminSession;
+        return spy(new LocalSession());
     }
 
     @Test

@@ -33,7 +33,6 @@ import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.extension.platform.AbstractPlayerActor;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.Location;
@@ -192,11 +191,6 @@ public class ForgePlayer extends AbstractPlayerActor {
     @Override
     public String[] getGroups() {
         return new String[] {}; // WorldEditMod.inst.getPermissionsResolver().getGroups(this.player.username);
-    }
-
-    @Override
-    public BlockBag getInventoryBlockBag() {
-        return null;
     }
 
     @Override

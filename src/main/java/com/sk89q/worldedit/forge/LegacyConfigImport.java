@@ -122,10 +122,6 @@ final class LegacyConfigImport {
         integer(old, "nav-wand-distance", v -> WorldEditConfig.Tools.navigationWandDistance = v);
         bool(old, "nav-use-glass", v -> WorldEditConfig.Tools.navigationUseGlass = v);
 
-        bool(old, "use-inventory", v -> WorldEditConfig.Inventory.useInventory = v);
-        bool(old, "use-inventory-override", v -> WorldEditConfig.Inventory.useInventoryOverride = v);
-        bool(old, "use-inventory-creative-override", v -> WorldEditConfig.Inventory.useInventoryCreativeOverride = v);
-
         string(old, "schematic-save-dir", v -> WorldEditConfig.Files.schematicSaveDir = v);
         string(old, "snapshots-dir", v -> WorldEditConfig.Files.snapshotsDir = v);
         bool(old, "allow-symbolic-links", v -> WorldEditConfig.Files.allowSymbolicLinks = v);

@@ -35,8 +35,8 @@ public final class WorldEditConfig {
     static final String FILE_NAME = "worldedit";
 
     /** Every category of the file. */
-    static final Class<?>[] CATEGORIES = { General.class, Permissions.class, Limits.class, Tools.class, Inventory.class,
-        Files.class, Placement.class };
+    static final Class<?>[] CATEGORIES = { General.class, Permissions.class, Limits.class, Tools.class, Files.class,
+        Placement.class };
 
     private WorldEditConfig() {}
 
@@ -224,29 +224,6 @@ public final class WorldEditConfig {
         @Config.DefaultBoolean(true)
         @Config.Reloadable(RELOAD)
         public static boolean navigationUseGlass;
-    }
-
-    @Config(
-        modid = ForgeWorldEdit.MOD_ID,
-        category = "inventory",
-        configSubDirectory = ForgeWorldEdit.MOD_ID,
-        filename = FILE_NAME)
-    public static final class Inventory {
-
-        @Config.Comment("Edits take blocks from the inventory of the player and give removed blocks back.")
-        @Config.DefaultBoolean(false)
-        @Config.Reloadable(RELOAD)
-        public static boolean useInventory;
-
-        @Config.Comment("Players with the worldedit.inventory.unrestricted permission do not use their inventory.")
-        @Config.DefaultBoolean(false)
-        @Config.Reloadable(RELOAD)
-        public static boolean useInventoryOverride;
-
-        @Config.Comment("Players in creative mode do not use their inventory.")
-        @Config.DefaultBoolean(false)
-        @Config.Reloadable(RELOAD)
-        public static boolean useInventoryCreativeOverride;
     }
 
     @Config(

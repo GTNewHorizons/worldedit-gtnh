@@ -26,7 +26,6 @@ import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.internal.cui.CUIEvent;
 import com.sk89q.worldedit.session.SessionKey;
 import com.sk89q.worldedit.util.Location;
@@ -73,11 +72,6 @@ class PlayerProxy extends AbstractPlayerActor {
     @Override
     public boolean giveWand(int type, String kind, String name) {
         return basePlayer.giveWand(type, kind, name);
-    }
-
-    @Override
-    public BlockBag getInventoryBlockBag() {
-        return basePlayer.getInventoryBlockBag();
     }
 
     @Override

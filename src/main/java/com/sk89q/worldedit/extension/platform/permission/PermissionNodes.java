@@ -42,7 +42,6 @@ public final class PermissionNodes {
             "worldedit.butcher.tagged",
             "worldedit.history.undo.other",
             "worldedit.history.redo.other",
-            "worldedit.inventory.unrestricted",
             OverridePermissions.NO_LIMITS,
             "worldedit.navigation.jumpto.tool",
             "worldedit.navigation.thru.tool",

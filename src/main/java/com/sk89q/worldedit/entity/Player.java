@@ -23,7 +23,6 @@ import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.WorldVectorFace;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.extension.platform.Actor;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.world.World;
 
 /**
@@ -109,13 +108,6 @@ public interface Player extends Entity, Actor {
      * @param amount How many items in the stack
      */
     void giveItem(int type, int amount);
-
-    /**
-     * Get this actor's block bag.
-     *
-     * @return the actor's block bag
-     */
-    BlockBag getInventoryBlockBag();
 
     /**
      * Return whether this actor has creative mode.

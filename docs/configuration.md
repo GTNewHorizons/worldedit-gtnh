@@ -37,15 +37,12 @@ To import again, delete `worldedit.cfg` and rename the old file back to `worlded
 | `nav-wand-item` | `tools` | `navigationWandItem` |
 | `nav-wand-distance` | `tools` | `navigationWandDistance` |
 | `nav-use-glass` | `tools` | `navigationUseGlass` |
-| `use-inventory` | `inventory` | `useInventory` |
-| `use-inventory-override` | `inventory` | `useInventoryOverride` |
-| `use-inventory-creative-override` | `inventory` | `useInventoryCreativeOverride` |
 | `schematic-save-dir` | `files` | `schematicSaveDir` |
 | `snapshots-dir` | `files` | `snapshotsDir` |
 | `allow-symbolic-links` | `files` | `allowSymbolicLinks` |
 | `place-last-blocks` | `placement` | `placeLastBlocks` |
 | `place-normally-blocks` | `placement` | `placeNormallyBlocks` |
 
-`register-help` and `allow-extra-data-values` did nothing, and are gone.
+`register-help`, `allow-extra-data-values` and the three `use-inventory` options did nothing, and are gone.
 
 [All commands](README.md)

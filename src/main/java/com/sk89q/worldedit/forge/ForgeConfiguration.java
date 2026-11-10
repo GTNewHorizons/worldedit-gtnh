@@ -125,10 +125,6 @@ public class ForgeConfiguration extends LocalConfiguration {
         navigationWandMaxDistance = WorldEditConfig.Tools.navigationWandDistance;
         navigationUseGlass = WorldEditConfig.Tools.navigationUseGlass;
 
-        useInventory = WorldEditConfig.Inventory.useInventory;
-        useInventoryOverride = WorldEditConfig.Inventory.useInventoryOverride;
-        useInventoryCreativeOverride = WorldEditConfig.Inventory.useInventoryCreativeOverride;
-
         saveDir = WorldEditConfig.Files.schematicSaveDir;
         snapshotRepo = WorldEditConfig.Files.snapshotsDir.isEmpty() ? null
             : new SnapshotRepository(WorldEditConfig.Files.snapshotsDir);
