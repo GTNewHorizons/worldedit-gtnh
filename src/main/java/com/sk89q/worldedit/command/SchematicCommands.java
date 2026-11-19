@@ -28,8 +28,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -51,6 +54,7 @@ import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardWriter;
 import com.sk89q.worldedit.function.operation.BackgroundOperation;
 import com.sk89q.worldedit.function.operation.Operations;
@@ -152,13 +156,16 @@ public final class SchematicCommands {
         // Reading and parsing the file doesn't touch the world, so it happens on a background thread.
         final WorldData worldData = player.getWorld()
             .getWorldData();
+        final AtomicReference<Collection<String>> missingNames = new AtomicReference<>(Collections.emptyList());
         final BackgroundOperation<Clipboard> reading = new BackgroundOperation<Clipboard>(() -> {
             Closer closer = Closer.create();
             try {
                 FileInputStream fis = closer.register(new FileInputStream(f));
                 BufferedInputStream bis = closer.register(new BufferedInputStream(fis));
-                return format.getReader(bis)
-                    .read(worldData);
+                ClipboardReader reader = format.getReader(bis);
+                Clipboard clipboard = reader.read(worldData);
+                missingNames.set(new ArrayList<>(reader.getMissingNames()));
+                return clipboard;
             } finally {
                 closer.close();
             }
@@ -182,6 +189,7 @@ public final class SchematicCommands {
                         log.info(player.getName() + " loaded " + f.getCanonicalPath());
                     } catch (IOException ignored) {}
                     player.print(filename + " loaded. Paste it with //paste");
+                    printMissingNames(player, filename, missingNames.get());
                 }
 
                 @Override
@@ -196,6 +204,23 @@ public final class SchematicCommands {
                     session.finishLoadingClipboard(request);
                 }
             });
+    }
+
+    private static final int MISSING_NAMES_SHOWN = 5;
+
+    private static void printMissingNames(Player player, String filename, Collection<String> names) {
+        if (names.isEmpty()) {
+            return;
+        }
+        List<String> shown = new ArrayList<>(names).subList(0, Math.min(names.size(), MISSING_NAMES_SHOWN));
+        String more = names.size() > shown.size() ? " and " + (names.size() - shown.size()) + " more" : "";
+        player.printError(
+            names.size() + " blocks/items in "
+                + filename
+                + " don't exist in this game and were left out (blocks became air): "
+                + String.join(", ", shown)
+                + more);
+        log.warning("Missing from " + filename + ": " + String.join(", ", names));
     }
 
     private static void save(Player player, LocalSession session, String formatName, String filename)

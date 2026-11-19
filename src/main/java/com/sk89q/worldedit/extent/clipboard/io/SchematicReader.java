@@ -20,9 +20,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -62,6 +68,7 @@ public class SchematicReader implements ClipboardReader {
 
     private static final Logger log = Logger.getLogger(SchematicReader.class.getCanonicalName());
     private final NBTInputStream inputStream;
+    private final Set<String> missingNames = new TreeSet<>();
 
     /**
      * Create a new instance.
@@ -71,6 +78,11 @@ public class SchematicReader implements ClipboardReader {
     public SchematicReader(NBTInputStream inputStream) {
         checkNotNull(inputStream);
         this.inputStream = inputStream;
+    }
+
+    @Override
+    public Collection<String> getMissingNames() {
+        return Collections.unmodifiableSet(missingNames);
     }
 
     @Override
@@ -139,15 +151,29 @@ public class SchematicReader implements ClipboardReader {
         // Blocks
         // ====================================================================
 
+        missingNames.clear();
+
+        // Blocks missing from this game become air
         Map<Integer, Integer> blockConversionMap = new HashMap<>();
         for (Map.Entry<String, Integer> entry : readMapping(schematic, "BlockMapping", "BlockMappingE").entrySet()) {
             Block block = Block.getBlockFromName(entry.getKey());
-            blockConversionMap.put(entry.getValue(), Block.getIdFromBlock(block));
+            if (block == null) {
+                missingNames.add(entry.getKey());
+                blockConversionMap.put(entry.getValue(), 0);
+            } else {
+                blockConversionMap.put(entry.getValue(), Block.getIdFromBlock(block));
+            }
         }
 
+        // Stacks of items missing from this game are dropped, other references to them become 0
         Map<Integer, Integer> itemConversionMap = new HashMap<>();
+        Set<Integer> missingItemIds = new HashSet<>();
         for (Map.Entry<String, Integer> entry : readMapping(schematic, "ItemMapping", "ItemMappingE").entrySet()) {
             Item item = (Item) Item.itemRegistry.getObject(entry.getKey());
+            if (item == null) {
+                missingNames.add(entry.getKey());
+                missingItemIds.add(entry.getValue());
+            }
             itemConversionMap.put(entry.getValue(), Item.getIdFromItem(item));
         }
 
@@ -326,20 +352,30 @@ public class SchematicReader implements ClipboardReader {
                                         }
                                     }
 
-                                    for (String key : nbtMap.keySet()) {
-                                        Object v = nbtMap.get(key);
+                                    Iterator<Map.Entry<String, Tag>> entries = nbtMap.entrySet()
+                                        .iterator();
+                                    while (entries.hasNext()) {
+                                        Map.Entry<String, Tag> entry = entries.next();
+                                        Tag v = entry.getValue();
                                         if (v instanceof ListTag) {
                                             ListTag inventoryTag = (ListTag) v;
-                                            ArrayList<Tag> inventoryList = new ArrayList<Tag>(inventoryTag.getValue());
-                                            for (int i = 0; i < inventoryList.size(); i++) {
-                                                Tag t2 = inventoryList.get(i);
-                                                if (t2 instanceof CompoundTag) {
-                                                    inventoryList.set(i, apply((CompoundTag) t2));
-                                                }
+                                            ArrayList<Tag> inventoryList = new ArrayList<Tag>();
+                                            for (Tag t2 : inventoryTag.getValue()) {
+                                                if (!(t2 instanceof CompoundTag)) {
+                                                    inventoryList.add(t2);
+                                                } else if (!SchematicItemIds
+                                                    .isMissingStack(((CompoundTag) t2).getValue(), missingItemIds)) {
+                                                        inventoryList.add(apply((CompoundTag) t2));
+                                                    }
                                             }
-                                            nbtMap.put(key, inventoryTag.setValue(inventoryList));
+                                            entry.setValue(inventoryTag.setValue(inventoryList));
                                         } else if (v instanceof CompoundTag) {
-                                            nbtMap.put(key, apply((CompoundTag) v));
+                                            if (SchematicItemIds
+                                                .isMissingStack(((CompoundTag) v).getValue(), missingItemIds)) {
+                                                entries.remove();
+                                            } else {
+                                                entry.setValue(apply((CompoundTag) v));
+                                            }
                                         }
                                     }
                                     return nbtData.setValue(nbtMap);

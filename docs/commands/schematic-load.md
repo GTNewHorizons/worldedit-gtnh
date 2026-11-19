@@ -4,6 +4,8 @@ Load a schematic into your clipboard.
 
 Also typed `//load`. Paste it afterwards with [//paste](paste.md).
 
+Block and item IDs are matched by registry name, so a schematic saved in another pack or version loads with the right blocks. Blocks and items that don't exist in this game are left out (blocks become air), and you get a message listing them.
+
 ## Usage
 
 ```

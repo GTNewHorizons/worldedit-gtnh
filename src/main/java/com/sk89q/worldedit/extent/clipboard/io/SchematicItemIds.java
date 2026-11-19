@@ -17,6 +17,7 @@
 package com.sk89q.worldedit.extent.clipboard.io;
 
 import java.util.Map;
+import java.util.Set;
 
 import com.sk89q.jnbt.IntTag;
 import com.sk89q.jnbt.ShortTag;
@@ -86,6 +87,25 @@ final class SchematicItemIds {
         } else if (tag instanceof ShortTag && newId <= 0xFFFF) {
             item.put(idKey, new ShortTag((short) newId));
         }
+    }
+
+    /**
+     * @return whether the tag is an item stack ({@code id/Count/Damage} or {@code Item/Count/Meta}) whose
+     *         source ID is in {@code missingIds}
+     */
+    static boolean isMissingStack(Map<String, Tag> tag, Set<Integer> missingIds) {
+        if (missingIds.isEmpty() || !tag.containsKey("Count")) {
+            return false;
+        }
+        String idKey;
+        if (tag.containsKey("id") && tag.containsKey("Damage")) {
+            idKey = "id";
+        } else if (tag.containsKey("Item") && tag.containsKey("Meta")) {
+            idKey = "Item";
+        } else {
+            return false;
+        }
+        return missingIds.contains(read(tag, idKey));
     }
 
     /**

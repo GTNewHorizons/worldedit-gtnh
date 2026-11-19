@@ -17,6 +17,8 @@
 package com.sk89q.worldedit.extent.clipboard.io;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.world.registry.WorldData;
@@ -36,5 +38,13 @@ public interface ClipboardReader {
      * @throws IOException thrown on I/O error
      */
     Clipboard read(WorldData data) throws IOException;
+
+    /**
+     * Registry names the last {@link #read(WorldData)} found in the file but not in this game, and so
+     * left out of the clipboard.
+     */
+    default Collection<String> getMissingNames() {
+        return Collections.emptyList();
+    }
 
 }

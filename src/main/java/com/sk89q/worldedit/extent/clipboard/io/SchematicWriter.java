@@ -264,7 +264,7 @@ public class SchematicWriter implements ClipboardWriter {
                                     SchematicItemIds.putMapping(
                                         blockMapping,
                                         blockMappingExtended,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
+                                        Block.blockRegistry.getNameForObject(Block.getBlockById(_id)),
                                         _id);
                                 }
 

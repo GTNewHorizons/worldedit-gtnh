@@ -20,8 +20,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -100,6 +102,28 @@ public class SchematicItemIdsTest {
 
         assertEquals((short) 40000, (short) ((ShortTag) item.get("id")).getValue());
         assertFalse(item.containsKey(SchematicItemIds.EXTENDED_ID));
+    }
+
+    @Test
+    public void detectsStacksOfMissingItems() {
+        Set<Integer> missing = Collections.singleton(40000);
+
+        Map<String, Tag> stack = extendedItem(40000);
+        stack.put("Count", new ShortTag((short) 1));
+        stack.put("Damage", new ShortTag((short) 0));
+        assertTrue(SchematicItemIds.isMissingStack(stack, missing));
+
+        Map<String, Tag> ae2Style = new HashMap<>();
+        ae2Style.put("Item", new ShortTag((short) 40000));
+        ae2Style.put("Count", new ShortTag((short) 1));
+        ae2Style.put("Meta", new ShortTag((short) 0));
+        assertTrue(SchematicItemIds.isMissingStack(ae2Style, missing));
+
+        stack.put(SchematicItemIds.EXTENDED_ID, new IntTag(40001));
+        assertFalse(SchematicItemIds.isMissingStack(stack, missing));
+
+        // Not stack-shaped, e.g. a packed GT cover ID
+        assertFalse(SchematicItemIds.isMissingStack(extendedItem(40000), missing));
     }
 
     @Test
