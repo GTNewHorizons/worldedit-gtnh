@@ -30,7 +30,6 @@ import com.sk89q.worldedit.command.tool.brush.SphereBrush;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extension.platform.Platform;
-import com.sk89q.worldedit.extent.inventory.BlockBag;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.function.mask.MaskIntersection;
 import com.sk89q.worldedit.function.pattern.Pattern;
@@ -168,9 +167,7 @@ public class BrushTool implements TraceTool {
             return true;
         }
 
-        BlockBag bag = session.getBlockBag(player);
-
-        EditSession editSession = session.createEditSession(player);
+        EditSession editSession = ToolEdits.start(session, player);
         Request.request()
             .setEditSession(editSession);
         if (mask != null) {
@@ -192,10 +189,7 @@ public class BrushTool implements TraceTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            if (bag != null) {
-                bag.flushChanges();
-            }
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession);
         }
 
         return true;

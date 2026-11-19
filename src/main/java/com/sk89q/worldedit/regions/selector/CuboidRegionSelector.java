@@ -39,8 +39,7 @@ import com.sk89q.worldedit.world.World;
 /**
  * Creates a {@code CuboidRegion} from a user's selections.
  */
-public class CuboidRegionSelector extends com.sk89q.worldedit.regions.CuboidRegionSelector
-    implements RegionSelector, CUIRegion {
+public class CuboidRegionSelector implements RegionSelector, CUIRegion {
 
     protected transient BlockVector position1;
     protected transient BlockVector position2;

@@ -42,7 +42,11 @@ public class AnvilChunk implements Chunk {
     private CompoundTag rootTag;
     private byte[][] blocks;
     private byte[][] blocksAdd;
+    private byte[][] blocksHigh = new byte[16][];
+    private byte[][] blocksTop = new byte[16][];
     private byte[][] data;
+    private byte[][] dataHigh = new byte[16][];
+    private byte[][] dataTop = new byte[16][];
     private int rootX;
     private int rootZ;
 
@@ -90,17 +94,8 @@ public class AnvilChunk implements Chunk {
                 continue;
             }
 
-            blocks[y] = NBTUtils.getChildTag(sectionTag.getValue(), "Blocks", ByteArrayTag.class)
-                .getValue();
-            data[y] = NBTUtils.getChildTag(sectionTag.getValue(), "Data", ByteArrayTag.class)
-                .getValue();
-
-            // 4096 ID block support
-            if (sectionTag.getValue()
-                .containsKey("Add")) {
-                blocksAdd[y] = NBTUtils.getChildTag(sectionTag.getValue(), "Add", ByteArrayTag.class)
-                    .getValue();
-            }
+            readBlocks(sectionTag, y);
+            readData(sectionTag, y);
         }
 
         int sectionsize = 16 * 16 * 16;
@@ -117,6 +112,83 @@ public class AnvilChunk implements Chunk {
                     "Chunk block data byte array " + "expected to be " + sectionsize + " bytes; found " + aData.length);
             }
         }
+    }
+
+    /**
+     * Read a section's block IDs. On top of vanilla's Blocks and Add, EndlessIDs stores higher bits in
+     * BlocksB2Hi and BlocksB3, and NotEnoughIDs stores whole IDs in Blocks16.
+     */
+    private void readBlocks(CompoundTag section, int y) throws DataException {
+        byte[] wide = optionalArray(section, "Blocks16");
+        if (wide != null) {
+            blocks[y] = new byte[4096];
+            blocksHigh[y] = new byte[2048];
+            for (int i = 0; i < wide.length >> 1; i++) {
+                int value = (wide[i * 2] & 0xFF) << 8 | (wide[i * 2 + 1] & 0xFF);
+                blocks[y][i] = (byte) value;
+                setNibble(blocksAdd[y], i, value >> 8);
+                setNibble(blocksHigh[y], i, value >> 12);
+            }
+            return;
+        }
+
+        blocks[y] = NBTUtils.getChildTag(section.getValue(), "Blocks", ByteArrayTag.class)
+            .getValue();
+        byte[] add = optionalArray(section, "Add");
+        if (add != null) {
+            blocksAdd[y] = add;
+        }
+        blocksHigh[y] = optionalArray(section, "BlocksB2Hi");
+        blocksTop[y] = optionalArray(section, "BlocksB3");
+    }
+
+    /**
+     * Read a section's metadata. On top of vanilla's Data, EndlessIDs stores higher bits in Data1High
+     * and Data2, and NotEnoughIDs stores whole values in Data16.
+     */
+    private void readData(CompoundTag section, int y) throws DataException {
+        byte[] wide = optionalArray(section, "Data16");
+        if (wide != null) {
+            data[y] = new byte[2048];
+            dataHigh[y] = new byte[2048];
+            dataTop[y] = new byte[4096];
+            for (int i = 0; i < wide.length >> 1; i++) {
+                int value = (wide[i * 2] & 0xFF) << 8 | (wide[i * 2 + 1] & 0xFF);
+                setNibble(data[y], i, value);
+                setNibble(dataHigh[y], i, value >> 4);
+                dataTop[y][i] = (byte) (value >> 8);
+            }
+            return;
+        }
+
+        data[y] = NBTUtils.getChildTag(section.getValue(), "Data", ByteArrayTag.class)
+            .getValue();
+        dataHigh[y] = optionalArray(section, "Data1High");
+        dataTop[y] = optionalArray(section, "Data2");
+    }
+
+    private static byte[] optionalArray(CompoundTag section, String name) throws DataException {
+        return section.getValue()
+            .containsKey(name)
+                ? NBTUtils.getChildTag(section.getValue(), name, ByteArrayTag.class)
+                    .getValue()
+                : null;
+    }
+
+    private static void setNibble(byte[] array, int index, int value) {
+        if ((index & 1) == 0) {
+            array[index >> 1] |= (byte) (value & 0x0F);
+        } else {
+            array[index >> 1] |= (byte) ((value & 0x0F) << 4);
+        }
+    }
+
+    private static int getNibble(byte[] array, int index) {
+        if (array == null) {
+            return 0;
+        }
+        int packed = array[index >> 1];
+        return (index & 1) == 0 ? packed & 0x0F : (packed >> 4) & 0x0F;
     }
 
     @Override
@@ -138,19 +210,10 @@ public class AnvilChunk implements Chunk {
         int index = x + (z * 16 + (yindex * 16 * 16));
 
         try {
-            int addId = 0;
-
-            // The block ID is the combination of the Blocks byte array with the
-            // Add byte array. 'Blocks' stores the lowest 8 bits of a block's ID, and
-            // 'Add' stores the highest 4 bits of the ID. The first block is stored
-            // in the lowest nibble in the Add byte array.
-            if (index % 2 == 0) {
-                addId = (blocksAdd[section][index >> 1] & 0x0F) << 8;
-            } else {
-                addId = (blocksAdd[section][index >> 1] & 0xF0) << 4;
-            }
-
-            return (blocks[section][index] & 0xFF) + addId;
+            byte[] top = blocksTop[section];
+            return (blocks[section][index] & 0xFF) | getNibble(blocksAdd[section], index) << 8
+                | getNibble(blocksHigh[section], index) << 12
+                | (top == null ? 0 : (top[index] & 0xFF) << 16);
         } catch (IndexOutOfBoundsException e) {
             throw new DataException("Chunk does not contain position " + position);
         }
@@ -174,15 +237,11 @@ public class AnvilChunk implements Chunk {
         }
 
         int index = x + (z * 16 + (yIndex * 16 * 16));
-        boolean shift = index % 2 == 0;
-        index /= 2;
 
         try {
-            if (!shift) {
-                return (data[section][index] & 0xF0) >> 4;
-            } else {
-                return data[section][index] & 0xF;
-            }
+            byte[] top = dataTop[section];
+            return getNibble(data[section], index) | getNibble(dataHigh[section], index) << 4
+                | (top == null ? 0 : (top[index] & 0xFF) << 8);
         } catch (IndexOutOfBoundsException e) {
             throw new DataException("Chunk does not contain position " + position);
         }

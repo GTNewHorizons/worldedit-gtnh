@@ -28,6 +28,7 @@ import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
+import com.sk89q.worldedit.extent.reorder.MultiStageReorder;
 import com.sk89q.worldedit.history.change.BlockChange;
 import com.sk89q.worldedit.history.change.EntityCreate;
 import com.sk89q.worldedit.history.change.EntityRemove;
@@ -57,6 +58,12 @@ public class ChangeSetExtent extends AbstractDelegateExtent {
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
         BaseBlock previous = getBlock(location);
+        Extent next = getExtent();
+        if (next instanceof MultiStageReorder && ((MultiStageReorder) next).queues(location)) {
+            // Recorded when the queue actually writes it, so that a cancelled edit only remembers what
+            // it changed.
+            return ((MultiStageReorder) next).setBlock(location, block, previous);
+        }
         changeSet.add(new BlockChange(location.toBlockVector(), previous, block));
         return super.setBlock(location, block);
     }

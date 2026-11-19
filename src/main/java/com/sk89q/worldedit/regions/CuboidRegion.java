@@ -25,7 +25,6 @@ import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.world.World;
@@ -47,14 +46,6 @@ public class CuboidRegion extends AbstractRegion implements FlatRegion {
      */
     public CuboidRegion(Vector pos1, Vector pos2) {
         this(null, pos1, pos2);
-    }
-
-    /**
-     * @deprecated cast {@code world} to {@link World}
-     */
-    @Deprecated
-    public CuboidRegion(LocalWorld world, Vector pos1, Vector pos2) {
-        this((World) world, pos1, pos2);
     }
 
     /**

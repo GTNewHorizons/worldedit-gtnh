@@ -45,9 +45,6 @@ public class SnapshotRepository {
     public SnapshotRepository(File dir) {
         this.dir = dir;
 
-        // If folder doesn't exist, make it
-        dir.mkdirs();
-
         dateParsers.add(new YYMMDDHHIISSParser());
         dateParsers.add(new ModificationTimerParser());
     }
@@ -212,18 +209,9 @@ public class SnapshotRepository {
             return false;
         }
 
-        return (file.isDirectory() && (new File(file, "level.dat")).exists()) || (file.isFile() && (file.getName()
+        return (file.isDirectory() && (new File(file, "level.dat")).exists()) || (file.isFile() && file.getName()
             .toLowerCase()
-            .endsWith(".zip")
-            || file.getName()
-                .toLowerCase()
-                .endsWith(".tar.bz2")
-            || file.getName()
-                .toLowerCase()
-                .endsWith(".tar.gz")
-            || file.getName()
-                .toLowerCase()
-                .endsWith(".tar")));
+            .endsWith(".zip"));
     }
 
     /**

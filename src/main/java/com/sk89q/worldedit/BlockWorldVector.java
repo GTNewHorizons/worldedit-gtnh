@@ -16,10 +16,11 @@
 
 package com.sk89q.worldedit;
 
+import com.sk89q.worldedit.world.World;
+
 /**
- * @deprecated Replace all uses of {@link WorldVector}s with {@link Location}s
+ * @deprecated Replace all uses of {@link WorldVector}s with {@link com.sk89q.worldedit.util.Location}s
  */
-@SuppressWarnings("deprecation")
 @Deprecated
 public class BlockWorldVector extends WorldVector {
 
@@ -38,7 +39,7 @@ public class BlockWorldVector extends WorldVector {
      * @param world    the world
      * @param position the position to copy
      */
-    public BlockWorldVector(LocalWorld world, Vector position) {
+    public BlockWorldVector(World world, Vector position) {
         super(world, position);
     }
 
@@ -72,7 +73,7 @@ public class BlockWorldVector extends WorldVector {
      * @param y     the Y coordinate
      * @param z     the Z coordinate
      */
-    public BlockWorldVector(LocalWorld world, int x, int y, int z) {
+    public BlockWorldVector(World world, int x, int y, int z) {
         super(world, x, y, z);
     }
 
@@ -84,7 +85,7 @@ public class BlockWorldVector extends WorldVector {
      * @param y     the Y coordinate
      * @param z     the Z coordinate
      */
-    public BlockWorldVector(LocalWorld world, float x, float y, float z) {
+    public BlockWorldVector(World world, float x, float y, float z) {
         super(world, x, y, z);
     }
 
@@ -96,7 +97,7 @@ public class BlockWorldVector extends WorldVector {
      * @param y     the Y coordinate
      * @param z     the Z coordinate
      */
-    public BlockWorldVector(LocalWorld world, double x, double y, double z) {
+    public BlockWorldVector(World world, double x, double y, double z) {
         super(world, x, y, z);
     }
 

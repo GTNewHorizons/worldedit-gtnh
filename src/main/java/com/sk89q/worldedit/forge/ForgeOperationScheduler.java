@@ -1,0 +1,450 @@
+/*
+ * WorldEdit, a Minecraft world manipulation toolkit
+ * Copyright (C) sk89q <http://www.sk89q.com>
+ * Copyright (C) WorldEdit team and contributors
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package com.sk89q.worldedit.forge;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.extension.platform.Actor;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.RunContext;
+import com.sk89q.worldedit.function.operation.TimeBudgetRunContext;
+import com.sk89q.worldedit.session.request.Request;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
+import com.sk89q.worldedit.world.World;
+
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
+
+/**
+ * An operation scheduler that spends a fixed slice of each server tick on queued work, so a large
+ * edit no longer blocks the server thread until it finishes.
+ *
+ * <p>
+ * Commands are dispatched on the server thread and ticks run on the server thread, so this class
+ * assumes single-threaded access and does not lock.
+ * </p>
+ */
+public class ForgeOperationScheduler implements OperationScheduler {
+
+    /**
+     * Wall-clock time per server tick that queued operations may use. A tick is 50ms, so this
+     * leaves the rest of the tick for everything else the server has to do.
+     */
+    private static final long BUDGET_NANOS = 20L * 1000L * 1000L;
+
+    /**
+     * An edit that edited straight away and queued at most this many blocks writes them at once. A
+     * block takes something like ten microseconds to write, so this is about one tick's budget.
+     */
+    private static final int SMALL_EDIT_BLOCKS = 2048;
+
+    private static final String CRASHED = "An unexpected error stopped this edit. See the server log.";
+
+    private static final Logger logger = Logger.getLogger(ForgeOperationScheduler.class.getCanonicalName());
+
+    private final Deque<Job> queue = new ArrayDeque<Job>();
+    private Job current;
+    private boolean registered;
+
+    @Override
+    public boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion) {
+        checkNotNull(owner);
+        checkNotNull(editSession);
+        checkNotNull(operation);
+        checkNotNull(completion);
+
+        // Never finished on the spot: commands refuse to start once their player has too many jobs
+        // queued, see MAX_QUEUED_JOBS.
+        queue.offer(new Job(owner.getUniqueId(), editSession, operation, completion));
+        return true;
+    }
+
+    @Override
+    public void whenFinished(final Actor owner, EditSession editSession, Runnable task) {
+        checkNotNull(owner);
+        checkNotNull(editSession);
+        checkNotNull(task);
+
+        Job job = find(editSession);
+        if (job != null) {
+            job.finalizer = task;
+            return;
+        }
+
+        if (editSession.queuedBlockCount() <= SMALL_EDIT_BLOCKS) {
+            // Few enough to fit in one tick, and waiting would only make the next brush stroke or
+            // command run into "still running".
+            try {
+                editSession.flushQueue();
+            } catch (RuntimeException e) {
+                // The task still runs, so that what was written is remembered and can be undone.
+                logger.log(Level.WARNING, "Failed to write an edit", e);
+                owner.printError(CRASHED);
+                abandon(editSession, null, "Failed to clean up after a failed write");
+            }
+            task.run();
+            return;
+        }
+
+        // The command did its own work straight away but only queued its blocks, so writing them is
+        // spread over ticks like any other edit.
+        job = new Job(owner.getUniqueId(), editSession, null, new OperationCompletion() {
+
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(WorldEditException e) {
+                owner.printError(OperationCompletion.messageOf(e));
+            }
+        });
+        job.finalizer = task;
+        queue.offer(job);
+    }
+
+    @Override
+    public List<EditSession> cancel(UUID owner) {
+        checkNotNull(owner);
+
+        List<Job> cancelled = new ArrayList<Job>();
+        if (current != null && owner.equals(current.owner)) {
+            cancelled.add(current);
+            current = null;
+        }
+        for (Iterator<Job> it = queue.iterator(); it.hasNext();) {
+            Job job = it.next();
+            if (owner.equals(job.owner)) {
+                cancelled.add(job);
+                it.remove();
+            }
+        }
+
+        // Stop everything first, then tell the commands newest first, so that each one puts back what
+        // was there before it: a queued //copy restores the clipboard from before it, which only
+        // means anything once the copies after it have restored theirs. Finalizers record history, so
+        // they still go oldest first.
+        List<EditSession> editSessions = new ArrayList<EditSession>(cancelled.size());
+        for (Job job : cancelled) {
+            stop(job);
+            editSessions.add(job.editSession);
+        }
+        for (int i = cancelled.size() - 1; i >= 0; i--) {
+            notifyCancelled(cancelled.get(i));
+        }
+        for (Job job : cancelled) {
+            runFinalizer(job);
+        }
+        return editSessions;
+    }
+
+    @Override
+    public int queuedJobs(UUID owner) {
+        checkNotNull(owner);
+
+        int count = current != null && owner.equals(current.owner) ? 1 : 0;
+        for (Job job : queue) {
+            if (owner.equals(job.owner)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    @Override
+    public boolean hasPendingWork(UUID owner) {
+        checkNotNull(owner);
+
+        if (current != null && owner.equals(current.owner)) {
+            return true;
+        }
+        for (Job job : queue) {
+            if (owner.equals(job.owner)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void shutdown() {
+        unregister();
+
+        // Run whatever is left to completion rather than leaving edits half applied.
+        finishEverything();
+    }
+
+    private void finishEverything() {
+        Job job = current;
+        current = null;
+        if (job != null) {
+            drain(job);
+        }
+        while (!queue.isEmpty()) {
+            drain(queue.poll());
+        }
+    }
+
+    private Job find(EditSession editSession) {
+        if (current != null && current.editSession == editSession) {
+            return current;
+        }
+        for (Job job : queue) {
+            if (job.editSession == editSession) {
+                return job;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Start receiving server ticks. Until this is called, submitted work stays queued.
+     */
+    public void register() {
+        if (!registered) {
+            FMLCommonHandler.instance()
+                .bus()
+                .register(this);
+            registered = true;
+        }
+    }
+
+    private void unregister() {
+        if (registered) {
+            FMLCommonHandler.instance()
+                .bus()
+                .unregister(this);
+            registered = false;
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        RunContext run = new TimeBudgetRunContext(BUDGET_NANOS);
+        while (true) {
+            if (current == null) {
+                current = queue.poll();
+            }
+            Job job = current;
+            if (job == null) {
+                return;
+            }
+
+            boolean done;
+            do {
+                done = advanceInRequest(job, run);
+            } while (!done && run.shouldContinue());
+            if (!done) {
+                return;
+            }
+
+            current = null;
+            finish(job);
+            // Several small jobs can share a tick, but check the clock itself rather than its
+            // amortised counter, which may not have looked yet.
+            if (!run.shouldContinueAfterLargeStep()) {
+                return;
+            }
+        }
+    }
+
+    /**
+     * Run a step with the request state of the command that submitted the job, because masks can
+     * read it while blocks are being tested. Later commands will have replaced it by now.
+     */
+    private boolean advanceInRequest(Job job, RunContext run) {
+        Request request = Request.request();
+        World world = request.getWorld();
+        LocalSession session = request.getSession();
+        EditSession editSession = request.getEditSession();
+
+        request.setWorld(job.requestWorld);
+        request.setSession(job.requestSession);
+        request.setEditSession(job.editSession);
+        try {
+            return advance(job, run);
+        } finally {
+            request.setWorld(world);
+            request.setSession(session);
+            request.setEditSession(editSession);
+        }
+    }
+
+    /**
+     * Push a job forward as far as the given budget allows.
+     *
+     * @param job the job
+     * @param run the budget
+     * @return true if the job is finished and should be reported
+     */
+    private boolean advance(Job job, RunContext run) {
+        while (true) {
+            if (job.operation != null) {
+                try {
+                    job.started = true;
+                    job.operation = job.operation.resume(run);
+                } catch (WorldEditException e) {
+                    fail(job, e);
+                } catch (RuntimeException e) {
+                    logger.log(Level.WARNING, "An operation failed", e);
+                    fail(job, new OperationCrashedException(e));
+                }
+
+                if (job.operation != null) {
+                    return false;
+                }
+            }
+
+            if (!job.committing) {
+                // The operation itself only buffers blocks while the reorder queue is enabled;
+                // committing is what actually writes them, so it gets budgeted too.
+                job.committing = true;
+                try {
+                    job.operation = job.editSession.commit();
+                } catch (RuntimeException e) {
+                    logger.log(Level.WARNING, "Failed to commit an edit session", e);
+                    fail(job, new OperationCrashedException(e));
+                }
+                continue;
+            }
+
+            return true;
+        }
+    }
+
+    /**
+     * Stop the job's current phase. A failed operation still gets committed, so what it did write
+     * reaches the world and can be undone. The first failure is the one reported.
+     */
+    private void fail(Job job, WorldEditException e) {
+        if (job.failure == null) {
+            job.failure = e;
+        }
+        Operation failed = job.operation;
+        job.operation = null;
+        if (job.committing) {
+            // Nothing writes the rest, so drop it like a cancel does. That also records the blocks
+            // cleared ahead of their write, which undo could not bring back otherwise.
+            abandon(job.editSession, failed, "Failed to clean up after a failed commit");
+        }
+    }
+
+    private void abandon(EditSession editSession, Operation operation, String warning) {
+        try {
+            if (operation != null) {
+                operation.cancel();
+            }
+            // History keeps the edit session alive, which must not keep its queue alive too.
+            editSession.discardQueue();
+            // With nothing left to write, this only runs the follow-up work such as fast mode's.
+            editSession.flushQueue();
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, warning, e);
+        }
+    }
+
+    private void drain(Job job) {
+        RunContext run = new RunContext();
+        while (!advanceInRequest(job, run)) {
+            // RunContext never asks to stop, so this converges.
+        }
+        finish(job);
+    }
+
+    private void finish(Job job) {
+        try {
+            if (job.failure != null) {
+                job.completion.onFailure(job.failure);
+            } else {
+                job.completion.onSuccess();
+            }
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "An operation completion handler failed", e);
+        } finally {
+            runFinalizer(job);
+        }
+    }
+
+    private void stop(Job job) {
+        abandon(job.editSession, job.operation, "Failed to cancel an operation");
+    }
+
+    private void notifyCancelled(Job job) {
+        try {
+            job.completion.onCancelled(job.started);
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "An operation cancel handler failed", e);
+        }
+    }
+
+    private void runFinalizer(Job job) {
+        if (job.finalizer != null) {
+            try {
+                job.finalizer.run();
+            } catch (RuntimeException e) {
+                logger.log(Level.WARNING, "Failed to finalize an edit session", e);
+            }
+        }
+    }
+
+    private static final class OperationCrashedException extends WorldEditException {
+
+        private OperationCrashedException(RuntimeException cause) {
+            super(CRASHED, cause);
+        }
+    }
+
+    private static final class Job {
+
+        private final UUID owner;
+        private final EditSession editSession;
+        private final OperationCompletion completion;
+        private final World requestWorld = Request.request()
+            .getWorld();
+        private final LocalSession requestSession = Request.request()
+            .getSession();
+        private Operation operation;
+        private boolean committing;
+        private boolean started;
+        private WorldEditException failure;
+        private Runnable finalizer;
+
+        private Job(UUID owner, EditSession editSession, Operation operation, OperationCompletion completion) {
+            this.owner = owner;
+            this.editSession = editSession;
+            this.operation = operation;
+            this.completion = completion;
+        }
+    }
+}

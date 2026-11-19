@@ -46,6 +46,7 @@ package com.sk89q.worldedit.world.storage;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
@@ -137,16 +138,10 @@ public class McRegionReader {
         byte version = dataStream.readByte();
 
         if (version == VERSION_GZIP) {
-            byte[] data = new byte[length - 1];
-            if (dataStream.read(data) < length - 1) {
-                throw new DataException("MCRegion file does not contain " + x + "," + z + " in full");
-            }
+            byte[] data = readChunkData(length - 1, x, z);
             return new GZIPInputStream(new ByteArrayInputStream(data));
         } else if (version == VERSION_DEFLATE) {
-            byte[] data = new byte[length - 1];
-            if (dataStream.read(data) < length - 1) {
-                throw new DataException("MCRegion file does not contain " + x + "," + z + " in full");
-            }
+            byte[] data = readChunkData(length - 1, x, z);
             return new InflaterInputStream(new ByteArrayInputStream(data));
         } else {
             throw new DataException("MCRegion chunk at " + x + "," + z + " has an unsupported version of " + version);
@@ -162,6 +157,16 @@ public class McRegionReader {
      */
     private int getOffset(int x, int z) {
         return offsets[x + z * 32];
+    }
+
+    private byte[] readChunkData(int size, int x, int z) throws IOException, DataException {
+        byte[] data = new byte[size];
+        try {
+            dataStream.readFully(data);
+        } catch (EOFException e) {
+            throw new DataException("MCRegion file does not contain " + x + "," + z + " in full");
+        }
+        return data;
     }
 
     /**

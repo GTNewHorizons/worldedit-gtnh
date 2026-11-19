@@ -45,7 +45,7 @@ public abstract class McRegionChunkStore extends ChunkStore {
         return "r." + (x >> 5) + "." + (z >> 5) + ".mca";
     }
 
-    protected McRegionReader getReader(Vector2D pos, String worldname) throws DataException, IOException {
+    protected McRegionReader getReader(Vector2D pos, World world) throws DataException, IOException {
         String filename = getFilename(pos);
         if (curFilename != null) {
             if (curFilename.equals(filename)) {
@@ -56,7 +56,7 @@ public abstract class McRegionChunkStore extends ChunkStore {
                 } catch (IOException ignored) {}
             }
         }
-        InputStream stream = getInputStream(filename, worldname);
+        InputStream stream = getInputStream(filename, world);
         cachedReader = new McRegionReader(stream);
         // curFilename = filename;
         return cachedReader;
@@ -64,7 +64,7 @@ public abstract class McRegionChunkStore extends ChunkStore {
 
     @Override
     public CompoundTag getChunkTag(Vector2D position, World world) throws DataException, IOException {
-        McRegionReader reader = getReader(position, world.getName());
+        McRegionReader reader = getReader(position, world);
 
         InputStream stream = reader.getChunkInputStream(position);
         NBTInputStream nbt = new NBTInputStream(stream);
@@ -111,12 +111,12 @@ public abstract class McRegionChunkStore extends ChunkStore {
     /**
      * Get the input stream for a chunk file.
      *
-     * @param name      the name of the chunk file
-     * @param worldName the world name
+     * @param name  the name of the chunk file
+     * @param world the world
      * @return an input stream
      * @throws IOException
      */
-    protected abstract InputStream getInputStream(String name, String worldName) throws IOException, DataException;
+    protected abstract InputStream getInputStream(String name, World world) throws IOException, DataException;
 
     @Override
     public void close() throws IOException {

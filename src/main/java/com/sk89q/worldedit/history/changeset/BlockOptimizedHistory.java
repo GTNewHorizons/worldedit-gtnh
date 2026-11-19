@@ -17,43 +17,35 @@
 package com.sk89q.worldedit.history.changeset;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Map.Entry;
 
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
-import com.sk89q.worldedit.BlockVector;
-import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.history.change.BlockChange;
 import com.sk89q.worldedit.history.change.Change;
-import com.sk89q.worldedit.util.collection.TupleArrayList;
+import com.sk89q.worldedit.util.collection.PackedBlockList;
 
 /**
- * An extension of {@link ArrayListHistory} that stores {@link BlockChange}s
- * separately in two {@link ArrayList}s.
+ * An extension of {@link ArrayListHistory} that stores {@link BlockChange}s in a
+ * {@link PackedBlockList} instead of keeping an object for each one, and rebuilds them when iterated.
  *
  * <p>
- * Whether this is a good idea or not is highly questionable, but this class
- * exists because this is how history was implemented in WorldEdit for
- * many years.
+ * Each iterator runs through other changes first and then block changes, and block changes are
+ * returned in the order they were added, or the reverse when going backward.
  * </p>
  */
 public class BlockOptimizedHistory extends ArrayListHistory {
 
-    private final TupleArrayList<BlockVector, BaseBlock> previous = new TupleArrayList<BlockVector, BaseBlock>();
-    private final TupleArrayList<BlockVector, BaseBlock> current = new TupleArrayList<BlockVector, BaseBlock>();
+    private final PackedBlockList blocks = new PackedBlockList(2);
 
     @Override
     public void add(Change change) {
         checkNotNull(change);
 
-        if (change instanceof BlockChange) {
+        if (change instanceof BlockChange && PackedBlockList.fits(((BlockChange) change).getPosition())) {
             BlockChange blockChange = (BlockChange) change;
-            BlockVector position = blockChange.getPosition();
-            previous.put(position, blockChange.getPrevious());
-            current.put(position, blockChange.getCurrent());
+            blocks.add(blockChange.getPosition(), blockChange.getPrevious(), blockChange.getCurrent());
         } else {
             super.add(change);
         }
@@ -61,34 +53,46 @@ public class BlockOptimizedHistory extends ArrayListHistory {
 
     @Override
     public Iterator<Change> forwardIterator() {
-        return Iterators.concat(super.forwardIterator(), Iterators.transform(current.iterator(), createTransform()));
+        return Iterators.concat(super.forwardIterator(), blockChanges(0, 1));
     }
 
     @Override
     public Iterator<Change> backwardIterator() {
-        return Iterators
-            .concat(super.backwardIterator(), Iterators.transform(previous.iterator(true), createTransform()));
+        return Iterators.concat(super.backwardIterator(), blockChanges(blocks.size() - 1, -1));
     }
 
     @Override
     public int size() {
-        return super.size() + previous.size();
+        return super.size() + blocks.size();
     }
 
-    /**
-     * Create a function that transforms each entry from the double array lists' iterator
-     * into an {@link Change}.
-     *
-     * @return a function
-     */
-    private Function<Entry<BlockVector, BaseBlock>, Change> createTransform() {
-        return new Function<Entry<BlockVector, BaseBlock>, Change>() {
+    private Iterator<Change> blockChanges(final int start, final int step) {
+        return new Iterator<Change>() {
+
+            private int index = start;
 
             @Override
-            public Change apply(Entry<BlockVector, BaseBlock> entry) {
-                return new BlockChange(entry.getKey(), entry.getValue(), entry.getValue());
+            public boolean hasNext() {
+                return index >= 0 && index < blocks.size();
+            }
+
+            @Override
+            public Change next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                Change change = new BlockChange(
+                    blocks.positionAt(index),
+                    blocks.blockAt(index, 0),
+                    blocks.blockAt(index, 1));
+                index += step;
+                return change;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
             }
         };
     }
-
 }

@@ -31,7 +31,9 @@ public class ForwardSeekableInputStream extends InputStream {
     @Override
     public int read() throws IOException {
         int ret = parent.read();
-        ++position;
+        if (ret != -1) {
+            ++position;
+        }
         return ret;
     }
 
@@ -57,16 +59,16 @@ public class ForwardSeekableInputStream extends InputStream {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        int read = super.read(b, off, len);
-        position += read;
+        int read = parent.read(b, off, len);
+        if (read > 0) {
+            position += read;
+        }
         return read;
     }
 
     @Override
     public int read(byte[] b) throws IOException {
-        int read = parent.read(b);
-        position += read;
-        return read;
+        return read(b, 0, b.length);
     }
 
     @Override
@@ -88,12 +90,16 @@ public class ForwardSeekableInputStream extends InputStream {
             throw new IOException("Can't seek backwards");
         }
 
-        if (diff == 0) {
-            return;
-        }
-
-        if (skip(diff) < diff) {
-            throw new IOException("Failed to seek " + diff + " bytes");
+        // skip() may stop early without being at the end of the stream.
+        while (diff > 0) {
+            long skipped = skip(diff);
+            if (skipped <= 0) {
+                if (read() == -1) {
+                    throw new IOException("Failed to seek " + diff + " bytes");
+                }
+                skipped = 1;
+            }
+            diff -= skipped;
         }
     }
 }

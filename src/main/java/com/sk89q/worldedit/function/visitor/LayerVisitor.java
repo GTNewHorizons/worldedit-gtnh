@@ -19,6 +19,7 @@ package com.sk89q.worldedit.function.visitor;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Iterator;
 import java.util.List;
 
 import com.sk89q.worldedit.Vector;
@@ -45,6 +46,7 @@ public class LayerVisitor implements Operation {
 
     private final FlatRegion flatRegion;
     private final LayerFunction function;
+    private Iterator<Vector2D> columns;
     private Mask2D mask = Masks.alwaysTrue2D();
     private int minY;
     private int maxY;
@@ -91,36 +93,45 @@ public class LayerVisitor implements Operation {
 
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
-        for (Vector2D column : flatRegion.asFlatRegion()) {
-            if (!mask.test(column)) {
-                continue;
+        if (columns == null) {
+            columns = flatRegion.asFlatRegion()
+                .iterator();
+        }
+
+        while (columns.hasNext()) {
+            Vector2D column = columns.next();
+
+            // A column covered above the region is underground, so it has no layers to visit.
+            if (mask.test(column) && !function.isGround(column.toVector(maxY + 1))) {
+                visitColumn(column);
             }
 
-            // Abort if we are underground
-            if (function.isGround(column.toVector(maxY + 1))) {
-                return null;
-            }
-
-            boolean found = false;
-            int groundY = 0;
-            for (int y = maxY; y >= minY; --y) {
-                Vector test = column.toVector(y);
-                if (!found) {
-                    if (function.isGround(test)) {
-                        found = true;
-                        groundY = y;
-                    }
-                }
-
-                if (found) {
-                    if (!function.apply(test, groundY - y)) {
-                        break;
-                    }
-                }
+            if (!run.shouldContinue()) {
+                return this;
             }
         }
 
         return null;
+    }
+
+    private void visitColumn(Vector2D column) throws WorldEditException {
+        boolean found = false;
+        int groundY = 0;
+        for (int y = maxY; y >= minY; --y) {
+            Vector test = column.toVector(y);
+            if (!found) {
+                if (function.isGround(test)) {
+                    found = true;
+                    groundY = y;
+                }
+            }
+
+            if (found) {
+                if (!function.apply(test, groundY - y)) {
+                    break;
+                }
+            }
+        }
     }
 
     @Override

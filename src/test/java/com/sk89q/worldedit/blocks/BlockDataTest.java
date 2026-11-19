@@ -23,7 +23,7 @@ import java.util.TreeSet;
 
 import org.junit.Test;
 
-import com.sk89q.worldedit.CuboidClipboard.FlipDirection;
+import com.sk89q.worldedit.FlipDirection;
 
 public class BlockDataTest {
 

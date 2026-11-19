@@ -30,6 +30,7 @@ public class MaxChangedBlocksException extends WorldEditException {
      * @param maxBlocks the maximum number of blocks that can be changed
      */
     public MaxChangedBlocksException(int maxBlocks) {
+        super("Max blocks changed in an operation reached (" + maxBlocks + ").");
         this.maxBlocks = maxBlocks;
     }
 

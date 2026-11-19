@@ -54,6 +54,10 @@ public class BlockMapEntryPlacer implements Operation {
         while (iterator.hasNext()) {
             Map.Entry<BlockVector, BaseBlock> entry = iterator.next();
             extent.setBlock(entry.getKey(), entry.getValue());
+
+            if (!run.shouldContinue()) {
+                return this;
+            }
         }
 
         return null;

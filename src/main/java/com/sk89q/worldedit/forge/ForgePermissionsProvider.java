@@ -20,13 +20,29 @@ import net.minecraft.command.ICommand;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.WorldSettings.GameType;
 
+import com.sk89q.worldedit.extension.platform.permission.PermissionNodes;
+
 import cpw.mods.fml.common.FMLCommonHandler;
 
 public interface ForgePermissionsProvider {
 
     public boolean hasPermission(EntityPlayerMP player, String permission);
 
-    public void registerPermission(ICommand command, String permission);
+    /**
+     * Tell the permission system about every node WorldEdit declared, once the commands are registered.
+     */
+    default void registerNodes() {
+        for (String node : PermissionNodes.all()) {
+            registerPermission(null, node);
+        }
+    }
+
+    /**
+     * Kept for providers written against the older API (ForgeEssentials).
+     *
+     * @param command always null
+     */
+    default void registerPermission(ICommand command, String permission) {}
 
     public static class VanillaPermissionsProvider implements ForgePermissionsProvider {
 
@@ -45,8 +61,5 @@ public interface ForgePermissionsProvider {
                 .func_152596_g(player.getGameProfile())
                 || (configuration.creativeEnable && player.theItemInWorldManager.getGameType() == GameType.CREATIVE);
         }
-
-        @Override
-        public void registerPermission(ICommand command, String permission) {}
     }
 }

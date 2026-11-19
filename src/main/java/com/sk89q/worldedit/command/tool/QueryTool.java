@@ -41,14 +41,17 @@ public class QueryTool implements BlockTool {
     }
 
     @Override
+    public boolean editsBlocks() {
+        return false;
+    }
+
+    @Override
     public boolean actPrimary(Platform server, LocalConfiguration config, Player player, LocalSession session,
         com.sk89q.worldedit.util.Location clicked) {
 
         World world = (World) clicked.getExtent();
         EditSession editSession = session.createEditSession(player);
-        BaseBlock block = (editSession).rawGetBlock(clicked.toVector());
-        BlockType type = BlockType.fromID(block.getType());
-
+        BaseBlock block = editSession.getBlock(clicked.toVector());
         player.print(
             "\u00A79@" + clicked.toVector()
                 + ": "
@@ -57,7 +60,7 @@ public class QueryTool implements BlockTool {
                 + block.getType()
                 + "\u00A77"
                 + " ("
-                + (type == null ? "Unknown" : type.getName())
+                + BlockType.nameOf(block.getType())
                 + ") "
                 + "\u00A7f"
                 + "["

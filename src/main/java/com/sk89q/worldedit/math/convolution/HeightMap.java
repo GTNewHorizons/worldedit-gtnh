@@ -18,11 +18,18 @@ package com.sk89q.worldedit.math.convolution;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.List;
+
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
+import com.sk89q.worldedit.function.operation.AffectedCounter;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.regions.Region;
 
 /**
@@ -97,6 +104,21 @@ public class HeightMap {
      */
 
     public int applyFilter(HeightMapFilter filter, int iterations) throws MaxChangedBlocksException {
+        Applier applier = applyFilterOperation(filter, iterations);
+        Operations.completeLegacy(applier);
+        return applier.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #applyFilter(HeightMapFilter, int)} runs, without running it,
+     * so a caller can hand it to an
+     * {@link com.sk89q.worldedit.util.operation.OperationScheduler OperationScheduler} instead.
+     *
+     * @param filter     the filter
+     * @param iterations the number of iterations to run the filter for
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public Applier applyFilterOperation(HeightMapFilter filter, int iterations) {
         checkNotNull(filter);
 
         int[] newData = new int[data.length];
@@ -106,7 +128,7 @@ public class HeightMap {
             newData = filter.filter(newData, width, height);
         }
 
-        return apply(newData);
+        return new Applier(newData);
     }
 
     /**
@@ -114,87 +136,146 @@ public class HeightMap {
      *
      * @param data the data
      * @return number of blocks affected
-     * @throws MaxChangedBlocksException
+     * @throws MaxChangedBlocksException thrown if too many blocks are changed
      */
-
     public int apply(int[] data) throws MaxChangedBlocksException {
+        Applier applier = applyOperation(data);
+        Operations.completeLegacy(applier);
+        return applier.getAffected();
+    }
+
+    /**
+     * Build the operation that {@link #apply(int[])} runs, without running it.
+     *
+     * @param data the data
+     * @return the operation, which also carries the affected count once it has run
+     */
+    public Applier applyOperation(int[] data) {
         checkNotNull(data);
 
-        Vector minY = region.getMinimumPoint();
-        int originX = minY.getBlockX();
-        int originY = minY.getBlockY();
-        int originZ = minY.getBlockZ();
+        return new Applier(data);
+    }
 
-        int maxY = region.getMaximumPoint()
-            .getBlockY();
-        BaseBlock fillerAir = new BaseBlock(BlockID.AIR);
+    /**
+     * Writes a heightmap to the world a column at a time, so a large smooth can be spread over
+     * several server ticks instead of running in one go.
+     */
+    public class Applier implements Operation, AffectedCounter {
 
-        int blocksChanged = 0;
+        private final int[] target;
+        private final int originX;
+        private final int originY;
+        private final int originZ;
+        private final int maxY;
+        private final BaseBlock fillerAir = new BaseBlock(BlockID.AIR);
 
-        // Apply heightmap
-        for (int z = 0; z < height; ++z) {
-            for (int x = 0; x < width; ++x) {
-                int index = z * width + x;
-                int curHeight = this.data[index];
+        private int x;
+        private int z;
+        private int blocksChanged;
 
-                // Clamp newHeight within the selection area
-                int newHeight = Math.min(maxY, data[index]);
+        private Applier(int[] target) {
+            this.target = target;
 
-                // Offset x,z to be 'real' coordinates
-                int xr = x + originX;
-                int zr = z + originZ;
+            Vector min = region.getMinimumPoint();
+            this.originX = min.getBlockX();
+            this.originY = min.getBlockY();
+            this.originZ = min.getBlockZ();
+            this.maxY = region.getMaximumPoint()
+                .getBlockY();
+        }
 
-                // We are keeping the topmost blocks so take that in account for the scale
-                double scale = (double) (curHeight - originY) / (double) (newHeight - originY);
+        @Override
+        public int getAffected() {
+            return blocksChanged;
+        }
 
-                // Depending on growing or shrinking we need to start at the bottom or top
-                if (newHeight > curHeight) {
-                    // Set the top block of the column to be the same type (this might go wrong with rounding)
-                    BaseBlock existing = session.getBlock(new Vector(xr, curHeight, zr));
+        @Override
+        public Operation resume(RunContext run) throws WorldEditException {
+            while (z < height) {
+                if (x >= width) {
+                    x = 0;
+                    z++;
+                    continue;
+                }
 
-                    // Skip water/lava
-                    if (existing.getType() != BlockID.WATER && existing.getType() != BlockID.STATIONARY_WATER
-                        && existing.getType() != BlockID.LAVA
-                        && existing.getType() != BlockID.STATIONARY_LAVA) {
-                        session.setBlock(new Vector(xr, newHeight, zr), existing);
-                        ++blocksChanged;
+                applyColumn(x, z);
+                x++;
 
-                        // Grow -- start from 1 below top replacing airblocks
-                        for (int y = newHeight - 1 - originY; y >= 0; --y) {
-                            int copyFrom = (int) (y * scale);
-                            session.setBlock(
-                                new Vector(xr, originY + y, zr),
-                                session.getBlock(new Vector(xr, originY + copyFrom, zr)));
-                            ++blocksChanged;
-                        }
-                    }
-                } else if (curHeight > newHeight) {
-                    // Shrink -- start from bottom
-                    for (int y = 0; y < newHeight - originY; ++y) {
+                if (!run.shouldContinue()) {
+                    return this;
+                }
+            }
+
+            // Drop trees to the floor -- TODO
+
+            return null;
+        }
+
+        @Override
+        public void cancel() {}
+
+        @Override
+        public void addStatusMessages(List<String> messages) {
+            messages.add(getAffected() + " blocks affected");
+        }
+
+        private void applyColumn(int x, int z) throws WorldEditException {
+            int index = z * width + x;
+            int curHeight = HeightMap.this.data[index];
+
+            // Clamp newHeight within the selection area
+            int newHeight = Math.min(maxY, target[index]);
+
+            // Offset x,z to be 'real' coordinates
+            int xr = x + originX;
+            int zr = z + originZ;
+
+            // We are keeping the topmost blocks so take that in account for the scale
+            double scale = (double) (curHeight - originY) / (double) (newHeight - originY);
+
+            // Depending on growing or shrinking we need to start at the bottom or top
+            if (newHeight > curHeight) {
+                // Set the top block of the column to be the same type (this might go wrong with rounding)
+                BaseBlock existing = session.getBlock(new Vector(xr, curHeight, zr));
+
+                // Skip water/lava
+                if (existing.getType() != BlockID.WATER && existing.getType() != BlockID.STATIONARY_WATER
+                    && existing.getType() != BlockID.LAVA
+                    && existing.getType() != BlockID.STATIONARY_LAVA) {
+                    session.setBlock(new Vector(xr, newHeight, zr), existing);
+                    ++blocksChanged;
+
+                    // Grow -- start from 1 below top replacing airblocks
+                    for (int y = newHeight - 1 - originY; y >= 0; --y) {
                         int copyFrom = (int) (y * scale);
                         session.setBlock(
                             new Vector(xr, originY + y, zr),
                             session.getBlock(new Vector(xr, originY + copyFrom, zr)));
                         ++blocksChanged;
                     }
-
-                    // Set the top block of the column to be the same type
-                    // (this could otherwise go wrong with rounding)
-                    session.setBlock(new Vector(xr, newHeight, zr), session.getBlock(new Vector(xr, curHeight, zr)));
+                }
+            } else if (curHeight > newHeight) {
+                // Shrink -- start from bottom
+                for (int y = 0; y < newHeight - originY; ++y) {
+                    int copyFrom = (int) (y * scale);
+                    session.setBlock(
+                        new Vector(xr, originY + y, zr),
+                        session.getBlock(new Vector(xr, originY + copyFrom, zr)));
                     ++blocksChanged;
+                }
 
-                    // Fill rest with air
-                    for (int y = newHeight + 1; y <= curHeight; ++y) {
-                        session.setBlock(new Vector(xr, y, zr), fillerAir);
-                        ++blocksChanged;
-                    }
+                // Set the top block of the column to be the same type
+                // (this could otherwise go wrong with rounding)
+                session.setBlock(new Vector(xr, newHeight, zr), session.getBlock(new Vector(xr, curHeight, zr)));
+                ++blocksChanged;
+
+                // Fill rest with air
+                for (int y = newHeight + 1; y <= curHeight; ++y) {
+                    session.setBlock(new Vector(xr, y, zr), fillerAir);
+                    ++blocksChanged;
                 }
             }
         }
-
-        // Drop trees to the floor -- TODO
-
-        return blocksChanged;
     }
 
 }

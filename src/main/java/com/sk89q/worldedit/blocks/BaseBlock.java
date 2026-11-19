@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.jnbt.StringTag;
 import com.sk89q.jnbt.Tag;
-import com.sk89q.worldedit.CuboidClipboard.FlipDirection;
+import com.sk89q.worldedit.FlipDirection;
 import com.sk89q.worldedit.foundation.Block;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.world.registry.WorldData;
@@ -61,23 +61,22 @@ import com.sk89q.worldedit.world.registry.WorldData;
 public class BaseBlock extends Block implements TileEntityBlock {
 
     /**
-     * Indicates the highest possible block ID (inclusive) that can be used.
-     * This value is subject to change depending on the implementation, but
-     * internally this class only supports a range of 4096 IDs (for space
-     * reasons), which coincides with the number of possible IDs that official
-     * Minecraft supports as of version 1.7.
+     * The highest block ID (inclusive) without EndlessIDs, as in vanilla 1.7.10. EndlessIDs replaces the
+     * ID methods below with its own wider ID and limit, so this doesn't apply when it is installed.
      */
     public final static int MAX_ID = 4095;
 
     /**
-     * Indicates the maximum data value (inclusive) that can be used. A future
-     * version of Minecraft may abolish block data values.
+     * The highest data value (inclusive). Raised to 65535 at startup when EndlessIDs is installed.
      */
     public static int MAX_DATA = 15;
 
     // Instances of this class should be _as small as possible_ because there will
     // be millions of instances of this object.
 
+    // EndlessIDs (BaseBlockMixin) overwrites getId, internalSetId, getData and internalSetData, and
+    // shadows the data field. Keep their names, signatures and the field's type, or it fails to apply.
+    // With it installed, this id field is unused: the mixin keeps the ID in a field of its own.
     private short id;
     private short data;
     @Nullable
@@ -226,7 +225,8 @@ public class BaseBlock extends Block implements TileEntityBlock {
      */
     @Override
     public boolean hasWildcardData() {
-        return getData() == -1;
+        // Reads the field because EndlessIDs makes getData() return this as 65535.
+        return data == -1;
     }
 
     @Override
@@ -374,7 +374,7 @@ public class BaseBlock extends Block implements TileEntityBlock {
      * @return true if equal
      */
     public boolean equalsFuzzy(BaseBlock o) {
-        return (getType() == o.getType()) && (getData() == o.getData() || getData() == -1 || o.getData() == -1);
+        return (getType() == o.getType()) && (getData() == o.getData() || hasWildcardData() || o.hasWildcardData());
     }
 
     /**
@@ -400,9 +400,7 @@ public class BaseBlock extends Block implements TileEntityBlock {
 
     @Override
     public int hashCode() {
-        int ret = getId() << 3;
-        if (getData() != (byte) -1) ret |= getData();
-        return ret;
+        return 31 * getId() + getData();
     }
 
     @Override

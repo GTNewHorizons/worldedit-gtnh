@@ -107,29 +107,33 @@ public class SchematicReader implements ClipboardReader {
         short height = requireTag(schematic, "Height", ShortTag.class).getValue();
         short length = requireTag(schematic, "Length", ShortTag.class).getValue();
 
+        // Read WEOrigin and WEOffset independently so the paste anchor is
+        // honoured even when only WEOffset is present (e.g. converted schems).
+        Vector min;
         try {
             int originX = requireTag(schematic, "WEOriginX", IntTag.class).getValue();
             int originY = requireTag(schematic, "WEOriginY", IntTag.class).getValue();
             int originZ = requireTag(schematic, "WEOriginZ", IntTag.class).getValue();
-            Vector min = new Vector(originX, originY, originZ);
+            min = new Vector(originX, originY, originZ);
+        } catch (IOException ignored) {
+            min = new Vector(0, 0, 0);
+        }
 
+        Vector offset;
+        try {
             int offsetX = requireTag(schematic, "WEOffsetX", IntTag.class).getValue();
             int offsetY = requireTag(schematic, "WEOffsetY", IntTag.class).getValue();
             int offsetZ = requireTag(schematic, "WEOffsetZ", IntTag.class).getValue();
-            Vector offset = new Vector(offsetX, offsetY, offsetZ);
-
-            origin = min.subtract(offset);
-            region = new CuboidRegion(
-                min,
-                min.add(width, height, length)
-                    .subtract(Vector.ONE));
+            offset = new Vector(offsetX, offsetY, offsetZ);
         } catch (IOException ignored) {
-            origin = new Vector(0, 0, 0);
-            region = new CuboidRegion(
-                origin,
-                origin.add(width, height, length)
-                    .subtract(Vector.ONE));
+            offset = new Vector(0, 0, 0);
         }
+
+        origin = min.subtract(offset);
+        region = new CuboidRegion(
+            min,
+            min.add(width, height, length)
+                .subtract(Vector.ONE));
 
         // ====================================================================
         // Blocks
@@ -188,7 +192,6 @@ public class SchematicReader implements ClipboardReader {
         byte[] addId = new byte[0];
         byte[] addId2 = new byte[0];
         byte[] addId3 = new byte[0];
-        int[] blocks = new int[blockId.length]; // Have to later combine IDs
 
         // We support 4096 block IDs using the same method as vanilla Minecraft, where
         // the highest 4 bits are stored in a separate byte array.
@@ -203,27 +206,11 @@ public class SchematicReader implements ClipboardReader {
         if (schematic.containsKey("AddBlocks3")) {
             addId3 = requireTag(schematic, "AddBlocks3", ByteArrayTag.class).getValue();
         }
-        // Combine the AddBlocks data with the first 8-bit block ID
-        for (int index = 0; index < blockId.length; index++) {
-            if ((index >> 1) >= addId.length) { // No corresponding AddBlocks index
-                blocks[index] = (short) (blockId[index] & 0xFF);
-            } else {
-                if ((index & 1) == 0) {
-                    blocks[index] = (short) (((addId[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFF));
-                } else {
-                    blocks[index] = (short) (((addId[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFF));
-                }
-            }
-        }
 
-        for (int index = 0; index < blockId.length; index++) {
-            if ((index >> 1) < addId2.length) { // No corresponding AddBlocks2 index
-                if ((index & 1) == 0) {
-                    blocks[index] = (short) (((addId2[index >> 1] & 0x0F) << 12) + (blocks[index] & 0xFFF));
-                } else {
-                    blocks[index] = (short) (((addId2[index >> 1] & 0xF0) << 8) + (blocks[index] & 0xFFF));
-                }
-            }
+        short[] combined = combineBlockIds(blockId, addId, addId2);
+        int[] blocks = new int[combined.length];
+        for (int index = 0; index < combined.length; index++) {
+            blocks[index] = combined[index] & 0xFFFF;
         }
 
         if (addId3.length == blockId.length) {
@@ -290,22 +277,27 @@ public class SchematicReader implements ClipboardReader {
 
                     BaseBlock block = new BaseBlock(
                         blocks[index] & 0xFFFF,
-                        (blockData[index] & 0xFF) + (addData != null ? (addData[index] & 0xFF << 8) : 0));
+                        (blockData[index] & 0xFF) + (addData != null ? ((addData[index] & 0xFF) << 8) : 0));
 
                     if (tileEntitiesMap.containsKey(pt)) {
-                        BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
-                            // Logic below is intentional to sneak a variable assignment into a boolean return statement
-                            return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
-                                && itemTag.containsKey("Count")
-                                && itemTag.containsKey("Damage"))
-                                || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
+                        final BiPredicate<CompoundTag, String[]> isItem = new BiPredicate<CompoundTag, String[]>() {
+
+                            @Override
+                            public boolean test(CompoundTag itemTag, String[] idPtr) {
+                                boolean c1 = ((idPtr[0] = "id") != null && itemTag.containsKey("id")
                                     && itemTag.containsKey("Count")
-                                    && itemTag.containsKey("Meta")
-                                || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
+                                    && itemTag.containsKey("Damage"));
+                                boolean c2 = (((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
+                                    && itemTag.containsKey("Count")
+                                    && itemTag.containsKey("Meta"));
+                                boolean c3 = (((idPtr[0] = "id") != null) && itemTag.containsKey("id")
                                     && itemTag.getValue()
-                                        .get("id") instanceof IntTag;
+                                        .get("id") instanceof IntTag);
+                                return c1 || c2 || c3;
+                            }
                         };
-                        Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
+
+                        final Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
 
                             @Override
                             public CompoundTag apply(CompoundTag nbtData) {
@@ -334,66 +326,80 @@ public class SchematicReader implements ClipboardReader {
                                         itemMap.put(idPtr[0], new ShortTag((short) newId));
                                     }
 
-                                    if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag nbt) {
-                                        itemMap.put("tag", apply(nbt));
+                                    if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag) {
+                                        itemMap.put("tag", apply((CompoundTag) itemMap.get("tag")));
                                     }
 
-                                    if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag d) {
-                                        itemMap.put("d", apply(d));
+                                    if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag) {
+                                        itemMap.put("d", apply((CompoundTag) itemMap.get("d")));
                                     }
                                     return nbtData.setValue(itemMap);
                                 } else {
 
-                                    HashMap<String, Tag> nbtMap = new HashMap<>(nbtData.getValue());
+                                    HashMap<String, Tag> nbtMap = new HashMap<String, Tag>(nbtData.getValue());
                                     if (nbtData.containsKey("id") && nbtData.getValue()
-                                        .get("id") instanceof StringTag str
-                                        && "customDoorTileEntity".equals(str.getValue())) {
+                                        .get("id") instanceof StringTag
+                                        && "customDoorTileEntity".equals(
+                                            ((StringTag) nbtData.getValue()
+                                                .get("id")).getValue())) {
 
                                         String key;
+
                                         if (nbtData.containsKey(key = "bottomMaterial") && nbtData.getValue()
-                                            .get(key) instanceof IntTag itag) {
+                                            .get(key) instanceof IntTag) {
+                                            IntTag itag = (IntTag) nbtData.getValue()
+                                                .get(key);
                                             int _id = itag.getValue();
                                             nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "topMaterial") && nbtData.getValue()
-                                            .get(key) instanceof IntTag itag) {
+                                            .get(key) instanceof IntTag) {
+                                            IntTag itag = (IntTag) nbtData.getValue()
+                                                .get(key);
                                             int _id = itag.getValue();
                                             nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "frame") && nbtData.getValue()
-                                            .get(key) instanceof IntTag itag) {
+                                            .get(key) instanceof IntTag) {
+                                            IntTag itag = (IntTag) nbtData.getValue()
+                                                .get(key);
                                             int _id = itag.getValue();
                                             nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "block") && nbtData.getValue()
-                                            .get(key) instanceof IntTag itag) {
+                                            .get(key) instanceof IntTag) {
+                                            IntTag itag = (IntTag) nbtData.getValue()
+                                                .get(key);
                                             int _id = itag.getValue();
                                             nbtMap.put(key, new IntTag(blockConversionMap.getOrDefault(_id, _id)));
                                         }
 
                                         if (nbtData.containsKey(key = "item") && nbtData.getValue()
-                                            .get(key) instanceof IntTag itag) {
+                                            .get(key) instanceof IntTag) {
+                                            IntTag itag = (IntTag) nbtData.getValue()
+                                                .get(key);
                                             int _id = itag.getValue();
                                             nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
                                         }
                                     }
 
                                     for (String key : nbtMap.keySet()) {
-                                        {
-                                            if (nbtMap.get(key) instanceof ListTag inventoryTag) {
-                                                ArrayList<Tag> inventoryList = new ArrayList<>(inventoryTag.getValue());
-                                                for (int i = 0; i < inventoryList.size(); i++) {
-                                                    if (inventoryList.get(i) instanceof CompoundTag itemTag) {
-                                                        inventoryList.set(i, apply(itemTag));
-                                                    }
+                                        Object v = nbtMap.get(key);
+                                        if (v instanceof ListTag) {
+                                            ListTag inventoryTag = (ListTag) v;
+                                            ArrayList<Tag> inventoryList = new ArrayList<Tag>(inventoryTag.getValue());
+                                            for (int i = 0; i < inventoryList.size(); i++) {
+                                                Tag t2 = inventoryList.get(i);
+                                                if (t2 instanceof CompoundTag) {
+                                                    inventoryList.set(i, apply((CompoundTag) t2));
                                                 }
-                                                nbtMap.put(key, inventoryTag.setValue(inventoryList));
-                                            } else if (nbtMap.get(key) instanceof CompoundTag itemTag) {
-                                                nbtMap.put(key, apply(itemTag));
                                             }
+                                            nbtMap.put(key, inventoryTag.setValue(inventoryList));
+                                        } else if (v instanceof CompoundTag) {
+                                            nbtMap.put(key, apply((CompoundTag) v));
                                         }
                                     }
                                     return nbtData.setValue(nbtMap);
@@ -425,6 +431,7 @@ public class SchematicReader implements ClipboardReader {
                                     e);
                                 break;
                             default:
+                                // no-op
                         }
 
                         failedBlockSets++;
@@ -457,6 +464,38 @@ public class SchematicReader implements ClipboardReader {
         }
 
         return clipboard;
+    }
+
+    static short[] combineBlockIds(byte[] blockId, @Nullable byte[] addId, @Nullable byte[] addId2) {
+        byte[] addIdSafe = addId != null ? addId : new byte[0];
+        byte[] addId2Safe = addId2 != null ? addId2 : new byte[0];
+
+        short[] blocks = new short[blockId.length];
+
+        // Combine the AddBlocks data with the first 8-bit block ID
+        for (int index = 0; index < blockId.length; index++) {
+            if ((index >> 1) >= addIdSafe.length) { // No corresponding AddBlocks index
+                blocks[index] = (short) (blockId[index] & 0xFF);
+            } else {
+                if ((index & 1) == 0) {
+                    blocks[index] = (short) (((addIdSafe[index >> 1] & 0x0F) << 8) + (blockId[index] & 0xFF));
+                } else {
+                    blocks[index] = (short) (((addIdSafe[index >> 1] & 0xF0) << 4) + (blockId[index] & 0xFF));
+                }
+            }
+        }
+
+        for (int index = 0; index < blockId.length; index++) {
+            if ((index >> 1) < addId2Safe.length) { // No corresponding AddBlocks2 index
+                if ((index & 1) == 0) {
+                    blocks[index] = (short) (((addId2Safe[index >> 1] & 0x0F) << 12) + (blocks[index] & 0xFFF));
+                } else {
+                    blocks[index] = (short) (((addId2Safe[index >> 1] & 0xF0) << 8) + (blocks[index] & 0xFFF));
+                }
+            }
+        }
+
+        return blocks;
     }
 
     private static <T extends Tag> T requireTag(Map<String, Tag> items, String key, Class<T> expected)

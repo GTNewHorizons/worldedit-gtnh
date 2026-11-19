@@ -34,4 +34,25 @@ public class RunContext {
         return true;
     }
 
+    /**
+     * Same as {@link #shouldContinue()}, for an operation that has just finished a large piece of work
+     * such as generating a chunk, where an implementation must not put off checking its budget.
+     *
+     * @return true if the operation should continue running
+     */
+    public boolean shouldContinueAfterLargeStep() {
+        return shouldContinue();
+    }
+
+    /**
+     * Ask to be resumed on a later tick, for an operation that is waiting on something else and has
+     * nothing to do yet.
+     *
+     * @return true if the operation should return and will be resumed later, false if this context
+     *         can't do that and the operation has to wait where it is
+     */
+    public boolean waitForNextTick() {
+        return false;
+    }
+
 }

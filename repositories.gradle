@@ -4,5 +4,9 @@ repositories {
     maven {
         name "EngineHub Repository"
         url "https://maven.enginehub.org/repo/"
+        mavenContent {
+            includeGroup("com.sk89q")
+            includeGroup("com.sk89q.lib")
+        }
     }
 }

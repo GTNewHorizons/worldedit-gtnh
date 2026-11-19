@@ -29,7 +29,7 @@ import com.sk89q.worldedit.world.snapshot.SnapshotRepository;
  */
 public abstract class LocalConfiguration {
 
-    protected static final int[] defaultDisallowedBlocks = new int[] {
+    public static final int[] defaultDisallowedBlocks = new int[] {
         // dangerous stuff (physics/drops items)
         BlockID.SAPLING, BlockID.BED, BlockID.POWERED_RAIL, BlockID.DETECTOR_RAIL, BlockID.LONG_GRASS,
         BlockID.DEAD_BUSH, BlockID.PISTON_EXTENSION, BlockID.PISTON_MOVING_PIECE, BlockID.YELLOW_FLOWER,
@@ -58,29 +58,23 @@ public abstract class LocalConfiguration {
     public int maxPolygonalPoints = 20;
     public int defaultMaxPolyhedronPoints = -1;
     public int maxPolyhedronPoints = 20;
-    public String shellSaveType = "";
     public SnapshotRepository snapshotRepo = null;
     public int maxRadius = -1;
     public int maxSuperPickaxeSize = 5;
     public int maxBrushRadius = 6;
     public boolean logCommands = false;
     public String logFile = "";
-    public boolean registerHelp = true; // what is the point of this, it's not even used
     public int wandItem = ItemID.WOOD_AXE;
     public boolean superPickaxeDrop = true;
     public boolean superPickaxeManyDrop = true;
-    public boolean noDoubleSlash = false;
-    public boolean useInventory = false;
-    public boolean useInventoryOverride = false;
-    public boolean useInventoryCreativeOverride = false;
     public boolean navigationUseGlass = true;
     public int navigationWand = ItemID.COMPASS;
     public int navigationWandMaxDistance = 50;
-    public int scriptTimeout = 3000;
-    public Set<Integer> allowedDataCycleBlocks = new HashSet<Integer>();
+    /**
+     * Whether only wands given by //wand act as wands, rather than any item of the wand's type.
+     */
+    public boolean requireWandTag = true;
     public String saveDir = "schematics";
-    public String scriptsDir = "craftscripts";
-    public boolean showHelpInfo = true;
     public int butcherDefaultRadius = -1;
     public int butcherMaxRadius = -1;
     public boolean allowSymlinks = false;

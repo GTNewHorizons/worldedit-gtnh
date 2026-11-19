@@ -24,7 +24,6 @@ import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.regions.NullRegion;
@@ -34,7 +33,7 @@ import com.sk89q.worldedit.world.World;
 
 /**
  * A region that mirrors the current selection according to the current
- * {@link LocalSession} and {@link LocalWorld} set on the current
+ * {@link LocalSession} and {@link World} set on the current
  * {@link Request}.
  *
  * <p>
@@ -132,11 +131,6 @@ public class RequestSelection implements Region {
     @Override
     public World getWorld() {
         return getRegion().getWorld();
-    }
-
-    @Override
-    public void setWorld(LocalWorld world) {
-        setWorld((World) world);
     }
 
     @Override

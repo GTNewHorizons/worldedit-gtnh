@@ -33,4 +33,13 @@ public interface Tool {
      */
     public boolean canUse(Actor actor);
 
+    /**
+     * Whether using the tool changes blocks, so that it has to wait for the player's queued edits.
+     *
+     * @return false for tools that only look, such as the query tool
+     */
+    default boolean editsBlocks() {
+        return true;
+    }
+
 }

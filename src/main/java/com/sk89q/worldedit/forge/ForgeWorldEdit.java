@@ -22,32 +22,40 @@ import static net.minecraftforge.event.entity.player.PlayerInteractEvent.Action;
 import java.io.File;
 import java.util.Map;
 
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.event.CommandEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.world.BlockEvent;
 
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Joiner;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WETags;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldVector;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
+import com.sk89q.worldedit.blocks.BlockType;
+import com.sk89q.worldedit.command.brigadier.CommandRegistry;
 import com.sk89q.worldedit.event.platform.PlatformReadyEvent;
 import com.sk89q.worldedit.extension.platform.Platform;
 import com.sk89q.worldedit.forge.compat.ArchitectureCraftBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.CarpentersBlocksBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartCompat;
 import com.sk89q.worldedit.forge.compat.ForgeMultipartExistsCompat;
+import com.sk89q.worldedit.forge.compat.ModRotationBlockTransformHook;
 import com.sk89q.worldedit.forge.compat.NoForgeMultipartCompat;
-import com.sk89q.worldedit.internal.LocalWorldAdapter;
+import com.sk89q.worldedit.forge.compat.ServerUtilitiesPermissionsProvider;
+import com.sk89q.worldedit.forge.compat.rotation.RotationMappings;
+import com.sk89q.worldedit.util.lighting.LightingScheduler;
+import com.sk89q.worldedit.util.operation.OperationScheduler;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
@@ -72,7 +80,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
     name = "WorldEdit",
     version = WETags.VERSION,
     acceptableRemoteVersions = "*",
-    dependencies = "after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks")
+    dependencies = "required-after:gtnhlib;after:ForgeMultipart;after:ArchitectureCraft;after:CarpentersBlocks;after:serverutilities")
 public class ForgeWorldEdit {
 
     public static Logger logger;
@@ -93,6 +101,12 @@ public class ForgeWorldEdit {
     private ForgeConfiguration config;
     private File workingDir;
     private ForgeMultipartCompat compat = new NoForgeMultipartCompat();
+    private ModRotationBlockTransformHook modRotationHook;
+    private ForgeLightingScheduler lightingScheduler;
+    private ForgeOperationScheduler operationScheduler;
+    private ClickedBlockRefresher clickedBlockRefresher;
+    private OperationScheduler previousOperationScheduler;
+    private LightingScheduler previousLightingScheduler;
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -117,12 +131,17 @@ public class ForgeWorldEdit {
             ForgeWorldData.getInstance()
                 .addBlockTransformHook(new CarpentersBlocksBlockTransformHook());
         }
+        modRotationHook = new ModRotationBlockTransformHook();
+        ForgeWorldData.getInstance()
+            .addBlockTransformHook(modRotationHook);
 
         FMLCommonHandler.instance()
             .bus()
             .register(ThreadSafeCache.getInstance());
 
-        if (Loader.isModLoaded("neid")) {
+        // EndlessIDs (and NEID Unofficial before it) widens block metadata to 16 bits and mixes
+        // into BaseBlock to match. Without this the block parser rejects any metadata above 15.
+        if (Loader.isModLoaded("endlessids") || Loader.isModLoaded("neid")) {
             BaseBlock.MAX_DATA = (1 << 16) - 1;
         }
     }
@@ -147,6 +166,7 @@ public class ForgeWorldEdit {
                 .unregister(platform);
         }
 
+        RotationMappings.init(workingDir);
         ForgeBiomeRegistry.populate();
 
         this.platform = new ForgePlatform(this);
@@ -154,11 +174,72 @@ public class ForgeWorldEdit {
         WorldEdit.getInstance()
             .getPlatformManager()
             .register(platform);
-        this.provider = new ForgePermissionsProvider.VanillaPermissionsProvider(platform);
+        final ForgePlatform forgePlatform = platform;
+        this.provider = Loader.isModLoaded("serverutilities")
+            ? new ServerUtilitiesPermissionsProvider(forgePlatform::getConfiguration)
+            : new ForgePermissionsProvider.VanillaPermissionsProvider(platform);
+
+        // GTNHLib creates a new command dispatcher for each server, right before this. Not any later: on Thermos it
+        // wraps the registered commands when the server is starting.
+        CommandRegistry.registerAll(WorldEdit.getInstance());
+        provider.registerNodes();
+
+        previousLightingScheduler = WorldEdit.getInstance()
+            .getLightingScheduler();
+        BlockType.setPlacementRules(new ForgeBlockPlacementRules(config.placeLastBlocks, config.placeNormallyBlocks));
+        BlockType
+            .setModdedProperties(new ForgeBlockProperties(config.naturalTerrainBlocks, config.notNaturalTerrainBlocks));
+
+        lightingScheduler = new ForgeLightingScheduler();
+        lightingScheduler.register();
+        WorldEdit.getInstance()
+            .setLightingScheduler(lightingScheduler);
+
+        previousOperationScheduler = WorldEdit.getInstance()
+            .getOperationScheduler();
+        operationScheduler = new ForgeOperationScheduler();
+        operationScheduler.register();
+        WorldEdit.getInstance()
+            .setOperationScheduler(operationScheduler);
+
+        clickedBlockRefresher = new ClickedBlockRefresher();
+        clickedBlockRefresher.register();
     }
 
     @EventHandler
     public void serverStopping(FMLServerStoppingEvent event) {
+        if (clickedBlockRefresher != null) {
+            clickedBlockRefresher.unregister();
+            clickedBlockRefresher = null;
+        }
+
+        // Edits finishing here may still ask for relighting, so the lighting scheduler goes last.
+        if (operationScheduler != null) {
+            operationScheduler.shutdown();
+            operationScheduler = null;
+        }
+
+        if (previousOperationScheduler != null) {
+            WorldEdit.getInstance()
+                .setOperationScheduler(previousOperationScheduler);
+            previousOperationScheduler = null;
+        }
+
+        // Only now: the edits finished above still needed these to order modded blocks.
+        BlockType.setPlacementRules(null);
+        BlockType.setModdedProperties(null);
+
+        if (lightingScheduler != null) {
+            lightingScheduler.shutdown();
+            lightingScheduler = null;
+        }
+
+        if (previousLightingScheduler != null) {
+            WorldEdit.getInstance()
+                .setLightingScheduler(previousLightingScheduler);
+            previousLightingScheduler = null;
+        }
+
         WorldEdit.getInstance()
             .getPlatformManager()
             .unregister(platform);
@@ -171,20 +252,35 @@ public class ForgeWorldEdit {
             .post(new PlatformReadyEvent());
     }
 
+    /**
+     * A wand never breaks the block it is used on. Vanilla blocks don't get this far, because the click
+     * itself is cancelled, but blocks that mods break on their own, such as LittleTiles in creative,
+     * only ask through this event.
+     */
     @SubscribeEvent
-    public void onCommandEvent(CommandEvent event) {
-        if ((event.sender instanceof EntityPlayerMP)) {
-            if (((EntityPlayerMP) event.sender).worldObj.isRemote) return;
-            String[] split = new String[event.parameters.length + 1];
-            System.arraycopy(event.parameters, 0, split, 1, event.parameters.length);
-            split[0] = event.command.getCommandName();
-            com.sk89q.worldedit.event.platform.CommandEvent weEvent = new com.sk89q.worldedit.event.platform.CommandEvent(
-                wrap((EntityPlayerMP) event.sender),
-                Joiner.on(" ")
-                    .join(split));
-            WorldEdit.getInstance()
-                .getEventBus()
-                .post(weEvent);
+    public void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (platform == null || !platform.isHookingEvents()) {
+            return;
+        }
+        if (!(event.getPlayer() instanceof EntityPlayerMP) || event.getPlayer() instanceof FakePlayer) {
+            return;
+        }
+        if (WorldEdit.getInstance()
+            .getPlatformManager()
+            .isUsingWand(wrap((EntityPlayerMP) event.getPlayer()))) {
+            event.setCanceled(true);
+        }
+    }
+
+    /**
+     * Discard what a block drops while WorldEdit replaces it. Removing its tile entity beforehand would
+     * do the same, but mods whose breakBlock expects their tile entity can crash on that.
+     */
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        if ((event.entity instanceof EntityItem || event.entity instanceof EntityXPOrb)
+            && ForgeWorld.isDropOfWrittenBlock(event.world, event.entity.posX, event.entity.posY, event.entity.posZ)) {
+            event.setCanceled(true);
         }
     }
 
@@ -208,7 +304,7 @@ public class ForgeWorldEdit {
             Action action = event.action;
             switch (action) {
                 case LEFT_CLICK_BLOCK: {
-                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
+                    WorldVector pos = new WorldVector(world, event.x, event.y, event.z);
 
                     if (we.handleBlockLeftClick(player, pos)) {
                         event.setCanceled(true);
@@ -218,10 +314,14 @@ public class ForgeWorldEdit {
                         event.setCanceled(true);
                     }
 
+                    if (event.isCanceled() && clickedBlockRefresher != null) {
+                        clickedBlockRefresher.refresh(playerMP, event.x, event.y, event.z);
+                    }
+
                     break;
                 }
                 case RIGHT_CLICK_BLOCK: {
-                    WorldVector pos = new WorldVector(LocalWorldAdapter.adapt(world), event.x, event.y, event.z);
+                    WorldVector pos = new WorldVector(world, event.x, event.y, event.z);
 
                     if (we.handleBlockRightClick(player, pos)) {
                         event.setCanceled(true);
@@ -323,6 +423,13 @@ public class ForgeWorldEdit {
     }
 
     /**
+     * Get the rotation hook used for mod block transformations.
+     */
+    public ModRotationBlockTransformHook getModRotationHook() {
+        return modRotationHook;
+    }
+
+    /**
      * Get the version of the WorldEdit-for-Forge implementation.
      *
      * @return a version string
@@ -334,6 +441,10 @@ public class ForgeWorldEdit {
 
     public void setPermissionsProvider(ForgePermissionsProvider provider) {
         this.provider = provider;
+        // Other mods install theirs after the commands declared their nodes.
+        if (platform != null) {
+            provider.registerNodes();
+        }
     }
 
     public ForgePermissionsProvider getPermissionsProvider() {

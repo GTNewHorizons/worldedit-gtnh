@@ -16,35 +16,72 @@
 
 package com.sk89q.worldedit.command;
 
-import com.sk89q.minecraft.util.commands.Command;
-import com.sk89q.minecraft.util.commands.CommandContext;
-import com.sk89q.minecraft.util.commands.CommandPermissions;
-import com.sk89q.worldedit.EditSession;
+import static com.sk89q.worldedit.command.brigadier.CommandRunner.run;
+import static com.sk89q.worldedit.command.brigadier.Nodes.integer;
+import static com.sk89q.worldedit.command.brigadier.Nodes.literal;
+import static com.sk89q.worldedit.command.brigadier.Nodes.word;
+
+import net.minecraft.command.ICommandSender;
+
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.command.brigadier.CommandCall;
+import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.function.pattern.Pattern;
-import com.sk89q.worldedit.util.command.parametric.Optional;
 
 /**
- * Tool commands.
+ * Commands that change how the tools work.
+ *
+ * <ul>
+ * <li>{@code //} (alias {@code ,}) {@code [on|off]}: toggle the super pickaxe</li>
+ * <li>{@code mask [mask]}, {@code mat <pattern>} (alias {@code material}), {@code range <range>},
+ * {@code size <radius>}: change the brush held in your hand</li>
+ * </ul>
  */
-public class ToolUtilCommands {
+public final class ToolUtilCommands {
 
-    private final WorldEdit we;
+    private ToolUtilCommands() {}
 
-    public ToolUtilCommands(WorldEdit we) {
-        this.we = we;
+    // spotless:off
+    static LiteralCommandNode<ICommandSender> maskNode() {
+        return literal("mask", "Set the brush mask")
+                .executes(run("worldedit.brush.options.mask", c -> mask(c.player(), c.session(), null)))
+                .then(word("mask")
+                        .executes(run("worldedit.brush.options.mask",
+                                c -> mask(c.player(), c.session(), c.mask("mask")))))
+                .build();
     }
 
-    @Command(aliases = { "/", "," }, usage = "[on|off]", desc = "Toggle the super pickaxe function", min = 0, max = 1)
-    @CommandPermissions("worldedit.superpickaxe")
-    public void togglePickaxe(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
+    static LiteralCommandNode<ICommandSender> materialNode() {
+        return literal("material", "Set the brush material").executes(Nodes.USAGE)
+                .then(word("pattern")
+                        .executes(run("worldedit.brush.options.material",
+                                c -> material(c.player(), c.session(), c.pattern("pattern")))))
+                .build();
+    }
 
-        String newState = args.getString(0, null);
+    static LiteralCommandNode<ICommandSender> rangeNode() {
+        return literal("range", "Set the brush range").executes(Nodes.USAGE)
+                .then(integer("range")
+                        .executes(run("worldedit.brush.options.range", ToolUtilCommands::range)))
+                .build();
+    }
+
+    static LiteralCommandNode<ICommandSender> sizeNode() {
+        return literal("size", "Set the brush size").executes(Nodes.USAGE)
+                .then(integer("radius")
+                        .executes(run("worldedit.brush.options.size", ToolUtilCommands::size)))
+                .build();
+    }
+    // spotless:on
+
+    static void togglePickaxe(Player player, LocalSession session, String newState) {
+        if (newState != null && !"on".equals(newState) && !"off".equals(newState)) {
+            player.printError("Use on or off, or nothing to toggle.");
+            return;
+        }
         if (session.hasSuperPickAxe()) {
             if ("on".equals(newState)) {
                 player.printError("Super pick axe already enabled.");
@@ -58,55 +95,39 @@ public class ToolUtilCommands {
                 player.printError("Super pick axe already disabled.");
                 return;
             }
+
             session.enableSuperPickAxe();
             player.print("Super pick axe enabled.");
         }
-
     }
 
-    @Command(aliases = { "mask" }, usage = "[mask]", desc = "Set the brush mask", min = 0, max = -1)
-    @CommandPermissions("worldedit.brush.options.mask")
-    public void mask(Player player, LocalSession session, EditSession editSession, @Optional Mask mask)
-        throws WorldEditException {
-        if (mask == null) {
-            session.getBrushTool(player.getItemInHand())
-                .setMask(null);
-            player.print("Brush mask disabled.");
-        } else {
-            session.getBrushTool(player.getItemInHand())
-                .setMask(mask);
-            player.print("Brush mask set.");
-        }
+    private static void mask(Player player, LocalSession session, Mask mask) throws Exception {
+        session.getBrushTool(player.getItemInHand())
+            .setMask(mask);
+        player.print(mask == null ? "Brush mask disabled." : "Brush mask set.");
     }
 
-    @Command(aliases = { "mat", "material" }, usage = "[pattern]", desc = "Set the brush material", min = 1, max = 1)
-    @CommandPermissions("worldedit.brush.options.material")
-    public void material(Player player, LocalSession session, EditSession editSession, Pattern pattern)
-        throws WorldEditException {
+    private static void material(Player player, LocalSession session, Pattern pattern) throws Exception {
         session.getBrushTool(player.getItemInHand())
             .setFill(pattern);
         player.print("Brush material set.");
     }
 
-    @Command(aliases = { "range" }, usage = "[pattern]", desc = "Set the brush range", min = 1, max = 1)
-    @CommandPermissions("worldedit.brush.options.range")
-    public void range(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-        int range = args.getInteger(0);
-        session.getBrushTool(player.getItemInHand())
-            .setRange(range);
+    private static void range(CommandCall call) throws Exception {
+        Player player = call.player();
+        call.session()
+            .getBrushTool(player.getItemInHand())
+            .setRange(call.integer("range"));
         player.print("Brush range set.");
     }
 
-    @Command(aliases = { "size" }, usage = "[pattern]", desc = "Set the brush size", min = 1, max = 1)
-    @CommandPermissions("worldedit.brush.options.size")
-    public void size(Player player, LocalSession session, EditSession editSession, CommandContext args)
-        throws WorldEditException {
-
-        int radius = args.getInteger(0);
-        we.checkMaxBrushRadius(radius);
-
-        session.getBrushTool(player.getItemInHand())
+    private static void size(CommandCall call) throws Exception {
+        Player player = call.player();
+        int radius = call.integer("radius");
+        call.worldEdit()
+            .checkMaxBrushRadius(radius);
+        call.session()
+            .getBrushTool(player.getItemInHand())
             .setSize(radius);
         player.print("Brush size set.");
     }

@@ -1,0 +1,501 @@
+package com.sk89q.worldedit.forge;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.Test;
+
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.extension.platform.Actor;
+import com.sk89q.worldedit.function.operation.Operation;
+import com.sk89q.worldedit.function.operation.RunContext;
+import com.sk89q.worldedit.session.request.Request;
+import com.sk89q.worldedit.util.operation.OperationCompletion;
+import com.sk89q.worldedit.world.World;
+
+import cpw.mods.fml.common.gameevent.TickEvent;
+
+/** Tests for {@link ForgeOperationScheduler}. */
+public class ForgeOperationSchedulerTest {
+
+    private final ForgeOperationScheduler scheduler = new ForgeOperationScheduler();
+    private final UUID ownerId = UUID.randomUUID();
+    private final Actor owner = actor(ownerId);
+    private final List<String> events = new ArrayList<String>();
+
+    @Test
+    public void workIsSpreadOverTicksAndThenCommittedAndFinalized() {
+        EditSession session = mock(EditSession.class);
+        FakeOperation operation = new FakeOperation(3);
+        submit(owner, session, operation, "a");
+
+        tick();
+        assertEquals(1, operation.resumes);
+        assertTrue(events.isEmpty());
+        verify(session, never()).commit();
+
+        tick();
+        tick();
+
+        assertEquals(3, operation.resumes);
+        verify(session, times(1)).commit();
+        assertEquals(Arrays.asList("success a", "finalize a"), events);
+    }
+
+    @Test
+    public void cancelStopsARunningJob() {
+        EditSession session = mock(EditSession.class);
+        FakeOperation operation = new FakeOperation(100);
+        submit(owner, session, operation, "a");
+        tick();
+
+        assertEquals(Collections.singletonList(session), scheduler.cancel(ownerId));
+        tick();
+
+        assertEquals(1, operation.resumes);
+        assertTrue(operation.cancelled);
+        verify(session, never()).commit();
+        verify(session).discardQueue();
+        verify(session).flushQueue();
+        assertEquals(Arrays.asList("cancelled a", "finalize a"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void cancelDropsQueuedJobsOldestFirst() {
+        EditSession first = mock(EditSession.class);
+        EditSession second = mock(EditSession.class);
+        FakeOperation firstOperation = new FakeOperation(100);
+        FakeOperation secondOperation = new FakeOperation(100);
+        submit(owner, first, firstOperation, "a");
+        submit(owner, second, secondOperation, "b");
+        tick();
+
+        assertEquals(Arrays.asList(first, second), scheduler.cancel(ownerId));
+
+        assertEquals(0, secondOperation.resumes);
+        // Commands unwind newest first, history is recorded oldest first.
+        assertEquals(Arrays.asList("cancelled b", "cancelled a", "finalize a", "finalize b"), events);
+    }
+
+    @Test
+    public void cancelDuringCommitStopsTheCommit() {
+        EditSession session = mock(EditSession.class);
+        FakeOperation commit = new FakeOperation(100);
+        when(session.commit()).thenReturn(commit);
+        submit(owner, session, new FakeOperation(1), "a");
+        tick();
+        assertEquals(1, commit.resumes);
+
+        scheduler.cancel(ownerId);
+        tick();
+
+        assertEquals(1, commit.resumes);
+        assertTrue(commit.cancelled);
+        assertEquals(Arrays.asList("cancelled a", "finalize a"), events);
+    }
+
+    @Test
+    public void cancelLeavesOtherOwnersAlone() {
+        EditSession mine = mock(EditSession.class);
+        EditSession theirs = mock(EditSession.class);
+        UUID otherId = UUID.randomUUID();
+        FakeOperation myOperation = new FakeOperation(100);
+        FakeOperation theirOperation = new FakeOperation(100);
+        submit(actor(otherId), theirs, theirOperation, "theirs");
+        submit(owner, mine, myOperation, "mine");
+        tick();
+
+        assertEquals(Collections.singletonList(mine), scheduler.cancel(ownerId));
+        tick();
+
+        assertEquals(2, theirOperation.resumes);
+        assertEquals(0, myOperation.resumes);
+        assertTrue(scheduler.hasPendingWork(otherId));
+    }
+
+    @Test
+    public void pendingWorkIsTrackedPerOwner() {
+        EditSession session = mock(EditSession.class);
+        UUID other = UUID.randomUUID();
+        assertFalse(scheduler.hasPendingWork(ownerId));
+
+        submit(owner, session, new FakeOperation(2), "queued");
+        assertTrue(scheduler.hasPendingWork(ownerId));
+        assertFalse(scheduler.hasPendingWork(other));
+
+        tick();
+        assertTrue(scheduler.hasPendingWork(ownerId));
+
+        tick();
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aLongQueueIsNeverFinishedOnTheSpot() {
+        FakeOperation[] operations = new FakeOperation[20];
+        for (int i = 0; i < operations.length; i++) {
+            operations[i] = new FakeOperation(100);
+            submit(owner, mock(EditSession.class), operations[i], "job " + i);
+        }
+
+        assertEquals(0, operations[0].resumes);
+        assertEquals(20, scheduler.queuedJobs(ownerId));
+        assertEquals(0, scheduler.queuedJobs(UUID.randomUUID()));
+    }
+
+    @Test
+    public void smallJobsShareATick() {
+        for (int i = 0; i < 5; i++) {
+            submit(owner, mock(EditSession.class), new Operation() {
+
+                @Override
+                public Operation resume(RunContext run) {
+                    return null;
+                }
+
+                @Override
+                public void cancel() {}
+
+                @Override
+                public void addStatusMessages(List<String> messages) {}
+            }, "small " + i);
+        }
+
+        tick();
+
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aFullQueueNeverLetsWorkOvertakeWhatIsQueued() {
+        final List<Integer> order = new ArrayList<Integer>();
+        for (int i = 0; i < 12; i++) {
+            final int number = i;
+            scheduler.submit(owner, mock(EditSession.class), new Operation() {
+
+                @Override
+                public Operation resume(RunContext run) {
+                    order.add(number);
+                    return null;
+                }
+
+                @Override
+                public void cancel() {}
+
+                @Override
+                public void addStatusMessages(List<String> messages) {}
+            }, new OperationCompletion() {
+
+                @Override
+                public void onSuccess() {}
+
+                @Override
+                public void onFailure(WorldEditException e) {}
+            });
+        }
+        for (int i = 0; i < 12; i++) {
+            tick();
+        }
+
+        assertEquals(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), order);
+    }
+
+    @Test
+    public void anImmediateCommandsQueuedBlocksAreWrittenOnTheNextTick() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(100000);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session, never()).commit();
+        verify(session, never()).flushQueue();
+        assertTrue(events.isEmpty());
+        assertTrue(scheduler.hasPendingWork(ownerId));
+
+        tick();
+
+        verify(session).commit();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aSmallImmediateEditIsWrittenStraightAway() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(500);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).flushQueue();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void aSmallImmediateEditThatCrashesIsStillFinalized() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(500);
+        doThrow(new IllegalStateException("mod block misbehaved")).doNothing()
+            .when(session)
+            .flushQueue();
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).discardQueue();
+        verify(owner).printError(anyString());
+        assertEquals(Collections.singletonList("finalize"), events);
+    }
+
+    @Test
+    public void anImmediateCommandWithNothingQueuedFinishesStraightAway() {
+        EditSession session = mock(EditSession.class);
+
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        verify(session).flushQueue();
+        assertEquals(Collections.singletonList("finalize"), events);
+        assertFalse(scheduler.hasPendingWork(ownerId));
+    }
+
+    @Test
+    public void anImmediateCommandsWritesCanBeCancelled() {
+        EditSession session = mock(EditSession.class);
+        when(session.queuedBlockCount()).thenReturn(100000);
+        scheduler.whenFinished(owner, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize");
+            }
+        });
+
+        assertEquals(Collections.singletonList(session), scheduler.cancel(ownerId));
+
+        verify(session).discardQueue();
+        verify(session, never()).commit();
+        assertEquals(Collections.singletonList("finalize"), events);
+    }
+
+    @Test
+    public void cancelWithNothingRunningReturnsNothing() {
+        assertTrue(
+            scheduler.cancel(ownerId)
+                .isEmpty());
+    }
+
+    @Test
+    public void crashIsReportedAsFailureNotSuccess() {
+        EditSession session = mock(EditSession.class);
+        submit(owner, session, new CrashingOperation(), "a");
+
+        tick();
+
+        verify(session, times(1)).commit();
+        assertEquals(Arrays.asList("failure a", "finalize a"), events);
+    }
+
+    @Test
+    public void crashDuringCommitIsReportedAsFailureNotSuccess() {
+        EditSession session = mock(EditSession.class);
+        when(session.commit()).thenReturn(new CrashingOperation());
+        submit(owner, session, new FakeOperation(1), "a");
+
+        tick();
+        tick();
+
+        assertEquals(Arrays.asList("failure a", "finalize a"), events);
+    }
+
+    @Test
+    public void crashDuringCommitDiscardsWhatIsLeftOfTheQueue() {
+        EditSession session = mock(EditSession.class);
+        when(session.commit()).thenReturn(new CrashingOperation());
+        submit(owner, session, new FakeOperation(1), "a");
+
+        tick();
+        tick();
+
+        verify(session).discardQueue();
+        verify(session).flushQueue();
+    }
+
+    @Test
+    public void crashBeforeCommitKeepsTheQueueForTheCommit() {
+        EditSession session = mock(EditSession.class);
+        submit(owner, session, new CrashingOperation(), "a");
+
+        tick();
+
+        verify(session, never()).discardQueue();
+    }
+
+    @Test
+    public void workSeesTheRequestOfTheCommandThatSubmittedIt() {
+        final LocalSession commandSession = mock(LocalSession.class);
+        final World commandWorld = mock(World.class);
+        final LocalSession laterSession = mock(LocalSession.class);
+        final EditSession session = mock(EditSession.class);
+        final List<Object> seen = new ArrayList<Object>();
+
+        Request.request()
+            .setSession(commandSession);
+        Request.request()
+            .setWorld(commandWorld);
+        submit(owner, session, new Operation() {
+
+            @Override
+            public Operation resume(RunContext run) {
+                seen.add(
+                    Request.request()
+                        .getSession());
+                seen.add(
+                    Request.request()
+                        .getWorld());
+                seen.add(
+                    Request.request()
+                        .getEditSession());
+                return null;
+            }
+
+            @Override
+            public void cancel() {}
+
+            @Override
+            public void addStatusMessages(List<String> messages) {}
+        }, "a");
+
+        Request.reset();
+        Request.request()
+            .setSession(laterSession);
+        tick();
+
+        assertEquals(Arrays.asList(commandSession, commandWorld, session), seen);
+        assertEquals(
+            laterSession,
+            Request.request()
+                .getSession());
+        Request.reset();
+    }
+
+    private void submit(Actor actor, EditSession session, Operation operation, final String name) {
+        scheduler.submit(actor, session, operation, new OperationCompletion() {
+
+            @Override
+            public void onSuccess() {
+                events.add("success " + name);
+            }
+
+            @Override
+            public void onFailure(WorldEditException e) {
+                events.add("failure " + name);
+            }
+
+            @Override
+            public void onCancelled(boolean started) {
+                events.add("cancelled " + name);
+            }
+        });
+        scheduler.whenFinished(actor, session, new Runnable() {
+
+            @Override
+            public void run() {
+                events.add("finalize " + name);
+            }
+        });
+    }
+
+    private void tick() {
+        scheduler.onServerTick(new TickEvent.ServerTickEvent(TickEvent.Phase.END));
+    }
+
+    private static Actor actor(UUID id) {
+        Actor actor = mock(Actor.class);
+        when(actor.getUniqueId()).thenReturn(id);
+        return actor;
+    }
+
+    /** Fails the way a mod block misbehaving inside an edit would. */
+    private static final class CrashingOperation implements Operation {
+
+        @Override
+        public Operation resume(RunContext run) {
+            throw new IllegalStateException("expected by this test");
+        }
+
+        @Override
+        public void cancel() {}
+
+        @Override
+        public void addStatusMessages(List<String> messages) {}
+    }
+
+    /** Uses up the budget it is given on every resume, so each tick is exactly one resume. */
+    private static final class FakeOperation implements Operation {
+
+        private int remaining;
+        private int resumes;
+        private boolean cancelled;
+
+        private FakeOperation(int steps) {
+            this.remaining = steps;
+        }
+
+        @Override
+        public Operation resume(RunContext run) {
+            while (run.shouldContinue()) {
+                Thread.yield();
+            }
+            resumes++;
+            return --remaining > 0 ? this : null;
+        }
+
+        @Override
+        public void cancel() {
+            cancelled = true;
+        }
+
+        @Override
+        public void addStatusMessages(List<String> messages) {}
+    }
+}

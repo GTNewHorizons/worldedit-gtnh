@@ -43,8 +43,7 @@ import com.sk89q.worldedit.world.World;
 /**
  * Creates a {@code CylinderRegionSelector} from a user's selections.
  */
-public class CylinderRegionSelector extends com.sk89q.worldedit.regions.CylinderRegionSelector
-    implements RegionSelector, CUIRegion {
+public class CylinderRegionSelector implements RegionSelector, CUIRegion {
 
     protected static transient final NumberFormat NUMBER_FORMAT;
     protected transient CylinderRegion region;

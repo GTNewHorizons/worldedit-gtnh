@@ -26,7 +26,6 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
-import net.minecraft.command.ServerCommandManager;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
@@ -41,8 +40,6 @@ import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.extension.platform.Capability;
 import com.sk89q.worldedit.extension.platform.MultiUserPlatform;
 import com.sk89q.worldedit.extension.platform.Preference;
-import com.sk89q.worldedit.util.command.CommandMapping;
-import com.sk89q.worldedit.util.command.Dispatcher;
 import com.sk89q.worldedit.world.World;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -148,37 +145,6 @@ class ForgePlatform extends AbstractPlatform implements MultiUserPlatform {
             }
 
             return null;
-        }
-    }
-
-    @Override
-    public void registerCommands(Dispatcher dispatcher) {
-        if (server == null) return;
-        ServerCommandManager mcMan = (ServerCommandManager) server.getCommandManager();
-
-        for (final CommandMapping command : dispatcher.getCommands()) {
-            CommandWrapper wrapper = new CommandWrapper(command);
-            mcMan.registerCommand(wrapper);
-            if (command.getDescription()
-                .getPermissions()
-                .size() > 0) {
-                ForgeWorldEdit.inst.getPermissionsProvider()
-                    .registerPermission(
-                        wrapper,
-                        command.getDescription()
-                            .getPermissions()
-                            .get(0));
-                for (int i = 1; i < command.getDescription()
-                    .getPermissions()
-                    .size(); i++) {
-                    ForgeWorldEdit.inst.getPermissionsProvider()
-                        .registerPermission(
-                            null,
-                            command.getDescription()
-                                .getPermissions()
-                                .get(i));
-                }
-            }
         }
     }
 

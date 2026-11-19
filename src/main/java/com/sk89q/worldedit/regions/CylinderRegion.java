@@ -23,7 +23,6 @@ import java.util.List;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.extent.Extent;
@@ -51,14 +50,6 @@ public class CylinderRegion extends AbstractRegion implements FlatRegion {
     }
 
     /**
-     * @deprecated cast {@code world} to {@link World}
-     */
-    @Deprecated
-    public CylinderRegion(LocalWorld world) {
-        this((World) world);
-    }
-
-    /**
      * Construct the region.
      *
      * @param world the world
@@ -66,11 +57,6 @@ public class CylinderRegion extends AbstractRegion implements FlatRegion {
     public CylinderRegion(World world) {
         this(world, new Vector(), new Vector2D(), 0, 0);
         hasY = false;
-    }
-
-    @Deprecated
-    public CylinderRegion(LocalWorld world, Vector center, Vector2D radius, int minY, int maxY) {
-        this((World) world, center, radius, minY, maxY);
     }
 
     /**

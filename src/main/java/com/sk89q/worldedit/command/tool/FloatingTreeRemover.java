@@ -73,7 +73,7 @@ public class FloatingTreeRemover implements BlockTool {
                 return true;
         }
 
-        final EditSession editSession = session.createEditSession(player);
+        final EditSession editSession = ToolEdits.start(session, player);
 
         try {
             final Set<Vector> blockSet = bfs(world, clicked.toVector());
@@ -99,7 +99,7 @@ public class FloatingTreeRemover implements BlockTool {
         } catch (MaxChangedBlocksException e) {
             player.printError("Max blocks change limit reached.");
         } finally {
-            session.remember(editSession);
+            ToolEdits.finish(session, player, editSession);
         }
 
         return true;

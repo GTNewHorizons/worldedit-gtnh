@@ -24,7 +24,6 @@ import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.BlockVector2D;
-import com.sk89q.worldedit.LocalWorld;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.regions.iterator.RegionIterator;
@@ -58,11 +57,6 @@ public abstract class AbstractRegion implements Region {
     @Override
     public World getWorld() {
         return world;
-    }
-
-    @Override
-    public void setWorld(LocalWorld world) {
-        setWorld((World) world);
     }
 
     @Override

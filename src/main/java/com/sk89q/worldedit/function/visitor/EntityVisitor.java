@@ -64,6 +64,10 @@ public class EntityVisitor implements Operation {
             if (function.apply(iterator.next())) {
                 affected++;
             }
+
+            if (!run.shouldContinue()) {
+                return this;
+            }
         }
 
         return null;
