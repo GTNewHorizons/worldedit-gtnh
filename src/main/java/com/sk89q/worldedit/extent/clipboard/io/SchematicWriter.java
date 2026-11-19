@@ -103,9 +103,9 @@ public class SchematicWriter implements ClipboardWriter {
         schematic.put("WEOffsetY", new IntTag(offset.getBlockY()));
         schematic.put("WEOffsetZ", new IntTag(offset.getBlockZ()));
         HashMap<String, Tag> blockMapping = new HashMap<>();
-        HashMap<String, Tag> blockMappingEndless = new HashMap<>();
+        HashMap<String, Tag> blockMappingExtended = new HashMap<>();
         HashMap<String, Tag> itemMapping = new HashMap<>();
-        HashMap<String, Tag> itemMappingEndless = new HashMap<>();
+        HashMap<String, Tag> itemMappingExtended = new HashMap<>();
 
         // ====================================================================
         // Block handling
@@ -127,7 +127,7 @@ public class SchematicWriter implements ClipboardWriter {
 
             int index = y * width * length + z * width + x;
             BaseBlock block = clipboard.getBlock(point);
-            boolean endlessId = false;
+
             // Save 4096 IDs in an AddBlocks section
             if (block.getType() > 255) {
                 if (addBlocks == null) { // Lazily create section
@@ -149,19 +149,19 @@ public class SchematicWriter implements ClipboardWriter {
                         : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
             }
 
-            if (block.getType() > 65535) {
-                endlessId = true;
+            // EndlessIDs IDs above 16 bits, one byte per block
+            if (block.getType() > 0xFFFF) {
                 if (addBlocks3 == null) {
                     addBlocks3 = new byte[blocks.length];
                 }
-
                 addBlocks3[index] = (byte) (block.getType() >> 16);
             }
 
-            putMapping(
-                endlessId ? blockMappingEndless : blockMapping,
+            SchematicItemIds.putMapping(
+                blockMapping,
+                blockMappingExtended,
                 Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
-                endlessId ? new IntTag(block.getId()) : new ShortTag((short) block.getId()));
+                block.getId());
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
@@ -207,22 +207,14 @@ public class SchematicWriter implements ClipboardWriter {
                     public void accept(CompoundTag nbtData) {
                         String[] idPtr = new String[1];
                         if (isItem.test(nbtData, idPtr)) {
-                            int id;
-                            if (nbtData.getValue()
-                                .get(idPtr[0]) instanceof IntTag) {
-                                id = nbtData.getInt(idPtr[0]);
-
-                                // GT edge case id+data, to differentiate from endless id 3 byte ids
-                                if ((id & 0xff000000) != 0) {
-                                    id = id & 0x0000ffff;
-                                }
-                            } else {
-                                id = Short.toUnsignedInt(nbtData.getShort(idPtr[0]));
+                            int id = SchematicItemIds.read(nbtData.getValue(), idPtr[0]);
+                            if (id != SchematicItemIds.NO_ID) {
+                                SchematicItemIds.putMapping(
+                                    itemMapping,
+                                    itemMappingExtended,
+                                    Item.itemRegistry.getNameForObject(Item.getItemById(id)),
+                                    id);
                             }
-                            putMapping(
-                                id > 65535 ? itemMappingEndless : itemMapping,
-                                Item.itemRegistry.getNameForObject(Item.getItemById(id)),
-                                id > 65535 ? new IntTag(id) : new ShortTag((short) id));
 
                             if (nbtData.containsKey("tag") && nbtData.getValue()
                                 .get("tag") instanceof CompoundTag nbt) {
@@ -239,46 +231,51 @@ public class SchematicWriter implements ClipboardWriter {
                                 if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
                                     .get("bottomMaterial") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    putMapping(
-                                        _id > 65535 ? itemMappingEndless : itemMapping,
+                                    SchematicItemIds.putMapping(
+                                        itemMapping,
+                                        itemMappingExtended,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id > 65535 ? new IntTag(_id) : new ShortTag((short) _id));
+                                        _id);
                                 }
 
                                 if (nbtData.containsKey("topMaterial") && nbtData.getValue()
                                     .get("topMaterial") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    putMapping(
-                                        _id > 65535 ? itemMappingEndless : itemMapping,
+                                    SchematicItemIds.putMapping(
+                                        itemMapping,
+                                        itemMappingExtended,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id > 65535 ? new IntTag(_id) : new ShortTag((short) _id));
+                                        _id);
                                 }
 
                                 if (nbtData.containsKey("frame") && nbtData.getValue()
                                     .get("frame") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    putMapping(
-                                        _id > 65535 ? itemMappingEndless : itemMapping,
+                                    SchematicItemIds.putMapping(
+                                        itemMapping,
+                                        itemMappingExtended,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id > 65535 ? new IntTag(_id) : new ShortTag((short) _id));
+                                        _id);
                                 }
 
                                 if (nbtData.containsKey("block") && nbtData.getValue()
                                     .get("block") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    putMapping(
-                                        _id > 65535 ? blockMappingEndless : blockMapping,
+                                    SchematicItemIds.putMapping(
+                                        blockMapping,
+                                        blockMappingExtended,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id > 65535 ? new IntTag(_id) : new ShortTag((short) _id));
+                                        _id);
                                 }
 
                                 if (nbtData.containsKey("item") && nbtData.getValue()
                                     .get("item") instanceof IntTag itag) {
                                     int _id = itag.getValue();
-                                    putMapping(
-                                        _id > 65535 ? itemMappingEndless : itemMapping,
+                                    SchematicItemIds.putMapping(
+                                        itemMapping,
+                                        itemMappingExtended,
                                         Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id > 65535 ? new IntTag(_id) : new ShortTag((short) _id));
+                                        _id);
                                 }
                             }
 
@@ -314,7 +311,7 @@ public class SchematicWriter implements ClipboardWriter {
         }
 
         if (addBlocks3 != null) {
-            schematic.put("AddBlocks3", new ByteArrayTag(addBlocks2));
+            schematic.put("AddBlocks3", new ByteArrayTag(addBlocks3));
         }
 
         if (addData != null) {
@@ -356,9 +353,13 @@ public class SchematicWriter implements ClipboardWriter {
         schematic.put("Entities", new ListTag(CompoundTag.class, entities));
 
         schematic.put("BlockMapping", new CompoundTag(blockMapping));
-        schematic.put("BlockMappingE", new CompoundTag(blockMappingEndless));
         schematic.put("ItemMapping", new CompoundTag(itemMapping));
-        schematic.put("ItemMappingE", new CompoundTag(itemMappingEndless));
+        if (!blockMappingExtended.isEmpty()) {
+            schematic.put("BlockMappingE", new CompoundTag(blockMappingExtended));
+        }
+        if (!itemMappingExtended.isEmpty()) {
+            schematic.put("ItemMappingE", new CompoundTag(itemMappingExtended));
+        }
         // ====================================================================
         // Output
         // ====================================================================
@@ -385,15 +386,5 @@ public class SchematicWriter implements ClipboardWriter {
     @Override
     public void close() throws IOException {
         outputStream.close();
-    }
-
-    /**
-     * Record a registry name for an ID. Some tile entities store numbers that look like item IDs but
-     * aren't, or name items that are no longer registered, so IDs without a name are left out.
-     */
-    private static void putMapping(Map<String, Tag> mapping, String name, Tag id) {
-        if (name != null) {
-            mapping.put(name, id);
-        }
     }
 }
