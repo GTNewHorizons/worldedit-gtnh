@@ -4,6 +4,8 @@ Save your clipboard to a schematic.
 
 Also typed `//save`. Rotations and flips of the clipboard are saved too.
 
+With EndlessIDs, block and item IDs above 65535 are saved in extra sections that older WorldEdit versions ignore, so those versions load them as the wrong blocks or items. You get a warning when a save contains such IDs.
+
 ## Usage
 
 ```

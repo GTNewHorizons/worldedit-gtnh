@@ -24,8 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -56,6 +55,7 @@ public class SchematicWriter implements ClipboardWriter {
 
     private static final int MAX_SIZE = Short.MAX_VALUE - Short.MIN_VALUE;
     private final NBTOutputStream outputStream;
+    private boolean usesExtendedIds;
 
     /**
      * Create a new schematic writer.
@@ -103,7 +103,16 @@ public class SchematicWriter implements ClipboardWriter {
         schematic.put("WEOffsetY", new IntTag(offset.getBlockY()));
         schematic.put("WEOffsetZ", new IntTag(offset.getBlockZ()));
         HashMap<String, Tag> blockMapping = new HashMap<>();
+        HashMap<String, Tag> blockMappingExtended = new HashMap<>();
         HashMap<String, Tag> itemMapping = new HashMap<>();
+        HashMap<String, Tag> itemMappingExtended = new HashMap<>();
+        IntConsumer recordItem = id -> SchematicItemIds
+            .putMapping(itemMapping, itemMappingExtended, Item.itemRegistry.getNameForObject(Item.getItemById(id)), id);
+        IntConsumer recordBlock = id -> SchematicItemIds.putMapping(
+            blockMapping,
+            blockMappingExtended,
+            Block.blockRegistry.getNameForObject(Block.getBlockById(id)),
+            id);
 
         // ====================================================================
         // Block handling
@@ -112,6 +121,7 @@ public class SchematicWriter implements ClipboardWriter {
         byte[] blocks = new byte[width * height * length];
         byte[] addBlocks = null;
         byte[] addBlocks2 = null;
+        byte[] addBlocks3 = null;
         byte[] blockData = new byte[width * height * length];
         byte[] addData = null;
         List<Tag> tileEntities = new ArrayList<Tag>();
@@ -145,10 +155,16 @@ public class SchematicWriter implements ClipboardWriter {
                     >> 1] = (byte) (((index & 1) == 0) ? addBlocks2[index >> 1] & 0xF0 | (block.getType() >> 12) & 0xF
                         : addBlocks2[index >> 1] & 0xF | ((block.getType() >> 12) & 0xF) << 4);
             }
-            putMapping(
-                blockMapping,
-                Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
-                new ShortTag((short) block.getId()));
+
+            // EndlessIDs IDs above 16 bits, one byte per block
+            if (block.getType() > 0xFFFF) {
+                if (addBlocks3 == null) {
+                    addBlocks3 = new byte[blocks.length];
+                }
+                addBlocks3[index] = (byte) (block.getType() >> 16);
+            }
+
+            recordBlock.accept(block.getId());
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
@@ -176,113 +192,7 @@ public class SchematicWriter implements ClipboardWriter {
                 CompoundTag tileEntityTag = new CompoundTag(values);
                 tileEntities.add(tileEntityTag);
 
-                BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
-                    // Logic below is intentional to sneak a variable assignment into a boolean return statement
-                    return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
-                        && itemTag.containsKey("Count")
-                        && itemTag.containsKey("Damage"))
-                        || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
-                            && itemTag.containsKey("Count")
-                            && itemTag.containsKey("Meta")
-                        || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
-                            && itemTag.getValue()
-                                .get("id") instanceof IntTag;
-                };
-                Consumer<CompoundTag> convertItems = new Consumer<CompoundTag>() {
-
-                    @Override
-                    public void accept(CompoundTag nbtData) {
-                        String[] idPtr = new String[1];
-                        if (isItem.test(nbtData, idPtr)) {
-                            short id;
-                            if (nbtData.getValue()
-                                .get(idPtr[0]) instanceof IntTag) {
-                                int id_data = nbtData.getInt(idPtr[0]);
-                                id = (short) id_data;
-
-                            } else {
-                                id = nbtData.getShort(idPtr[0]);
-                            }
-
-                            putMapping(
-                                itemMapping,
-                                Item.itemRegistry.getNameForObject(Item.getItemById(Short.toUnsignedInt(id))),
-                                new ShortTag(id));
-
-                            if (nbtData.containsKey("tag") && nbtData.getValue()
-                                .get("tag") instanceof CompoundTag nbt) {
-                                accept(nbt);
-                            }
-
-                            if (nbtData.containsKey("d") && nbtData.getValue()
-                                .get("d") instanceof CompoundTag d) {
-                                accept(d);
-                            }
-                        } else {
-                            if (nbtData.containsKey("id") && nbtData.getValue()
-                                .get("id") instanceof StringTag str && "customDoorTileEntity".equals(str.getValue())) {
-                                if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
-                                    .get("bottomMaterial") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    putMapping(
-                                        itemMapping,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        new ShortTag((short) _id));
-                                }
-
-                                if (nbtData.containsKey("topMaterial") && nbtData.getValue()
-                                    .get("topMaterial") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    putMapping(
-                                        itemMapping,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        new ShortTag((short) _id));
-                                }
-
-                                if (nbtData.containsKey("frame") && nbtData.getValue()
-                                    .get("frame") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    putMapping(
-                                        itemMapping,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        new ShortTag((short) _id));
-                                }
-
-                                if (nbtData.containsKey("block") && nbtData.getValue()
-                                    .get("block") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    putMapping(
-                                        blockMapping,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        new ShortTag((short) _id));
-                                }
-
-                                if (nbtData.containsKey("item") && nbtData.getValue()
-                                    .get("item") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    putMapping(
-                                        itemMapping,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        new ShortTag((short) _id));
-                                }
-                            }
-
-                            for (Tag tag : nbtData.getValue()
-                                .values()) {
-                                if (tag instanceof ListTag inventoryTag) {
-                                    for (Tag tag2 : inventoryTag.getValue()) {
-                                        if (tag2 instanceof CompoundTag itemTag) {
-                                            accept(itemTag);
-                                        }
-                                    }
-                                } else if (tag instanceof CompoundTag itemTag) {
-                                    accept(itemTag);
-                                }
-                            }
-                        }
-                    }
-                };
-                convertItems.accept(tileEntityTag);
+                SchematicItemIds.collect(tileEntityTag, recordItem, recordBlock);
             }
         }
 
@@ -296,6 +206,10 @@ public class SchematicWriter implements ClipboardWriter {
 
         if (addBlocks2 != null) {
             schematic.put("AddBlocks2", new ByteArrayTag(addBlocks2));
+        }
+
+        if (addBlocks3 != null) {
+            schematic.put("AddBlocks3", new ByteArrayTag(addBlocks3));
         }
 
         if (addData != null) {
@@ -331,6 +245,7 @@ public class SchematicWriter implements ClipboardWriter {
 
                 CompoundTag entityTag = new CompoundTag(values);
                 entities.add(entityTag);
+                SchematicItemIds.collect(entityTag, recordItem, recordBlock);
             }
         }
 
@@ -338,6 +253,13 @@ public class SchematicWriter implements ClipboardWriter {
 
         schematic.put("BlockMapping", new CompoundTag(blockMapping));
         schematic.put("ItemMapping", new CompoundTag(itemMapping));
+        if (!blockMappingExtended.isEmpty()) {
+            schematic.put("BlockMappingE", new CompoundTag(blockMappingExtended));
+        }
+        if (!itemMappingExtended.isEmpty()) {
+            schematic.put("ItemMappingE", new CompoundTag(itemMappingExtended));
+        }
+        usesExtendedIds = addBlocks3 != null || !blockMappingExtended.isEmpty() || !itemMappingExtended.isEmpty();
         // ====================================================================
         // Output
         // ====================================================================
@@ -362,17 +284,12 @@ public class SchematicWriter implements ClipboardWriter {
     }
 
     @Override
-    public void close() throws IOException {
-        outputStream.close();
+    public boolean usesExtendedIds() {
+        return usesExtendedIds;
     }
 
-    /**
-     * Record a registry name for an ID. Some tile entities store numbers that look like item IDs but
-     * aren't, or name items that are no longer registered, so IDs without a name are left out.
-     */
-    private static void putMapping(Map<String, Tag> mapping, String name, ShortTag id) {
-        if (name != null) {
-            mapping.put(name, id);
-        }
+    @Override
+    public void close() throws IOException {
+        outputStream.close();
     }
 }

@@ -30,8 +30,35 @@ public class SchematicReaderTest {
         byte[] addBlocks = new byte[] { (byte) ((blockId >> 8) & 0x0F) };
         byte[] addBlocks2 = new byte[] { (byte) ((blockId >> 12) & 0x0F) };
 
-        short[] combined = SchematicReader.combineBlockIds(blocks, addBlocks, addBlocks2);
+        int[] combined = SchematicReader.combineBlockIds(blocks, addBlocks, addBlocks2, null);
 
         assertEquals(blockId, combined[0]);
+    }
+
+    @Test
+    public void readsIdsAbove32767Unsigned() {
+        int blockId = 0xF123;
+
+        byte[] blocks = new byte[] { (byte) blockId };
+        byte[] addBlocks = new byte[] { (byte) ((blockId >> 8) & 0x0F) };
+        byte[] addBlocks2 = new byte[] { (byte) ((blockId >> 12) & 0x0F) };
+
+        assertEquals(blockId, SchematicReader.combineBlockIds(blocks, addBlocks, addBlocks2, null)[0]);
+    }
+
+    @Test
+    public void readsAddBlocks3AndOddIndexNibbles() {
+        int even = 0xC3B12A;
+        int odd = 0x81F4E5;
+
+        byte[] blocks = new byte[] { (byte) even, (byte) odd };
+        byte[] addBlocks = new byte[] { (byte) (((even >> 8) & 0xF) | ((odd >> 8) & 0xF) << 4) };
+        byte[] addBlocks2 = new byte[] { (byte) (((even >> 12) & 0xF) | ((odd >> 12) & 0xF) << 4) };
+        byte[] addBlocks3 = new byte[] { (byte) (even >> 16), (byte) (odd >> 16) };
+
+        int[] combined = SchematicReader.combineBlockIds(blocks, addBlocks, addBlocks2, addBlocks3);
+
+        assertEquals(even, combined[0]);
+        assertEquals(odd, combined[1]);
     }
 }
