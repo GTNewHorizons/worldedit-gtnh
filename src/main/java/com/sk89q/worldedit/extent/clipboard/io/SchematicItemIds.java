@@ -48,6 +48,7 @@ final class SchematicItemIds {
 
     private static final String[] DOOR_ITEM_KEYS = { "bottomMaterial", "topMaterial", "frame", "item" };
     private static final String DOOR_BLOCK_KEY = "block";
+    private static final String[] TRADE_ITEM_KEYS = { "buy", "buyB", "sell" };
     /** Item compounds that hold further items. */
     private static final String[] ITEM_CHILD_KEYS = { "tag", "d" };
 
@@ -132,7 +133,8 @@ final class SchematicItemIds {
     /**
      * Rewrite every block and item ID in the tag. A stack of a missing item is removed only from a list
      * whose entries carry a {@code Slot}, i.e. an inventory. Elsewhere list position can matter (e.g. AE2
-     * pattern inputs), so the entry stays and its ID becomes whatever the conversion map says.
+     * pattern inputs), so the entry stays and its ID becomes whatever the conversion map says. A villager
+     * trade using a missing item is removed whole, as Minecraft fails to save a trade with an empty item.
      */
     static CompoundTag remapAll(CompoundTag tag, Map<Integer, Integer> items, Map<Integer, Integer> blocks,
         Set<Integer> missingItems) {
@@ -162,7 +164,7 @@ final class SchematicItemIds {
                 for (Tag element : list.getValue()) {
                     if (!(element instanceof CompoundTag compound)) {
                         entries.add(element);
-                    } else if (!(compound.containsKey("Slot") && isMissingStack(compound.getValue(), missingItems))) {
+                    } else if (!isRemovable(compound.getValue(), missingItems)) {
                         entries.add(remapAll(compound, items, blocks, missingItems));
                     }
                 }
@@ -217,6 +219,27 @@ final class SchematicItemIds {
                 collect(child, items, blocks);
             }
         }
+    }
+
+    /**
+     * @return whether a list entry should be dropped: an inventory stack or a villager trade
+     *         ({@code buy}, optional {@code buyB}, {@code sell}) using a missing item
+     */
+    private static boolean isRemovable(Map<String, Tag> entry, Set<Integer> missingItems) {
+        if (missingItems.isEmpty()) {
+            return false;
+        }
+        if (entry.containsKey("Slot")) {
+            return isMissingStack(entry, missingItems);
+        }
+        if (entry.containsKey("buy") && entry.containsKey("sell")) {
+            for (String key : TRADE_ITEM_KEYS) {
+                if (entry.get(key) instanceof CompoundTag stack && isMissingStack(stack.getValue(), missingItems)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean isDoor(Map<String, Tag> tag) {

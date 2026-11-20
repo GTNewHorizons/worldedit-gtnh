@@ -201,6 +201,42 @@ public class SchematicItemIdsTest {
         assertEquals(Collections.singletonList(5000), collected);
     }
 
+    private static CompoundTag trade(int buy, Integer buyB, int sell) {
+        Map<String, Tag> trade = new HashMap<>();
+        trade.put("buy", stack(buy, null));
+        if (buyB != null) {
+            trade.put("buyB", stack(buyB, null));
+        }
+        trade.put("sell", stack(sell, null));
+        trade.put("uses", new IntTag(0));
+        return new CompoundTag(trade);
+    }
+
+    @Test
+    public void villagerTradeWithMissingItemIsRemovedWhole() {
+        Map<Integer, Integer> items = conversion(5000, 0);
+        items.put(388, 388);
+        Map<String, Tag> offers = new HashMap<>();
+        offers.put(
+            "Recipes",
+            new ListTag(CompoundTag.class, Arrays.<Tag>asList(trade(388, 5000, 1), trade(388, null, 2))));
+        Map<String, Tag> villager = new HashMap<>();
+        villager.put("id", new StringTag("Villager"));
+        villager.put("Offers", new CompoundTag(offers));
+
+        CompoundTag result = SchematicItemIds
+            .remapAll(new CompoundTag(villager), items, new HashMap<>(), Collections.singleton(5000));
+
+        List<Tag> recipes = ((CompoundTag) result.getValue()
+            .get("Offers")).getList("Recipes");
+        assertEquals(1, recipes.size());
+        assertEquals(
+            2,
+            shortId(
+                ((CompoundTag) recipes.get(0)).getValue()
+                    .get("sell")));
+    }
+
     @Test
     public void plainIntStackIdUsesFullWidth() {
         Map<String, Tag> item = new HashMap<>(stack(0, null).getValue());
