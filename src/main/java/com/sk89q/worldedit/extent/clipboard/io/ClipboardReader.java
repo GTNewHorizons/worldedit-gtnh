@@ -41,7 +41,7 @@ public interface ClipboardReader {
 
     /**
      * Registry names the last {@link #read(WorldData)} found in the file but not in this game, and so
-     * left out of the clipboard.
+     * replaced with air or an empty item.
      */
     default Collection<String> getMissingNames() {
         return Collections.emptyList();

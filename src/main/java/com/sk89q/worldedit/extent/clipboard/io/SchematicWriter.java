@@ -24,8 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -56,6 +55,7 @@ public class SchematicWriter implements ClipboardWriter {
 
     private static final int MAX_SIZE = Short.MAX_VALUE - Short.MIN_VALUE;
     private final NBTOutputStream outputStream;
+    private boolean usesExtendedIds;
 
     /**
      * Create a new schematic writer.
@@ -106,6 +106,13 @@ public class SchematicWriter implements ClipboardWriter {
         HashMap<String, Tag> blockMappingExtended = new HashMap<>();
         HashMap<String, Tag> itemMapping = new HashMap<>();
         HashMap<String, Tag> itemMappingExtended = new HashMap<>();
+        IntConsumer recordItem = id -> SchematicItemIds
+            .putMapping(itemMapping, itemMappingExtended, Item.itemRegistry.getNameForObject(Item.getItemById(id)), id);
+        IntConsumer recordBlock = id -> SchematicItemIds.putMapping(
+            blockMapping,
+            blockMappingExtended,
+            Block.blockRegistry.getNameForObject(Block.getBlockById(id)),
+            id);
 
         // ====================================================================
         // Block handling
@@ -157,11 +164,7 @@ public class SchematicWriter implements ClipboardWriter {
                 addBlocks3[index] = (byte) (block.getType() >> 16);
             }
 
-            SchematicItemIds.putMapping(
-                blockMapping,
-                blockMappingExtended,
-                Block.blockRegistry.getNameForObject(Block.getBlockById(block.getId())),
-                block.getId());
+            recordBlock.accept(block.getId());
 
             blocks[index] = (byte) block.getType();
             blockData[index] = (byte) block.getData();
@@ -189,112 +192,7 @@ public class SchematicWriter implements ClipboardWriter {
                 CompoundTag tileEntityTag = new CompoundTag(values);
                 tileEntities.add(tileEntityTag);
 
-                BiPredicate<CompoundTag, String[]> isItem = (itemTag, idPtr) -> {
-                    // Logic below is intentional to sneak a variable assignment into a boolean return statement
-                    return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
-                        && itemTag.containsKey("Count")
-                        && itemTag.containsKey("Damage"))
-                        || ((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
-                            && itemTag.containsKey("Count")
-                            && itemTag.containsKey("Meta")
-                        || ((idPtr[0] = "id") != null) && itemTag.containsKey("id")
-                            && itemTag.getValue()
-                                .get("id") instanceof IntTag;
-                };
-                Consumer<CompoundTag> convertItems = new Consumer<CompoundTag>() {
-
-                    @Override
-                    public void accept(CompoundTag nbtData) {
-                        String[] idPtr = new String[1];
-                        if (isItem.test(nbtData, idPtr)) {
-                            int id = SchematicItemIds.read(nbtData.getValue(), idPtr[0]);
-                            if (id != SchematicItemIds.NO_ID) {
-                                SchematicItemIds.putMapping(
-                                    itemMapping,
-                                    itemMappingExtended,
-                                    Item.itemRegistry.getNameForObject(Item.getItemById(id)),
-                                    id);
-                            }
-
-                            if (nbtData.containsKey("tag") && nbtData.getValue()
-                                .get("tag") instanceof CompoundTag nbt) {
-                                accept(nbt);
-                            }
-
-                            if (nbtData.containsKey("d") && nbtData.getValue()
-                                .get("d") instanceof CompoundTag d) {
-                                accept(d);
-                            }
-                        } else {
-                            if (nbtData.containsKey("id") && nbtData.getValue()
-                                .get("id") instanceof StringTag str && "customDoorTileEntity".equals(str.getValue())) {
-                                if (nbtData.containsKey("bottomMaterial") && nbtData.getValue()
-                                    .get("bottomMaterial") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    SchematicItemIds.putMapping(
-                                        itemMapping,
-                                        itemMappingExtended,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id);
-                                }
-
-                                if (nbtData.containsKey("topMaterial") && nbtData.getValue()
-                                    .get("topMaterial") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    SchematicItemIds.putMapping(
-                                        itemMapping,
-                                        itemMappingExtended,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id);
-                                }
-
-                                if (nbtData.containsKey("frame") && nbtData.getValue()
-                                    .get("frame") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    SchematicItemIds.putMapping(
-                                        itemMapping,
-                                        itemMappingExtended,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id);
-                                }
-
-                                if (nbtData.containsKey("block") && nbtData.getValue()
-                                    .get("block") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    SchematicItemIds.putMapping(
-                                        blockMapping,
-                                        blockMappingExtended,
-                                        Block.blockRegistry.getNameForObject(Block.getBlockById(_id)),
-                                        _id);
-                                }
-
-                                if (nbtData.containsKey("item") && nbtData.getValue()
-                                    .get("item") instanceof IntTag itag) {
-                                    int _id = itag.getValue();
-                                    SchematicItemIds.putMapping(
-                                        itemMapping,
-                                        itemMappingExtended,
-                                        Item.itemRegistry.getNameForObject(Item.getItemById(_id)),
-                                        _id);
-                                }
-                            }
-
-                            for (Tag tag : nbtData.getValue()
-                                .values()) {
-                                if (tag instanceof ListTag inventoryTag) {
-                                    for (Tag tag2 : inventoryTag.getValue()) {
-                                        if (tag2 instanceof CompoundTag itemTag) {
-                                            accept(itemTag);
-                                        }
-                                    }
-                                } else if (tag instanceof CompoundTag itemTag) {
-                                    accept(itemTag);
-                                }
-                            }
-                        }
-                    }
-                };
-                convertItems.accept(tileEntityTag);
+                SchematicItemIds.collect(tileEntityTag, recordItem, recordBlock);
             }
         }
 
@@ -347,6 +245,7 @@ public class SchematicWriter implements ClipboardWriter {
 
                 CompoundTag entityTag = new CompoundTag(values);
                 entities.add(entityTag);
+                SchematicItemIds.collect(entityTag, recordItem, recordBlock);
             }
         }
 
@@ -360,6 +259,7 @@ public class SchematicWriter implements ClipboardWriter {
         if (!itemMappingExtended.isEmpty()) {
             schematic.put("ItemMappingE", new CompoundTag(itemMappingExtended));
         }
+        usesExtendedIds = addBlocks3 != null || !blockMappingExtended.isEmpty() || !itemMappingExtended.isEmpty();
         // ====================================================================
         // Output
         // ====================================================================
@@ -381,6 +281,11 @@ public class SchematicWriter implements ClipboardWriter {
         list.add(new FloatTag(location.getYaw()));
         list.add(new FloatTag(location.getPitch()));
         return new ListTag(FloatTag.class, list);
+    }
+
+    @Override
+    public boolean usesExtendedIds() {
+        return usesExtendedIds;
     }
 
     @Override

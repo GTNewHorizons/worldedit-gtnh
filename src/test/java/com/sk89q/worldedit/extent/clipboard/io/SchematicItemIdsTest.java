@@ -20,15 +20,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.junit.Test;
 
+import com.sk89q.jnbt.ByteTag;
+import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.jnbt.IntTag;
+import com.sk89q.jnbt.ListTag;
 import com.sk89q.jnbt.ShortTag;
+import com.sk89q.jnbt.StringTag;
 import com.sk89q.jnbt.Tag;
 
 public class SchematicItemIdsTest {
@@ -124,6 +131,84 @@ public class SchematicItemIdsTest {
 
         // Not stack-shaped, e.g. a packed GT cover ID
         assertFalse(SchematicItemIds.isMissingStack(extendedItem(40000), missing));
+    }
+
+    private static CompoundTag stack(int id, Integer slot) {
+        Map<String, Tag> item = shortItem(id);
+        item.put("Count", new ByteTag((byte) 1));
+        item.put("Damage", new ShortTag((short) 0));
+        if (slot != null) {
+            item.put("Slot", new ByteTag((byte) (int) slot));
+        }
+        return new CompoundTag(item);
+    }
+
+    private static CompoundTag withList(String key, CompoundTag... entries) {
+        Map<String, Tag> map = new HashMap<>();
+        map.put(key, new ListTag(CompoundTag.class, Arrays.<Tag>asList(entries)));
+        return new CompoundTag(map);
+    }
+
+    private static int shortId(Tag tag) {
+        return ((ShortTag) ((CompoundTag) tag).getValue()
+            .get("id")).getValue() & 0xFFFF;
+    }
+
+    @Test
+    public void missingPatternInputStaysInPlace() {
+        // AE2 pattern inputs have no Slot, their list position is the crafting slot
+        Map<Integer, Integer> items = conversion(5000, 0);
+        items.put(6000, 6001);
+        CompoundTag pattern = withList("in", stack(5000, null), stack(6000, null));
+
+        CompoundTag result = SchematicItemIds.remapAll(pattern, items, new HashMap<>(), Collections.singleton(5000));
+
+        List<Tag> in = result.getList("in");
+        assertEquals(2, in.size());
+        assertEquals(0, shortId(in.get(0)));
+        assertEquals(6001, shortId(in.get(1)));
+    }
+
+    @Test
+    public void missingInventoryStackIsRemoved() {
+        Map<Integer, Integer> items = conversion(5000, 0);
+        items.put(6000, 6001);
+        CompoundTag chest = withList("Items", stack(5000, 0), stack(6000, 1));
+
+        List<Tag> result = SchematicItemIds.remapAll(chest, items, new HashMap<>(), Collections.singleton(5000))
+            .getList("Items");
+
+        assertEquals(1, result.size());
+        assertEquals(6001, shortId(result.get(0)));
+    }
+
+    @Test
+    public void remapsItemsHeldByEntities() {
+        Map<String, Tag> entity = new HashMap<>();
+        entity.put("id", new StringTag("Item"));
+        entity.put("Item", stack(5000, null));
+
+        CompoundTag result = SchematicItemIds
+            .remapAll(new CompoundTag(entity), conversion(5000, 260), new HashMap<>(), Collections.emptySet());
+        assertEquals(
+            260,
+            shortId(
+                result.getValue()
+                    .get("Item")));
+
+        List<Integer> collected = new ArrayList<>();
+        SchematicItemIds.collect(new CompoundTag(entity), collected::add, id -> {});
+        assertEquals(Collections.singletonList(5000), collected);
+    }
+
+    @Test
+    public void plainIntStackIdUsesFullWidth() {
+        Map<String, Tag> item = new HashMap<>(stack(0, null).getValue());
+        item.put("id", new IntTag(70000));
+
+        assertEquals(70000, SchematicItemIds.read(item, "id"));
+        SchematicItemIds.remap(item, "id", conversion(70000, 70001));
+        assertEquals(70001, (int) ((IntTag) item.get("id")).getValue());
     }
 
     @Test

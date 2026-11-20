@@ -38,4 +38,12 @@ public interface ClipboardWriter extends Closeable {
      */
     void write(Clipboard clipboard, WorldData data) throws IOException;
 
+    /**
+     * Whether the last {@link #write(Clipboard, WorldData)} stored block or item IDs above 65535, which
+     * older readers can't load correctly.
+     */
+    default boolean usesExtendedIds() {
+        return false;
+    }
+
 }

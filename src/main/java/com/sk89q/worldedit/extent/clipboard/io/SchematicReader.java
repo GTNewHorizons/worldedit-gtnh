@@ -19,18 +19,14 @@ package com.sk89q.worldedit.extent.clipboard.io;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -155,17 +151,19 @@ public class SchematicReader implements ClipboardReader {
 
         // Blocks missing from this game become air
         Map<Integer, Integer> blockConversionMap = new HashMap<>();
+        Set<Integer> missingBlockIds = new HashSet<>();
         for (Map.Entry<String, Integer> entry : readMapping(schematic, "BlockMapping", "BlockMappingE").entrySet()) {
             Block block = Block.getBlockFromName(entry.getKey());
             if (block == null) {
                 missingNames.add(entry.getKey());
+                missingBlockIds.add(entry.getValue());
                 blockConversionMap.put(entry.getValue(), 0);
             } else {
                 blockConversionMap.put(entry.getValue(), Block.getIdFromBlock(block));
             }
         }
 
-        // Stacks of items missing from this game are dropped, other references to them become 0
+        // Items missing from this game become ID 0, and their stacks are removed from inventories
         Map<Integer, Integer> itemConversionMap = new HashMap<>();
         Set<Integer> missingItemIds = new HashSet<>();
         for (Map.Entry<String, Integer> entry : readMapping(schematic, "ItemMapping", "ItemMappingE").entrySet()) {
@@ -257,137 +255,27 @@ public class SchematicReader implements ClipboardReader {
                     int index = y * width * length + z * width + x;
                     BlockVector pt = new BlockVector(x, y, z);
 
-                    if (!blockConversionMap.isEmpty()) {
-                        blocks[index] = blockConversionMap.getOrDefault(blocks[index], blocks[index]);
-                    }
-
-                    BaseBlock block = new BaseBlock(
-                        blocks[index],
-                        (blockData[index] & 0xFF) + (addData != null ? ((addData[index] & 0xFF) << 8) : 0));
-
-                    if (tileEntitiesMap.containsKey(pt)) {
-                        final BiPredicate<CompoundTag, String[]> isItem = new BiPredicate<CompoundTag, String[]>() {
-
-                            @Override
-                            public boolean test(CompoundTag itemTag, String[] idPtr) {
-                                // Short-circuits so idPtr keeps the key of the first match
-                                return ((idPtr[0] = "id") != null && itemTag.containsKey("id")
-                                    && itemTag.containsKey("Count")
-                                    && itemTag.containsKey("Damage"))
-                                    || (((idPtr[0] = "Item") != null) && itemTag.containsKey("Item")
-                                        && itemTag.containsKey("Count")
-                                        && itemTag.containsKey("Meta"))
-                                    || (((idPtr[0] = "id") != null) && itemTag.containsKey("id")
-                                        && itemTag.getValue()
-                                            .get("id") instanceof IntTag);
-                            }
-                        };
-
-                        final Function<CompoundTag, CompoundTag> convertItems = new Function<CompoundTag, CompoundTag>() {
-
-                            @Override
-                            public CompoundTag apply(CompoundTag nbtData) {
-                                String[] idPtr = new String[1];
-                                if (isItem.test(nbtData, idPtr)) {
-                                    HashMap<String, Tag> itemMap = new HashMap<String, Tag>(nbtData.getValue());
-                                    SchematicItemIds.remap(itemMap, idPtr[0], itemConversionMap);
-
-                                    if (nbtData.containsKey("tag") && itemMap.get("tag") instanceof CompoundTag) {
-                                        itemMap.put("tag", apply((CompoundTag) itemMap.get("tag")));
-                                    }
-
-                                    if (nbtData.containsKey("d") && itemMap.get("d") instanceof CompoundTag) {
-                                        itemMap.put("d", apply((CompoundTag) itemMap.get("d")));
-                                    }
-                                    return nbtData.setValue(itemMap);
-                                } else {
-
-                                    HashMap<String, Tag> nbtMap = new HashMap<String, Tag>(nbtData.getValue());
-                                    if (nbtData.containsKey("id") && nbtData.getValue()
-                                        .get("id") instanceof StringTag
-                                        && "customDoorTileEntity".equals(
-                                            ((StringTag) nbtData.getValue()
-                                                .get("id")).getValue())) {
-
-                                        String key;
-
-                                        if (nbtData.containsKey(key = "bottomMaterial") && nbtData.getValue()
-                                            .get(key) instanceof IntTag) {
-                                            IntTag itag = (IntTag) nbtData.getValue()
-                                                .get(key);
-                                            int _id = itag.getValue();
-                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
-                                        }
-
-                                        if (nbtData.containsKey(key = "topMaterial") && nbtData.getValue()
-                                            .get(key) instanceof IntTag) {
-                                            IntTag itag = (IntTag) nbtData.getValue()
-                                                .get(key);
-                                            int _id = itag.getValue();
-                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
-                                        }
-
-                                        if (nbtData.containsKey(key = "frame") && nbtData.getValue()
-                                            .get(key) instanceof IntTag) {
-                                            IntTag itag = (IntTag) nbtData.getValue()
-                                                .get(key);
-                                            int _id = itag.getValue();
-                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
-                                        }
-
-                                        if (nbtData.containsKey(key = "block") && nbtData.getValue()
-                                            .get(key) instanceof IntTag) {
-                                            IntTag itag = (IntTag) nbtData.getValue()
-                                                .get(key);
-                                            int _id = itag.getValue();
-                                            nbtMap.put(key, new IntTag(blockConversionMap.getOrDefault(_id, _id)));
-                                        }
-
-                                        if (nbtData.containsKey(key = "item") && nbtData.getValue()
-                                            .get(key) instanceof IntTag) {
-                                            IntTag itag = (IntTag) nbtData.getValue()
-                                                .get(key);
-                                            int _id = itag.getValue();
-                                            nbtMap.put(key, new IntTag(itemConversionMap.getOrDefault(_id, _id)));
-                                        }
-                                    }
-
-                                    Iterator<Map.Entry<String, Tag>> entries = nbtMap.entrySet()
-                                        .iterator();
-                                    while (entries.hasNext()) {
-                                        Map.Entry<String, Tag> entry = entries.next();
-                                        Tag v = entry.getValue();
-                                        if (v instanceof ListTag) {
-                                            ListTag inventoryTag = (ListTag) v;
-                                            ArrayList<Tag> inventoryList = new ArrayList<Tag>();
-                                            for (Tag t2 : inventoryTag.getValue()) {
-                                                if (!(t2 instanceof CompoundTag)) {
-                                                    inventoryList.add(t2);
-                                                } else if (!SchematicItemIds
-                                                    .isMissingStack(((CompoundTag) t2).getValue(), missingItemIds)) {
-                                                        inventoryList.add(apply((CompoundTag) t2));
-                                                    }
-                                            }
-                                            entry.setValue(inventoryTag.setValue(inventoryList));
-                                        } else if (v instanceof CompoundTag) {
-                                            if (SchematicItemIds
-                                                .isMissingStack(((CompoundTag) v).getValue(), missingItemIds)) {
-                                                entries.remove();
-                                            } else {
-                                                entry.setValue(apply((CompoundTag) v));
-                                            }
-                                        }
-                                    }
-                                    return nbtData.setValue(nbtMap);
-                                }
-                            }
-                        };
-
-                        CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
-                        if (!itemConversionMap.isEmpty()) {
-                            nbtData = convertItems.apply(nbtData);
+                    BaseBlock block;
+                    if (missingBlockIds.contains(blocks[index])) {
+                        // Plain air: the source data and tile entity may not be valid here
+                        block = new BaseBlock(0);
+                    } else {
+                        if (!blockConversionMap.isEmpty()) {
+                            blocks[index] = blockConversionMap.getOrDefault(blocks[index], blocks[index]);
                         }
-                        block.setNbtData(nbtData);
+
+                        block = new BaseBlock(
+                            blocks[index],
+                            (blockData[index] & 0xFF) + (addData != null ? ((addData[index] & 0xFF) << 8) : 0));
+
+                        if (tileEntitiesMap.containsKey(pt)) {
+                            CompoundTag nbtData = new CompoundTag(tileEntitiesMap.get(pt));
+                            if (!itemConversionMap.isEmpty()) {
+                                nbtData = SchematicItemIds
+                                    .remapAll(nbtData, itemConversionMap, blockConversionMap, missingItemIds);
+                            }
+                            block.setNbtData(nbtData);
+                        }
                     }
 
                     try {
@@ -431,6 +319,10 @@ public class SchematicReader implements ClipboardReader {
                         .toLocation(clipboard, compound.getListTag("Pos"), compound.getListTag("Rotation"));
 
                     if (!id.isEmpty()) {
+                        if (!itemConversionMap.isEmpty()) {
+                            compound = SchematicItemIds
+                                .remapAll(compound, itemConversionMap, blockConversionMap, missingItemIds);
+                        }
                         BaseEntity state = new BaseEntity(id, compound);
                         clipboard.createEntity(location, state);
                     }

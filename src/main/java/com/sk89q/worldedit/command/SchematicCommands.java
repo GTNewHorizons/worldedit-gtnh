@@ -217,7 +217,7 @@ public final class SchematicCommands {
         player.printError(
             names.size() + " blocks/items in "
                 + filename
-                + " don't exist in this game and were left out (blocks became air): "
+                + " don't exist in this game (blocks became air, items were emptied): "
                 + String.join(", ", shown)
                 + more);
         log.warning("Missing from " + filename + ": " + String.join(", ", names));
@@ -279,6 +279,11 @@ public final class SchematicCommands {
             writer.write(target, holder.getWorldData());
             log.info(player.getName() + " saved " + f.getCanonicalPath());
             player.print(filename + " saved.");
+            if (writer.usesExtendedIds()) {
+                player.printError(
+                    filename + " has block or item IDs above 65535. Older WorldEdit versions load those as the"
+                        + " wrong blocks or items.");
+            }
         } catch (IOException e) {
             player.printError("The schematic could not be written: " + e.getMessage());
             log.log(Level.WARNING, "Failed to write a saved clipboard", e);
