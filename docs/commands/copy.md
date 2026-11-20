@@ -16,7 +16,7 @@ Flags go right after the command, before the arguments.
 
 | Flag | Meaning |
 |---|---|
-| `-e` | Accepted, but entities are not copied at the moment. |
+| `-e` | Also copy the entities in the selection, such as mobs, item frames and minecarts. Players are never copied. |
 | `-m` | Only copy what matches the [mask](../masks.md). The other blocks become air in the copy. |
 
 ## Examples
@@ -25,5 +25,6 @@ Flags go right after the command, before the arguments.
 |---|---|
 | `//copy` | Copy the selection. |
 | `//copy -m !air` | Copy everything that is not air. |
+| `//copy -e` | Copy the selection with its entities. |
 
 [All commands](../README.md)

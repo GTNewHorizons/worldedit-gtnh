@@ -98,12 +98,12 @@ public final class ClipboardCommands {
 
     static void copy(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession, Region region,
         boolean copyEntities, Mask mask) throws WorldEditException {
-        copyToClipboard(worldEdit, player, session, editSession, region, null, mask);
+        copyToClipboard(worldEdit, player, session, editSession, region, null, copyEntities, mask);
     }
 
     static void cut(WorldEdit worldEdit, Player player, LocalSession session, EditSession editSession, Region region,
         Pattern leavePattern, boolean copyEntities, Mask mask) throws WorldEditException {
-        copyToClipboard(worldEdit, player, session, editSession, region, leavePattern, mask);
+        copyToClipboard(worldEdit, player, session, editSession, region, leavePattern, copyEntities, mask);
     }
 
     /**
@@ -116,13 +116,17 @@ public final class ClipboardCommands {
      * </p>
      */
     private static void copyToClipboard(WorldEdit worldEdit, final Player player, final LocalSession session,
-        EditSession editSession, Region selection, Pattern leavePattern, Mask mask) throws WorldEditException {
+        EditSession editSession, Region selection, Pattern leavePattern, boolean copyEntities, Mask mask)
+        throws WorldEditException {
         final Region region = selection.clone();
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));
         ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
+        copy.setCopyingEntities(copyEntities);
         if (leavePattern != null) {
             copy.setSourceFunction(new BlockReplace(editSession, leavePattern));
+            // A cut takes the entities with it
+            copy.setRemovingEntities(true);
         }
         if (mask != null) {
             copy.setSourceMask(mask);

@@ -56,6 +56,7 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     private final Vector to;
     private int repetitions = 1;
     private Mask sourceMask = Masks.alwaysTrue();
+    private boolean copyingEntities = true;
     private boolean removingEntities;
     private RegionFunction sourceFunction = null;
     private Transform transform = new Identity();
@@ -189,6 +190,24 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     }
 
     /**
+     * Return whether entities in the region are copied too.
+     *
+     * @return true if copying entities
+     */
+    public boolean isCopyingEntities() {
+        return copyingEntities;
+    }
+
+    /**
+     * Set whether entities in the region are copied too.
+     *
+     * @param copyingEntities true to copy entities
+     */
+    public void setCopyingEntities(boolean copyingEntities) {
+        this.copyingEntities = copyingEntities;
+    }
+
+    /**
      * Return whether entities that are copied should be removed.
      *
      * @return true if removing
@@ -236,13 +255,17 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
                 : blockCopy;
             RegionVisitor blockVisitor = new RegionVisitor(region, new RegionMaskingFilter(sourceMask, function));
 
-            ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, currentTransform);
+            lastVisitor = blockVisitor;
+            Transform entityTransform = currentTransform;
+            currentTransform = currentTransform.combine(transform);
+            if (!copyingEntities) {
+                return new DelegateOperation(this, blockVisitor);
+            }
+
+            ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, entityTransform);
             entityCopy.setRemoving(removingEntities);
             List<? extends Entity> entities = source.getEntities(region);
             EntityVisitor entityVisitor = new EntityVisitor(entities.iterator(), entityCopy);
-
-            lastVisitor = blockVisitor;
-            currentTransform = currentTransform.combine(transform);
             return new DelegateOperation(this, new OperationQueue(blockVisitor, entityVisitor));
         } else {
             return null;

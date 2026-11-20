@@ -22,7 +22,7 @@ Flags go right after the command, before the arguments.
 
 | Flag | Meaning |
 |---|---|
-| `-e` | Accepted, but entities are not copied at the moment. |
+| `-e` | Also cut the entities in the selection, such as mobs, item frames and minecarts: they move to the clipboard. Players are never cut. |
 | `-m` | Only cut what matches the [mask](../masks.md). Other blocks stay in the world, and are air in the clipboard. |
 
 ## Examples
