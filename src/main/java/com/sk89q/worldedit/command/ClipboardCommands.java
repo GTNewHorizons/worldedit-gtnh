@@ -121,6 +121,7 @@ public final class ClipboardCommands {
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));
         ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
+        copy.setVisitByChunk(leavePattern == null && mask == null);
         if (leavePattern != null) {
             copy.setSourceFunction(new BlockReplace(editSession, leavePattern));
         }

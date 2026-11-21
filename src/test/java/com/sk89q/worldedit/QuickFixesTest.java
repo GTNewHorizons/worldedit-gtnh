@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -46,9 +47,20 @@ public class QuickFixesTest {
     }
 
     @Test
+    public void queuedHistoryReusesTheBlockReadForUndo() throws Exception {
+        Extent extent = mock(Extent.class);
+        MultiStageReorder reorder = new MultiStageReorder(extent);
+        assertTrue(reorder.setBlock(new Vector(1, 2, 3), STONE, new BaseBlock(0)));
+        assertFalse(reorder.setBlock(new Vector(2, 2, 3), STONE, STONE));
+        verify(extent, never()).getLazyBlock(any());
+        assertEquals(2, reorder.pendingBlockCount());
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
-    public void fastModeTracksEveryChunkItTouches() throws Exception {
+    public void fastModeTracksEveryChunkItChanges() throws Exception {
         World world = mock(World.class);
+        when(world.setBlock(any(), any(), eq(false))).thenReturn(true);
         FastModeExtent extent = new FastModeExtent(world, true);
 
         extent.setBlock(new Vector(1, 0, 1), STONE);

@@ -144,11 +144,12 @@ public class MultiStageReorder extends AbstractDelegateExtent implements Reorder
             return super.setBlock(location, block);
         }
 
-        BaseBlock lazyBlock = getLazyBlock(location);
-        boolean changed = !(lazyBlock.getType() == block.getType() && lazyBlock.getData() == block.getData());
+        // A history-enabled write has already taken the full snapshot, including attachment NBT.
+        BaseBlock existing = previous != null ? previous : getLazyBlock(location);
+        boolean changed = !(existing.getType() == block.getType() && existing.getData() == block.getData());
         boolean replacingAttached = changed
-            && (BlockType.shouldPlaceLast(lazyBlock.getType()) || BlockType.shouldPlaceFinal(lazyBlock.getType())
-                || BlockType.isAttachedByContents(lazyBlock));
+            && (BlockType.shouldPlaceLast(existing.getType()) || BlockType.shouldPlaceFinal(existing.getType())
+                || BlockType.isAttachedByContents(existing));
 
         // Destroy torches, etc. first, whatever replaces them. They would fall off if what they're
         // attached to went away while they were still waiting for their turn. This waits for the

@@ -8,8 +8,9 @@ Requires [GTNHLib](https://github.com/GTNewHorizons/GTNHLib).
 
 ## What this fork adds
 
-**Big edits don't freeze the server.** Edits are spread over server ticks within a time budget, so the server keeps
-running while a large `//set`, `//copy`, `//paste`, `//undo` or `//regen` goes through. [`//cancel`](docs/commands/cancel.md)
+**Big edits don't freeze the server.** The scheduler budgets up to 20 ms per tick for queued operations. On busy ticks
+the budget shrinks to as little as 1 ms. Large `//set`, `//copy`, `//count`, `//paste`, `//undo` and `//regen` operations share
+this budget. [`//cancel`](docs/commands/cancel.md)
 stops your queued edits, and whatever was already done can be undone. Schematics load on a background thread.
 
 **Restore from ServerUtilities backups.** [`//restore`](docs/commands/restore.md) reads the backups ServerUtilities

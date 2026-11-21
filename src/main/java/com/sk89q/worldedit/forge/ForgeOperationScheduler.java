@@ -40,11 +40,12 @@ import com.sk89q.worldedit.util.operation.OperationScheduler;
 import com.sk89q.worldedit.world.World;
 
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
 /**
- * An operation scheduler that spends a fixed slice of each server tick on queued work, so a large
+ * An operation scheduler that spends a bounded slice of each server tick on queued work, so a large
  * edit no longer blocks the server thread until it finishes.
  *
  * <p>
@@ -58,7 +59,10 @@ public class ForgeOperationScheduler implements OperationScheduler {
      * Wall-clock time per server tick that queued operations may use. A tick is 50ms, so this
      * leaves the rest of the tick for everything else the server has to do.
      */
-    private static final long BUDGET_NANOS = 20L * 1000L * 1000L;
+    private static final long MAX_BUDGET_NANOS = 20_000_000L;
+    private static final long MIN_BUDGET_NANOS = 1_000_000L;
+    // Leave five milliseconds of a 20 TPS tick for handlers that run after ours.
+    private static final long EDIT_DEADLINE_NANOS = 45_000_000L;
 
     /**
      * An edit that edited straight away and queued at most this many blocks writes them at once. A
@@ -73,6 +77,8 @@ public class ForgeOperationScheduler implements OperationScheduler {
     private final Deque<Job> queue = new ArrayDeque<Job>();
     private Job current;
     private boolean registered;
+    private long tickStartNanos;
+    private boolean sawTickStart;
 
     @Override
     public boolean submit(Actor owner, EditSession editSession, Operation operation, OperationCompletion completion) {
@@ -245,13 +251,26 @@ public class ForgeOperationScheduler implements OperationScheduler {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onServerTickStart(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.START) {
+            tickStartNanos = System.nanoTime();
+            sawTickStart = true;
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
 
-        RunContext run = new TimeBudgetRunContext(BUDGET_NANOS);
+        long elapsed = sawTickStart ? System.nanoTime() - tickStartNanos : 0L;
+        sawTickStart = false;
+        if (current == null && queue.isEmpty()) {
+            return;
+        }
+        RunContext run = new TimeBudgetRunContext(budgetForTick(elapsed));
         while (true) {
             if (current == null) {
                 current = queue.poll();
@@ -277,6 +296,11 @@ public class ForgeOperationScheduler implements OperationScheduler {
                 return;
             }
         }
+    }
+
+    /** Busy ticks get a shorter slice, with a small floor so queued edits still make progress. */
+    static long budgetForTick(long elapsedNanos) {
+        return Math.max(MIN_BUDGET_NANOS, Math.min(MAX_BUDGET_NANOS, EDIT_DEADLINE_NANOS - elapsedNanos));
     }
 
     /**

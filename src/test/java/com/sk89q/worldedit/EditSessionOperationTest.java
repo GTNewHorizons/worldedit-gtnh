@@ -8,8 +8,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Before;
@@ -21,9 +24,11 @@ import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.EllipsoidRegion;
 import com.sk89q.worldedit.regions.Region;
 
 /**
@@ -67,6 +72,86 @@ public class EditSessionOperationTest {
         Operations.complete(operation);
 
         assertEquals(BLOCKS, operation.getAffected());
+    }
+
+    @Test
+    public void countYieldsAndMatchesTheSynchronousMetadataAndIdCounts() throws Exception {
+        doAnswer(
+            call -> new BaseBlock(
+                STONE,
+                call.<Vector>getArgument(0)
+                    .getBlockY())).when(session)
+                        .getLazyBlock(any(Vector.class));
+        RegionVisitor count = session.countBlocksOperation(selection, Collections.singleton(new BaseBlock(STONE, 1)));
+        assertEquals(4, session.countBlocks(selection, Collections.singleton(new BaseBlock(STONE, 1))));
+        assertEquals(BLOCKS, session.countBlock(selection, Collections.singleton(STONE)));
+        changeSelection();
+        assertEquals(count, count.resume(new RunContext() {
+
+            @Override
+            public boolean shouldContinue() {
+                return false;
+            }
+        }));
+        assertEquals(0, count.getAffected());
+        Operations.complete(count);
+        assertEquals(4, count.getAffected());
+    }
+
+    @Test
+    public void countUsesTheSelectedShapeForNonCuboids() throws Exception {
+        EllipsoidRegion sphere = new EllipsoidRegion(new Vector(0, 10, 0), new Vector(1, 1, 1));
+        RegionVisitor count = session.countBlocksOperation(sphere, Collections.singleton(new BaseBlock(STONE)));
+        sphere.setRadius(new Vector(3, 3, 3));
+        Operations.complete(count);
+        assertEquals(19, count.getAffected());
+    }
+
+    @Test
+    public void onlyUnrestrictedConstantFastFillsUseChunkOrder() throws Exception {
+        CuboidRegion acrossBoundary = new CuboidRegion(new Vector(15, 0, 0), new Vector(16, 1, 0));
+        Vector first = new BlockVector(15, 0, 0);
+        Vector east = new BlockVector(16, 0, 0);
+        Vector up = new BlockVector(15, 1, 0);
+        Vector last = new BlockVector(16, 1, 0);
+        List<Vector> rowOrder = Arrays.asList(first, east, up, last);
+        List<Vector> chunkOrder = Arrays.asList(first, up, east, last);
+        List<Vector> writes = new ArrayList<>();
+        doAnswer(call -> writes.add(call.getArgument(0))).when(session)
+            .setBlock(any(Vector.class), any(BaseBlock.class));
+        doReturn(true).when(session)
+            .isQueueEnabled();
+        doReturn(-1).when(session)
+            .getBlockChangeLimit();
+        doReturn(null).when(session)
+            .getBlockBag();
+
+        Operations.complete(session.setBlocksOperation(acrossBoundary, pattern));
+        assertEquals(rowOrder, writes);
+
+        doReturn(true).when(session)
+            .hasFastMode();
+        writes.clear();
+        Operations.complete(session.setBlocksOperation(acrossBoundary, pattern));
+        assertEquals(chunkOrder, writes);
+
+        writes.clear();
+        Operations.complete(session.setBlocksOperation(acrossBoundary, pattern::apply));
+        assertEquals(rowOrder, writes);
+
+        doReturn(Masks.alwaysTrue()).when(session)
+            .getMask();
+        writes.clear();
+        Operations.complete(session.setBlocksOperation(acrossBoundary, pattern));
+        assertEquals(rowOrder, writes);
+
+        doReturn(null).when(session)
+            .getMask();
+        doReturn(2).when(session)
+            .getBlockChangeLimit();
+        writes.clear();
+        Operations.complete(session.setBlocksOperation(acrossBoundary, pattern));
+        assertEquals(rowOrder, writes);
     }
 
     @Test

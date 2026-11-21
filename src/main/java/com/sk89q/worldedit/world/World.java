@@ -146,6 +146,14 @@ public interface World extends Extent {
     boolean setBlock(Vector position, BaseBlock block, boolean notifyAndLight) throws WorldEditException;
 
     /**
+     * Called immediately after a fast write returns false. A world may skip the chunk refresh only
+     * if its setter can distinguish a no-op from a failed write that changed the world.
+     */
+    default boolean isKnownUnchangedAfterFailedFastWrite(Vector position, BaseBlock block) {
+        return false;
+    }
+
+    /**
      * @deprecated Use {@link #setBlock(Vector, BaseBlock)}
      */
     @Deprecated

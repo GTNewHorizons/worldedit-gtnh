@@ -29,6 +29,8 @@ import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
 import com.sk89q.worldedit.world.World;
 
+import cpw.mods.fml.common.eventhandler.EventPriority;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
 /** Tests for {@link ForgeOperationScheduler}. */
@@ -38,6 +40,26 @@ public class ForgeOperationSchedulerTest {
     private final UUID ownerId = UUID.randomUUID();
     private final Actor owner = actor(ownerId);
     private final List<String> events = new ArrayList<String>();
+
+    @Test
+    public void tickMeasurementIncludesNormalPriorityHandlersInBothPhases() throws Exception {
+        assertEquals(EventPriority.HIGHEST, tickPriority("onServerTickStart"));
+        assertEquals(EventPriority.LOWEST, tickPriority("onServerTick"));
+    }
+
+    private static EventPriority tickPriority(String method) throws NoSuchMethodException {
+        return ForgeOperationScheduler.class.getMethod(method, TickEvent.ServerTickEvent.class)
+            .getAnnotation(SubscribeEvent.class)
+            .priority();
+    }
+
+    @Test
+    public void busyTicksShrinkTheEditSliceAndOverloadedTicksStillMakeProgress() {
+        assertEquals(20_000_000L, ForgeOperationScheduler.budgetForTick(0));
+        assertEquals(10_000_000L, ForgeOperationScheduler.budgetForTick(35_000_000L));
+        assertEquals(1_000_000L, ForgeOperationScheduler.budgetForTick(44_000_000L));
+        assertEquals(1_000_000L, ForgeOperationScheduler.budgetForTick(100_000_000L));
+    }
 
     @Test
     public void workIsSpreadOverTicksAndThenCommittedAndFinalized() {
@@ -446,6 +468,7 @@ public class ForgeOperationSchedulerTest {
     }
 
     private void tick() {
+        scheduler.onServerTickStart(new TickEvent.ServerTickEvent(TickEvent.Phase.START));
         scheduler.onServerTick(new TickEvent.ServerTickEvent(TickEvent.Phase.END));
     }
 

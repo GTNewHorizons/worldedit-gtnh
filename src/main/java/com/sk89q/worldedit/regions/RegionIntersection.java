@@ -103,6 +103,10 @@ public class RegionIntersection extends AbstractRegion {
         return minimum;
     }
 
+    List<Region> children() {
+        return Collections.unmodifiableList(regions);
+    }
+
     @Override
     public Vector getMaximumPoint() {
         Vector maximum = regions.get(0)

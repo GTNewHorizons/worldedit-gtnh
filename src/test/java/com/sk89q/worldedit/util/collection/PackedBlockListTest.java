@@ -129,6 +129,37 @@ public class PackedBlockListTest {
     }
 
     @Test
+    public void aLateIrregularWritePreservesEarlierRowsAndBothUniformColumns() {
+        PackedBlockList list = new PackedBlockList(2);
+        for (int i = 0; i < 511; i++) {
+            list.add(new Vector((i & 15) - 8, 5, i >>> 4), STONE, null);
+        }
+        list.add(new Vector(-30000, 42, 30000), DIRT, STONE);
+
+        for (int i = 510; i >= 0; i--) {
+            assertEquals(new BlockVector((i & 15) - 8, 5, i >>> 4), list.positionAt(i));
+            assertEquals(STONE, list.blockAt(i, 0));
+            assertEquals(null, list.blockAt(i, 1));
+        }
+        assertEquals(new BlockVector(-30000, 42, 30000), list.positionAt(511));
+        assertEquals(DIRT, list.blockAt(511, 0));
+        assertEquals(STONE, list.blockAt(511, 1));
+    }
+
+    @Test
+    public void firstPageGrowsWithLateChangesToEachColumnAndThePositionRuns() {
+        PackedBlockList list = new PackedBlockList(2);
+        for (int i = 0; i < 256; i++) {
+            list.add(new Vector(i, i < 69 ? 0 : 1, 0), i < 9 ? STONE : DIRT, i < 150 ? null : STONE);
+        }
+        for (int i = 0; i < 256; i++) {
+            assertEquals(new BlockVector(i, i < 69 ? 0 : 1, 0), list.positionAt(i));
+            assertEquals(i < 9 ? STONE : DIRT, list.blockAt(i, 0));
+            assertEquals(i < 150 ? null : STONE, list.blockAt(i, 1));
+        }
+    }
+
+    @Test
     public void drainVisitsEverythingOnceAndCanResume() {
         int count = 70000;
         PackedBlockList list = new PackedBlockList(1);

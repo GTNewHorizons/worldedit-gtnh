@@ -46,12 +46,7 @@ import com.sk89q.worldedit.command.brigadier.CommandCall;
 import com.sk89q.worldedit.command.brigadier.LogMode;
 import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
-import com.sk89q.worldedit.function.Contextual;
-import com.sk89q.worldedit.function.EditContext;
 import com.sk89q.worldedit.function.GroundFunction;
-import com.sk89q.worldedit.function.RegionFunction;
-import com.sk89q.worldedit.function.block.BlockReplace;
-import com.sk89q.worldedit.function.factory.Apply;
 import com.sk89q.worldedit.function.generator.FloraGenerator;
 import com.sk89q.worldedit.function.generator.ForestGenerator;
 import com.sk89q.worldedit.function.mask.ExistingBlockMask;
@@ -253,21 +248,7 @@ public final class RegionCommands {
         Pattern pattern = call.pattern("pattern");
         EditSession editSession = call.queuedEditSession();
 
-        EditContext editContext = new EditContext();
-        editContext.setDestination(editSession);
-        editContext.setRegion(selection.clone());
-        final Operation operation = new Apply(new Contextual<RegionFunction>() {
-
-            @Override
-            public RegionFunction createFromContext(EditContext context) {
-                return new BlockReplace(context.getDestination(), pattern);
-            }
-
-            @Override
-            public String toString() {
-                return "replace blocks";
-            }
-        }).createFromContext(editContext);
+        final Operation operation = editSession.setBlocksOperation(selection, pattern);
 
         // Hand the work to the scheduler, which may spread it over several ticks. The status message has to wait until
         // it is actually done.
@@ -317,7 +298,7 @@ public final class RegionCommands {
      * @param prefix      prepended to the completion message
      * @param suffix      appended to the affected count to form the completion message
      */
-    private static void schedule(EditSession editSession, Operation operation, final AffectedCounter counter,
+    static void schedule(EditSession editSession, Operation operation, final AffectedCounter counter,
         final Player player, final String prefix, final String suffix) {
         WorldEdit.getInstance()
             .getOperationScheduler()

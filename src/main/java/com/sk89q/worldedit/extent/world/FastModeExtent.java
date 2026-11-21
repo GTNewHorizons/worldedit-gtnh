@@ -85,18 +85,30 @@ public class FastModeExtent extends AbstractDelegateExtent {
 
     @Override
     public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        if (enabled) {
-            int chunkX = location.getBlockX() >> 4;
-            int chunkZ = location.getBlockZ() >> 4;
-            if (!hasLastChunk || chunkX != lastChunkX || chunkZ != lastChunkZ) {
-                dirtyChunks.add(new BlockVector2D(chunkX, chunkZ));
-                hasLastChunk = true;
-                lastChunkX = chunkX;
-                lastChunkZ = chunkZ;
-            }
-            return world.setBlock(location, block, false);
-        } else {
+        if (!enabled) {
             return world.setBlock(location, block, true);
+        }
+        // A mod can throw after changing a block, in which case it still needs the fix-up.
+        boolean needsFix = true;
+        try {
+            boolean changed = world.setBlock(location, block, false);
+            needsFix = changed || !world.isKnownUnchangedAfterFailedFastWrite(location, block);
+            return changed;
+        } finally {
+            if (needsFix) {
+                markDirty(location);
+            }
+        }
+    }
+
+    private void markDirty(Vector location) {
+        int chunkX = location.getBlockX() >> 4;
+        int chunkZ = location.getBlockZ() >> 4;
+        if (!hasLastChunk || chunkX != lastChunkX || chunkZ != lastChunkZ) {
+            dirtyChunks.add(new BlockVector2D(chunkX, chunkZ));
+            hasLastChunk = true;
+            lastChunkX = chunkX;
+            lastChunkZ = chunkZ;
         }
     }
 

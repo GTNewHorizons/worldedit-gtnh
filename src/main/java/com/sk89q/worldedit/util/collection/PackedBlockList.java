@@ -36,28 +36,28 @@ import com.sk89q.worldedit.blocks.BaseBlock;
  * that large edits don't need several objects per block.
  *
  * <p>
- * Positions are packed into a long, and blocks into an int that indexes a palette. Blocks without NBT
+ * Pages store X runs by their first position and uniform block columns by one palette index.
+ * Irregular pages expand independently and retain constant-time indexed access for undo. Blocks without NBT
  * share one palette entry per ID and data value, so callers get back shared instances that must not
  * be modified. Blocks with NBT each keep their own entry.
  * </p>
  */
 public final class PackedBlockList {
 
-    private static final int SEGMENT_BITS = 15;
-    private static final int SEGMENT_SIZE = 1 << SEGMENT_BITS;
-    private static final int SEGMENT_MASK = SEGMENT_SIZE - 1;
-    private static final int INITIAL_CAPACITY = 64;
+    private static final int PAGE_BITS = 8;
+    private static final int PAGE_SIZE = 1 << PAGE_BITS;
+    private static final int PAGE_MASK = PAGE_SIZE - 1;
+    private static final long X_STEP = 1L << 38;
 
     private static final int XZ_LIMIT = 1 << 25;
     private static final int Y_LIMIT = 1 << 11;
 
     private final int columns;
-    private final List<long[]> positions = new ArrayList<long[]>();
-    private final List<int[]> blocks = new ArrayList<int[]>();
+    private final List<Page> pages = new ArrayList<Page>();
     private final List<BaseBlock> palette = new ArrayList<BaseBlock>();
     private final Map<Long, Integer> paletteIndex = new HashMap<Long, Integer>();
-    private long lastKey = -1;
-    private int lastIndex;
+    private final long[] lastKeys = { -1, -1 };
+    private final int[] lastIndices = new int[2];
     private int size;
     private int head;
 
@@ -92,8 +92,7 @@ public final class PackedBlockList {
      */
     public void add(Vector position, BaseBlock block) {
         checkArgument(columns == 1, "this list has two blocks per position");
-        int index = append(position);
-        blocks.get(index >>> SEGMENT_BITS)[index & SEGMENT_MASK] = paletteIndexOf(block);
+        append(position, block, null);
     }
 
     /**
@@ -105,39 +104,24 @@ public final class PackedBlockList {
      */
     public void add(Vector position, BaseBlock first, BaseBlock second) {
         checkArgument(columns == 2, "this list has one block per position");
-        int index = append(position);
-        int[] segment = blocks.get(index >>> SEGMENT_BITS);
-        int offset = (index & SEGMENT_MASK) * 2;
-        segment[offset] = paletteIndexOf(first);
-        segment[offset + 1] = paletteIndexOf(second);
+        append(position, first, second);
     }
 
-    private int append(Vector position) {
+    private void append(Vector position, BaseBlock first, BaseBlock second) {
         checkArgument(fits(position), "position out of range: %s", position);
 
-        int segment = size >>> SEGMENT_BITS;
-        int offset = size & SEGMENT_MASK;
-
-        if (segment == positions.size()) {
-            // Only the first segment starts small, so that small edits stay small.
-            int capacity = segment == 0 ? INITIAL_CAPACITY : SEGMENT_SIZE;
-            positions.add(new long[capacity]);
-            blocks.add(new int[capacity * columns]);
+        int firstIndex = paletteIndexOf(first, 0);
+        int secondIndex = paletteIndexOf(second, 1);
+        int offset = size & PAGE_MASK;
+        if (offset == 0) {
+            pages.add(new Page(firstIndex, secondIndex));
         }
-
-        long[] segmentPositions = positions.get(segment);
-        if (offset == segmentPositions.length) {
-            int capacity = Math.min(segmentPositions.length * 2, SEGMENT_SIZE);
-            segmentPositions = Arrays.copyOf(segmentPositions, capacity);
-            positions.set(segment, segmentPositions);
-            blocks.set(segment, Arrays.copyOf(blocks.get(segment), capacity * columns));
-        }
-
-        segmentPositions[offset] = pack(position);
-        return size++;
+        pages.get(size >>> PAGE_BITS)
+            .add(offset, pack(position), firstIndex, secondIndex, size < PAGE_SIZE);
+        size++;
     }
 
-    private int paletteIndexOf(BaseBlock block) {
+    private int paletteIndexOf(BaseBlock block, int column) {
         if (block == null) {
             return -1;
         }
@@ -146,9 +130,9 @@ public final class PackedBlockList {
             return palette.size() - 1;
         }
 
-        long key = ((long) block.getId() << 16) | (block.getData() & 0xFFFF);
-        if (key == lastKey) {
-            return lastIndex;
+        long key = ((long) block.getId() << 32) | (block.getData() & 0xFFFFFFFFL);
+        if (key == lastKeys[column]) {
+            return lastIndices[column];
         }
 
         Integer index = paletteIndex.get(key);
@@ -157,8 +141,8 @@ public final class PackedBlockList {
             palette.add(new BaseBlock(block.getId(), block.getData()));
             paletteIndex.put(key, index);
         }
-        lastKey = key;
-        lastIndex = index;
+        lastKeys[column] = key;
+        lastIndices[column] = index;
         return index;
     }
 
@@ -183,7 +167,8 @@ public final class PackedBlockList {
      * @return the position
      */
     public BlockVector positionAt(int index) {
-        long packed = positions.get(index >>> SEGMENT_BITS)[index & SEGMENT_MASK];
+        long packed = pages.get(index >>> PAGE_BITS)
+            .positionAt(index & PAGE_MASK);
         int x = (int) (packed >> 38);
         int z = (int) (packed << 26 >> 38);
         int y = (int) (packed << 52 >> 52);
@@ -198,7 +183,9 @@ public final class PackedBlockList {
      * @return the block, which must not be modified, or null if null was added
      */
     public BaseBlock blockAt(int index, int column) {
-        int paletteIndex = blocks.get(index >>> SEGMENT_BITS)[(index & SEGMENT_MASK) * columns + column];
+        Page page = pages.get(index >>> PAGE_BITS);
+        int offset = index & PAGE_MASK;
+        int paletteIndex = column == 0 ? page.firstAt(offset) : page.secondAt(offset);
         return paletteIndex < 0 ? null : palette.get(paletteIndex);
     }
 
@@ -270,10 +257,8 @@ public final class PackedBlockList {
 
     private void advance() {
         head++;
-        if ((head & SEGMENT_MASK) == 0) {
-            int finished = (head - 1) >>> SEGMENT_BITS;
-            positions.set(finished, null);
-            blocks.set(finished, null);
+        if ((head & PAGE_MASK) == 0) {
+            pages.set((head - 1) >>> PAGE_BITS, null);
         }
     }
 
@@ -315,12 +300,84 @@ public final class PackedBlockList {
      * Remove everything.
      */
     public void clear() {
-        positions.clear();
-        blocks.clear();
+        pages.clear();
         palette.clear();
         paletteIndex.clear();
-        lastKey = -1;
+        Arrays.fill(lastKeys, -1);
         size = 0;
         head = 0;
+    }
+
+    private static final class Page {
+
+        private static final int RUNS_PER_PAGE = PAGE_SIZE / 16;
+
+        // Each group of 16 consecutive X coordinates needs only its start. On the first
+        // discontinuity inside a group, expand this page only. Packed addition also works
+        // across X = 0 because X occupies the high bits.
+        private long[] positions = new long[RUNS_PER_PAGE];
+        private final int first;
+        private final int second;
+        private int[] firstValues;
+        private int[] secondValues;
+
+        Page(int first, int second) {
+            this.first = first;
+            this.second = second;
+        }
+
+        void add(int offset, long position, int firstIndex, int secondIndex, boolean firstPage) {
+            if (positions.length != RUNS_PER_PAGE) {
+                if (offset == positions.length) {
+                    positions = Arrays.copyOf(positions, offset * 2);
+                }
+                positions[offset] = position;
+            } else if ((offset & 15) == 0) {
+                positions[offset >>> 4] = position;
+            } else if (positionAt(offset) != position) {
+                long[] expanded = new long[initialDenseCapacity(offset, firstPage)];
+                for (int i = 0; i < offset; i++) {
+                    expanded[i] = positionAt(i);
+                }
+                expanded[offset] = position;
+                positions = expanded;
+            }
+            firstValues = setValue(firstValues, offset, first, firstIndex, firstPage);
+            secondValues = setValue(secondValues, offset, second, secondIndex, firstPage);
+        }
+
+        // Most short histories never fill a page. Grow only their first page, leaving subsequent
+        // dense pages at full capacity to avoid copying buffers on large edits. Dense position
+        // arrays are always longer than the array of compressed run starts.
+        private static int initialDenseCapacity(int offset, boolean firstPage) {
+            return firstPage ? Math.max(2 * RUNS_PER_PAGE, Integer.highestOneBit(offset) * 2) : PAGE_SIZE;
+        }
+
+        private static int[] setValue(int[] values, int offset, int uniform, int value, boolean firstPage) {
+            if (values == null) {
+                if (uniform == value) {
+                    return null;
+                }
+                values = new int[initialDenseCapacity(offset, firstPage)];
+                Arrays.fill(values, 0, offset, uniform);
+            } else if (offset == values.length) {
+                values = Arrays.copyOf(values, offset * 2);
+            }
+            values[offset] = value;
+            return values;
+        }
+
+        long positionAt(int offset) {
+            return positions.length == RUNS_PER_PAGE ? positions[offset >>> 4] + (offset & 15) * X_STEP
+                : positions[offset];
+        }
+
+        int firstAt(int offset) {
+            return firstValues == null ? first : firstValues[offset];
+        }
+
+        int secondAt(int offset) {
+            return secondValues == null ? second : secondValues[offset];
+        }
     }
 }
