@@ -262,6 +262,21 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
+    public boolean isKnownUnchangedAfterFailedFastWrite(Vector position, BaseBlock block) {
+        // Chunk returns false both for an exact match and when breakBlock replaces our target.
+        // Its latter failure leaves a different block in storage. Tile writes are always conservative.
+        if (block.getNbtData() != null) {
+            return false;
+        }
+        int x = position.getBlockX();
+        int y = position.getBlockY();
+        int z = position.getBlockZ();
+        Chunk chunk = chunkAt(getWorld(), x, y, z);
+        return chunk != null && chunk.getBlock(x & 15, y, z & 15) == Block.getBlockById(block.getId())
+            && chunk.getBlockMetadata(x & 15, y, z & 15) == block.getData();
+    }
+
+    @Override
     public int getBlockLightLevel(Vector position) {
         checkNotNull(position);
         return getWorld().getBlockLightValue(position.getBlockX(), position.getBlockY(), position.getBlockZ());
