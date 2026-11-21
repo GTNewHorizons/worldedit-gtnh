@@ -33,9 +33,8 @@ import com.sk89q.worldedit.regions.Region;
  */
 public class RegionVisitor implements Operation, AffectedCounter {
 
-    private final Region region;
+    private final Iterable<BlockVector> positions;
     private final RegionFunction function;
-    private final boolean visitByChunk;
     private Iterator<BlockVector> iterator;
     private int affected = 0;
 
@@ -48,9 +47,16 @@ public class RegionVisitor implements Operation, AffectedCounter {
      * and writes local. Custom region iterators still define which blocks belong to their region.
      */
     public RegionVisitor(Region region, RegionFunction function, boolean visitByChunk) {
-        this.region = region;
+        this.positions = visitByChunk && region.getClass() == CuboidRegion.class
+            ? ((CuboidRegion) region)::chunkOrderedIterator
+            : region;
         this.function = function;
-        this.visitByChunk = visitByChunk;
+    }
+
+    /** Visit the supplied positions in order, checking the time budget after each call. */
+    public RegionVisitor(Iterable<BlockVector> positions, RegionFunction function) {
+        this.positions = positions;
+        this.function = function;
     }
 
     /**
@@ -66,9 +72,7 @@ public class RegionVisitor implements Operation, AffectedCounter {
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
         if (iterator == null) {
-            iterator = visitByChunk && region.getClass() == CuboidRegion.class
-                ? ((CuboidRegion) region).chunkOrderedIterator()
-                : region.iterator();
+            iterator = positions.iterator();
         }
 
         while (iterator.hasNext()) {

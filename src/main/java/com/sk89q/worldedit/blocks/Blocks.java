@@ -17,6 +17,8 @@
 package com.sk89q.worldedit.blocks;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Block-related utility methods.
@@ -24,6 +26,15 @@ import java.util.Collection;
 public final class Blocks {
 
     private Blocks() {}
+
+    /** Match every metadata value for each of the given block IDs. */
+    public static Set<BaseBlock> withWildcardData(Set<Integer> ids) {
+        Set<BaseBlock> blocks = new HashSet<>();
+        for (int id : ids) {
+            blocks.add(new BaseBlock(id, -1));
+        }
+        return blocks;
+    }
 
     /**
      * Checks whether a given block is in a list of base blocks.

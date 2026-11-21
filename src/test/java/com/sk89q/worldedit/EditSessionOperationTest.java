@@ -24,9 +24,11 @@ import com.sk89q.worldedit.function.mask.Masks;
 import com.sk89q.worldedit.function.operation.CountedOperation;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.EllipsoidRegion;
 import com.sk89q.worldedit.regions.Region;
 
 /**
@@ -70,6 +72,39 @@ public class EditSessionOperationTest {
         Operations.complete(operation);
 
         assertEquals(BLOCKS, operation.getAffected());
+    }
+
+    @Test
+    public void countYieldsAndMatchesTheSynchronousMetadataAndIdCounts() throws Exception {
+        doAnswer(
+            call -> new BaseBlock(
+                STONE,
+                call.<Vector>getArgument(0)
+                    .getBlockY())).when(session)
+                        .getLazyBlock(any(Vector.class));
+        RegionVisitor count = session.countBlocksOperation(selection, Collections.singleton(new BaseBlock(STONE, 1)));
+        assertEquals(4, session.countBlocks(selection, Collections.singleton(new BaseBlock(STONE, 1))));
+        assertEquals(BLOCKS, session.countBlock(selection, Collections.singleton(STONE)));
+        changeSelection();
+        assertEquals(count, count.resume(new RunContext() {
+
+            @Override
+            public boolean shouldContinue() {
+                return false;
+            }
+        }));
+        assertEquals(0, count.getAffected());
+        Operations.complete(count);
+        assertEquals(4, count.getAffected());
+    }
+
+    @Test
+    public void countUsesTheSelectedShapeForNonCuboids() throws Exception {
+        EllipsoidRegion sphere = new EllipsoidRegion(new Vector(0, 10, 0), new Vector(1, 1, 1));
+        RegionVisitor count = session.countBlocksOperation(sphere, Collections.singleton(new BaseBlock(STONE)));
+        sphere.setRadius(new Vector(3, 3, 3));
+        Operations.complete(count);
+        assertEquals(19, count.getAffected());
     }
 
     @Test

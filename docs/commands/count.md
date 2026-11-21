@@ -1,6 +1,7 @@
 # `//count`
 
-Count a block in your selection.
+Count matching blocks in your selection. Large counts run over several server ticks. The total appears when the scan
+finishes. Use `//cancel` to stop a queued or running count.
 
 ## Usage
 

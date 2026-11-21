@@ -298,7 +298,7 @@ public final class RegionCommands {
      * @param prefix      prepended to the completion message
      * @param suffix      appended to the affected count to form the completion message
      */
-    private static void schedule(EditSession editSession, Operation operation, final AffectedCounter counter,
+    static void schedule(EditSession editSession, Operation operation, final AffectedCounter counter,
         final Player player, final String prefix, final String suffix) {
         WorldEdit.getInstance()
             .getOperationScheduler()

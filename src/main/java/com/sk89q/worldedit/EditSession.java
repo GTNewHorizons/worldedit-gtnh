@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.blocks.BlockType;
+import com.sk89q.worldedit.blocks.Blocks;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.event.extent.EditSessionEvent;
@@ -60,7 +61,6 @@ import com.sk89q.worldedit.extent.world.SurvivalModeExtent;
 import com.sk89q.worldedit.function.GroundFunction;
 import com.sk89q.worldedit.function.RegionMaskingFilter;
 import com.sk89q.worldedit.function.block.BlockReplace;
-import com.sk89q.worldedit.function.block.Counter;
 import com.sk89q.worldedit.function.block.Naturalizer;
 import com.sk89q.worldedit.function.generator.GardenPatchGenerator;
 import com.sk89q.worldedit.function.mask.BlockMask;
@@ -104,6 +104,7 @@ import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.EllipsoidRegion;
 import com.sk89q.worldedit.regions.FlatRegion;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.regions.RegionCount;
 import com.sk89q.worldedit.regions.Regions;
 import com.sk89q.worldedit.regions.shape.ArbitraryBiomeShape;
 import com.sk89q.worldedit.regions.shape.ArbitraryShape;
@@ -695,11 +696,7 @@ public class EditSession implements Extent {
      * @return the number of found blocks
      */
     public int countBlock(Region region, Set<Integer> searchIDs) {
-        Set<BaseBlock> passOn = new HashSet<BaseBlock>();
-        for (Integer i : searchIDs) {
-            passOn.add(new BaseBlock(i, -1));
-        }
-        return countBlocks(region, passOn);
+        return countBlocks(region, Blocks.withWildcardData(searchIDs));
     }
 
     /**
@@ -710,12 +707,15 @@ public class EditSession implements Extent {
      * @return the number of blocks that matched the pattern
      */
     public int countBlocks(Region region, Set<BaseBlock> searchBlocks) {
+        RegionVisitor visitor = countBlocksOperation(region, searchBlocks);
+        Operations.completeBlindly(visitor);
+        return visitor.getAffected();
+    }
+
+    /** Build a resumable count over the selection as it was when the command was issued. */
+    public RegionVisitor countBlocksOperation(Region region, Set<BaseBlock> searchBlocks) {
         FuzzyBlockMask mask = new FuzzyBlockMask(this, searchBlocks);
-        Counter count = new Counter();
-        RegionMaskingFilter filter = new RegionMaskingFilter(mask, count);
-        RegionVisitor visitor = new RegionVisitor(region, filter);
-        Operations.completeBlindly(visitor); // We can't throw exceptions, nor do we expect any
-        return count.getCount();
+        return RegionCount.create(region, mask::test);
     }
 
     /**

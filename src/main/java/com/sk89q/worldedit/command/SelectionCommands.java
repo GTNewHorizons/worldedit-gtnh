@@ -38,6 +38,7 @@ import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BlockType;
+import com.sk89q.worldedit.blocks.Blocks;
 import com.sk89q.worldedit.command.brigadier.CommandCall;
 import com.sk89q.worldedit.command.brigadier.CommandFailure;
 import com.sk89q.worldedit.command.brigadier.LogMode;
@@ -47,6 +48,7 @@ import com.sk89q.worldedit.command.util.RelativeCoordinates;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.permission.ActorSelectorLimits;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
+import com.sk89q.worldedit.function.visitor.RegionVisitor;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.RegionOperationException;
 import com.sk89q.worldedit.regions.RegionSelector;
@@ -144,7 +146,7 @@ public final class SelectionCommands {
 
         Nodes.registerWithFlags(dispatcher, literal("/count", "Counts the number of a certain type of block").executes(Nodes.USAGE)
                 .then(word("block")
-                        .executes(run("worldedit.analysis.count", c -> count(c.player(), c.session(), c)))),
+                        .executes(run("worldedit.analysis.count", SelectionCommands::count))),
                 "d");
 
         Nodes.registerWithFlags(dispatcher, literal("/distr", "Get the distribution of blocks in the selection")
@@ -557,23 +559,14 @@ public final class SelectionCommands {
         player.print("# of blocks: " + region.getArea());
     }
 
-    private static void count(Player player, LocalSession session, CommandCall args) throws Exception {
-        EditSession editSession = args.editSession();
-
-        boolean useData = args.flag('d');
-        if (args.string("block")
-            .contains(":")) {
-            useData = true; // override d flag, if they specified data they want it
-        }
-        if (useData) {
-            Set<BaseBlock> searchBlocks = CommandInput.blocks(player, args.string("block"), true, false);
-            int count = editSession.countBlocks(session.getSelection(player.getWorld()), searchBlocks);
-            player.print("Counted: " + count);
-        } else {
-            Set<Integer> searchIDs = CommandInput.blockIds(player, args.string("block"), true);
-            int count = editSession.countBlock(session.getSelection(player.getWorld()), searchIDs);
-            player.print("Counted: " + count);
-        }
+    static void count(CommandCall args) throws Exception {
+        Player player = args.player();
+        EditSession editSession = args.queuedEditSession();
+        String input = args.string("block");
+        Set<BaseBlock> search = args.flag('d') || input.contains(":") ? CommandInput.blocks(player, input, true, false)
+            : Blocks.withWildcardData(CommandInput.blockIds(player, input, true));
+        RegionVisitor count = editSession.countBlocksOperation(args.region(), search);
+        RegionCommands.schedule(editSession, count, count, player, "Counted: ", "");
     }
 
     private static void distr(Player player, LocalSession session, CommandCall args) throws Exception {

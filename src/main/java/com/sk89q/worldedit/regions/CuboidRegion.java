@@ -346,8 +346,10 @@ public class CuboidRegion extends AbstractRegion implements FlatRegion {
      * Within a chunk, X runs first, followed by Z and Y, matching Minecraft's section storage order.
      */
     public Iterator<BlockVector> chunkOrderedIterator() {
-        final Vector min = getMinimumPoint();
-        final Vector max = getMaximumPoint();
+        return chunkOrderedIterator(getMinimumPoint(), getMaximumPoint());
+    }
+
+    static Iterator<BlockVector> chunkOrderedIterator(Vector min, Vector max) {
         return new Iterator<BlockVector>() {
 
             private final int minX = min.getBlockX();
