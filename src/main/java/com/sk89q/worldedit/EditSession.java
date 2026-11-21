@@ -891,7 +891,14 @@ public class EditSession implements Extent {
         checkNotNull(pattern);
 
         BlockReplace replace = new BlockReplace(this, pattern);
-        return new RegionVisitor(region.clone(), replace);
+        // A mask or custom pattern may observe visit order. A block limit or inventory shortage can
+        // also determine which part of the selection gets filled.
+        boolean visitByChunk = hasFastMode() && isQueueEnabled()
+            && pattern.getClass() == BlockPattern.class
+            && getMask() == null
+            && getBlockChangeLimit() == -1
+            && getBlockBag() == null;
+        return new RegionVisitor(region.clone(), replace, visitByChunk);
     }
 
     /**

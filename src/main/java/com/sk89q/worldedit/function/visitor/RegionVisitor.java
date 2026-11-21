@@ -25,6 +25,7 @@ import com.sk89q.worldedit.function.RegionFunction;
 import com.sk89q.worldedit.function.operation.AffectedCounter;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
+import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 
 /**
@@ -34,12 +35,22 @@ public class RegionVisitor implements Operation, AffectedCounter {
 
     private final Region region;
     private final RegionFunction function;
+    private final boolean visitByChunk;
     private Iterator<BlockVector> iterator;
     private int affected = 0;
 
     public RegionVisitor(Region region, RegionFunction function) {
+        this(region, function, false);
+    }
+
+    /**
+     * When order is immaterial, visit ordinary cuboids in chunk order to keep consecutive reads
+     * and writes local. Custom region iterators still define which blocks belong to their region.
+     */
+    public RegionVisitor(Region region, RegionFunction function, boolean visitByChunk) {
         this.region = region;
         this.function = function;
+        this.visitByChunk = visitByChunk;
     }
 
     /**
@@ -55,7 +66,9 @@ public class RegionVisitor implements Operation, AffectedCounter {
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
         if (iterator == null) {
-            iterator = region.iterator();
+            iterator = visitByChunk && region.getClass() == CuboidRegion.class
+                ? ((CuboidRegion) region).chunkOrderedIterator()
+                : region.iterator();
         }
 
         while (iterator.hasNext()) {

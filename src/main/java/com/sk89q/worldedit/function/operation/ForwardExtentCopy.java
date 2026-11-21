@@ -57,6 +57,7 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     private int repetitions = 1;
     private Mask sourceMask = Masks.alwaysTrue();
     private boolean removingEntities;
+    private boolean visitByChunk;
     private RegionFunction sourceFunction = null;
     private Transform transform = new Identity();
     private Transform currentTransform = null;
@@ -207,6 +208,14 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     }
 
     /**
+     * Enable chunk-local traversal for copies whose individual block writes are independent.
+     * The caller must use distinct source and destination storage and a one-to-one transform.
+     */
+    public void setVisitByChunk(boolean visitByChunk) {
+        this.visitByChunk = visitByChunk;
+    }
+
+    /**
      * Get the number of affected objects.
      *
      * @return the number of affected
@@ -234,7 +243,10 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
             // The mask covers the source function too: a block that is not copied must stay where it is
             RegionFunction function = sourceFunction != null ? new CombinedRegionFunction(blockCopy, sourceFunction)
                 : blockCopy;
-            RegionVisitor blockVisitor = new RegionVisitor(region, new RegionMaskingFilter(sourceMask, function));
+            RegionVisitor blockVisitor = new RegionVisitor(
+                region,
+                new RegionMaskingFilter(sourceMask, function),
+                visitByChunk);
 
             ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, currentTransform);
             entityCopy.setRemoving(removingEntities);

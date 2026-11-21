@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import com.sk89q.worldedit.BlockVector;
@@ -338,6 +339,67 @@ public class CuboidRegion extends AbstractRegion implements FlatRegion {
             && y <= max.getBlockY()
             && z >= min.getBlockZ()
             && z <= max.getBlockZ();
+    }
+
+    /**
+     * Visit the cuboid one chunk at a time. Each returned position is independent and may be retained.
+     * Within a chunk, X runs first, followed by Z and Y, matching Minecraft's section storage order.
+     */
+    public Iterator<BlockVector> chunkOrderedIterator() {
+        final Vector min = getMinimumPoint();
+        final Vector max = getMaximumPoint();
+        return new Iterator<BlockVector>() {
+
+            private final int minX = min.getBlockX();
+            private final int minY = min.getBlockY();
+            private final int maxX = max.getBlockX();
+            private final int maxY = max.getBlockY();
+            private final int maxZ = max.getBlockZ();
+            private int startX = minX;
+            private int startZ = min.getBlockZ();
+            private int endX = Math.min(startX | 15, maxX);
+            private int endZ = Math.min(startZ | 15, maxZ);
+            private int x = startX;
+            private int y = minY;
+            private int z = startZ;
+            private boolean remaining = true;
+
+            @Override
+            public boolean hasNext() {
+                return remaining;
+            }
+
+            @Override
+            public BlockVector next() {
+                if (!remaining) throw new NoSuchElementException();
+                BlockVector result = new BlockVector(x, y, z);
+                if (x < endX) {
+                    x++;
+                } else if (z < endZ) {
+                    x = startX;
+                    z++;
+                } else if (y < maxY) {
+                    x = startX;
+                    z = startZ;
+                    y++;
+                } else if (endX < maxX || endZ < maxZ) {
+                    if (endX < maxX) {
+                        startX = endX + 1;
+                    } else {
+                        startX = minX;
+                        startZ = endZ + 1;
+                        endZ = Math.min(startZ | 15, maxZ);
+                    }
+                    endX = Math.min(startX | 15, maxX);
+                    x = startX;
+                    y = minY;
+                    z = startZ;
+                } else {
+                    remaining = false;
+                }
+                return result;
+            }
+        };
     }
 
     @Override
