@@ -20,10 +20,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.sk89q.jnbt.CompoundTag;
+import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEditException;
@@ -37,14 +41,17 @@ import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.biome.BaseBiome;
 
 /**
- * Stores block data as a multi-dimensional array of {@link BaseBlock}s and
- * other data as lists or maps.
+ * Stores clipboard blocks in lazily allocated, paletted sections of up to 16 blocks on each axis.
  */
 public class BlockArrayClipboard implements Clipboard {
 
     private final Region region;
-    private Vector origin = new Vector();
-    private final BaseBlock[][][] blocks;
+    private final int xBits;
+    private final int yBits;
+    private final int zBits;
+    private Vector origin;
+    private final Map<BlockVector, ClipboardSection> sections = new HashMap<>();
+    private ClipboardSection lastSection;
     private final List<ClipboardEntity> entities = new ArrayList<ClipboardEntity>();
 
     /**
@@ -60,9 +67,18 @@ public class BlockArrayClipboard implements Clipboard {
         checkNotNull(region);
         this.region = region.clone();
         this.origin = region.getMinimumPoint();
+        Vector dimensions = this.region.getMaximumPoint()
+            .subtract(this.region.getMinimumPoint())
+            .add(1, 1, 1);
+        xBits = sectionBits(dimensions.getX());
+        yBits = sectionBits(dimensions.getY());
+        zBits = sectionBits(dimensions.getZ());
+    }
 
-        Vector dimensions = getDimensions();
-        blocks = new BaseBlock[dimensions.getBlockX()][dimensions.getBlockY()][dimensions.getBlockZ()];
+    // Short axes use a smaller power of two. A one-block-wide wire needs only 16 slots per section.
+    private static int sectionBits(double dimension) {
+        int length = Math.max(1, Math.min(16, (int) Math.ceil(dimension)));
+        return Integer.SIZE - Integer.numberOfLeadingZeros(length - 1);
     }
 
     @Override
@@ -125,15 +141,18 @@ public class BlockArrayClipboard implements Clipboard {
 
     @Override
     public BaseBlock getBlock(Vector position) {
-        if (region.contains(position)) {
-            Vector v = position.subtract(region.getMinimumPoint());
-            BaseBlock block = blocks[v.getBlockX()][v.getBlockY()][v.getBlockZ()];
-            if (block != null) {
-                return new BaseBlock(block);
-            }
+        if (!region.contains(position) || sections.isEmpty()) {
+            return new BaseBlock(BlockID.AIR);
         }
 
-        return new BaseBlock(BlockID.AIR);
+        Vector minimum = region.getMinimumPoint();
+        int x = (int) Math.round(position.getX() - minimum.getX());
+        int y = (int) Math.round(position.getY() - minimum.getY());
+        int z = (int) Math.round(position.getZ() - minimum.getZ());
+        ClipboardSection section = sectionAt(x >> xBits, y >> yBits, z >> zBits);
+        int index = localIndex(x, y, z);
+        long state = section.stateAt(index);
+        return new BaseBlock((int) (state >>> 32), (int) state, section.tagAt(index));
     }
 
     @Override
@@ -143,13 +162,55 @@ public class BlockArrayClipboard implements Clipboard {
 
     @Override
     public boolean setBlock(Vector position, BaseBlock block) throws WorldEditException {
-        if (region.contains(position)) {
-            Vector v = position.subtract(region.getMinimumPoint());
-            blocks[v.getBlockX()][v.getBlockY()][v.getBlockZ()] = new BaseBlock(block);
-            return true;
-        } else {
+        if (!region.contains(position)) {
             return false;
         }
+
+        Vector minimum = region.getMinimumPoint();
+        int x = (int) Math.round(position.getX() - minimum.getX());
+        int y = (int) Math.round(position.getY() - minimum.getY());
+        int z = (int) Math.round(position.getZ() - minimum.getZ());
+        long state = ((long) block.getId() << 32) | (block.getData() & 0xffffffffL);
+        CompoundTag tag = block.getNbtData();
+        if (sections.isEmpty() && state == 0 && tag == null) {
+            return true;
+        }
+        ClipboardSection section = sectionAt(x >> xBits, y >> yBits, z >> zBits);
+        boolean wasEmpty = section.isEmpty();
+        int index = localIndex(x, y, z);
+        section.set(index, state, tag);
+        if (section.isEmpty() != wasEmpty) {
+            if (wasEmpty) {
+                sections.put(section.key, section);
+            } else {
+                sections.remove(section.key);
+            }
+        }
+        return true;
+    }
+
+    private int localIndex(int x, int y, int z) {
+        int localX = x & ((1 << xBits) - 1);
+        int localY = y & ((1 << yBits) - 1);
+        int localZ = z & ((1 << zBits) - 1);
+        return (localY << (zBits + xBits)) | (localZ << xBits) | localX;
+    }
+
+    private ClipboardSection sectionAt(int x, int y, int z) {
+        ClipboardSection section = lastSection;
+        if (section != null && section.key.getBlockX() == x
+            && section.key.getBlockY() == y
+            && section.key.getBlockZ() == z) {
+            return section;
+        }
+        BlockVector key = new BlockVector(x, y, z);
+        section = sections.get(key);
+        if (section == null) {
+            // Cache misses as well: visiting a run of air in a sparse schematic needs just one lookup.
+            section = new ClipboardSection(key, 1 << (xBits + yBits + zBits));
+        }
+        lastSection = section;
+        return section;
     }
 
     @Override
