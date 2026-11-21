@@ -24,9 +24,8 @@ package com.sk89q.worldedit.function.operation;
  * <p>
  * Operations call {@link #shouldContinue()} once per unit of work, which for a block visitor means
  * once per block. Reading the clock that often would itself be measurable, so the check is
- * amortised: only every {@value #CHECK_INTERVAL} calls actually looks at the clock. An operation
- * can therefore overshoot its budget by up to {@value #CHECK_INTERVAL} units of work, which is the
- * intended trade-off.
+ * amortised across up to {@value #CHECK_INTERVAL} calls, with shorter intervals for small budgets.
+ * Operations can overshoot by the time it takes to complete one such interval.
  * </p>
  */
 public class TimeBudgetRunContext extends RunContext {
@@ -37,7 +36,8 @@ public class TimeBudgetRunContext extends RunContext {
     private static final int CHECK_INTERVAL = 256;
 
     private final long deadline;
-    private int countdown = CHECK_INTERVAL;
+    private final int checkInterval;
+    private int countdown;
     private boolean expired;
 
     /**
@@ -47,6 +47,10 @@ public class TimeBudgetRunContext extends RunContext {
      */
     public TimeBudgetRunContext(long budgetNanos) {
         this.deadline = System.nanoTime() + budgetNanos;
+        // A busy server can give the edit as little as a millisecond. Check more frequently
+        // on those ticks, especially when the operation is placing tile entities.
+        this.checkInterval = budgetNanos < 5_000_000L ? 16 : CHECK_INTERVAL;
+        this.countdown = checkInterval;
     }
 
     @Override
@@ -59,7 +63,7 @@ public class TimeBudgetRunContext extends RunContext {
             return true;
         }
 
-        countdown = CHECK_INTERVAL;
+        countdown = checkInterval;
         return checkClock();
     }
 
