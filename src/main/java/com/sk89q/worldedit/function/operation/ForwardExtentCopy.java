@@ -26,6 +26,7 @@ import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.function.CombinedRegionFunction;
+import com.sk89q.worldedit.function.EntityFunction;
 import com.sk89q.worldedit.function.RegionFunction;
 import com.sk89q.worldedit.function.RegionMaskingFilter;
 import com.sk89q.worldedit.function.block.ExtentBlockCopy;
@@ -62,7 +63,9 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
     private Transform transform = new Identity();
     private Transform currentTransform = null;
     private RegionVisitor lastVisitor;
+    private ExtentEntityCopy lastEntityCopy;
     private int affected;
+    private int entitiesNotCreated;
 
     /**
      * Create a new copy using the region's lowest minimum point as the
@@ -235,11 +238,24 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
         return affected;
     }
 
+    /**
+     * Get the number of entities the destination refused to create.
+     *
+     * @return the number of entities not created
+     */
+    public int getEntitiesNotCreated() {
+        return entitiesNotCreated;
+    }
+
     @Override
     public Operation resume(RunContext run) throws WorldEditException {
         if (lastVisitor != null) {
             affected += lastVisitor.getAffected();
             lastVisitor = null;
+        }
+        if (lastEntityCopy != null) {
+            entitiesNotCreated += lastEntityCopy.getNotCreated();
+            lastEntityCopy = null;
         }
 
         if (repetitions > 0) {
@@ -264,9 +280,19 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
 
             ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, entityTransform);
             entityCopy.setRemoving(removingEntities);
+            lastEntityCopy = entityCopy;
             List<? extends Entity> entities = source.getEntities(region);
-            EntityVisitor entityVisitor = new EntityVisitor(entities.iterator(), entityCopy);
-            return new DelegateOperation(this, new OperationQueue(blockVisitor, entityVisitor));
+            // Entities can move between the listing and the copy, which can be ticks apart
+            EntityFunction inRegion = entity -> region.contains(
+                entity.getLocation()
+                    .toVector())
+                && entityCopy.apply(entity);
+            EntityVisitor entityVisitor = new EntityVisitor(entities.iterator(), inRegion);
+            // Moving entities go first: once their blocks are gone, a hanging entity like an item frame
+            // drops off and would be copied as well as dropped
+            OperationQueue queue = removingEntities ? new OperationQueue(entityVisitor, blockVisitor)
+                : new OperationQueue(blockVisitor, entityVisitor);
+            return new DelegateOperation(this, queue);
         } else {
             return null;
         }

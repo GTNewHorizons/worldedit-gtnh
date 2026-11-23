@@ -59,7 +59,10 @@ public class EntityCreate implements Change {
 
     @Override
     public void redo(UndoContext context) throws WorldEditException {
-        entity = checkNotNull(context.getExtent()).createEntity(location, state);
+        // A redo that was cancelled partway runs again: don't create the entity twice
+        if (entity == null) {
+            entity = checkNotNull(context.getExtent()).createEntity(location, state);
+        }
     }
 
 }

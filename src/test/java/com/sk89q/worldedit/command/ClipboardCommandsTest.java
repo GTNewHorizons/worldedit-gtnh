@@ -1,16 +1,20 @@
 package com.sk89q.worldedit.command;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Before;
@@ -23,6 +27,8 @@ import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.entity.BaseEntity;
+import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extent.clipboard.Clipboard;
 import com.sk89q.worldedit.function.mask.BlockMask;
@@ -31,6 +37,7 @@ import com.sk89q.worldedit.function.pattern.BlockPattern;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.ClipboardHolder;
+import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.operation.DirectOperationScheduler;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.registry.WorldData;
@@ -46,6 +53,7 @@ public class ClipboardCommandsTest {
     private static final Vector DIRT_POSITION = new Vector(1, 0, 0);
 
     private final Map<Vector, Integer> world = new HashMap<>();
+    private final List<String> events = new ArrayList<>();
     private final Player player = mock(Player.class);
     private final LocalSession session = mock(LocalSession.class);
     private final Region region = new CuboidRegion(STONE_POSITION, DIRT_POSITION);
@@ -72,6 +80,7 @@ public class ClipboardCommandsTest {
             .getLazyBlock(any(Vector.class));
         doAnswer(call -> {
             world.put(key(call.getArgument(0)), ((BaseBlock) call.getArgument(1)).getType());
+            events.add("block");
             return true;
         }).when(editSession)
             .setBlock(any(Vector.class), any(BaseBlock.class));
@@ -90,10 +99,21 @@ public class ClipboardCommandsTest {
     }
 
     private Clipboard cut(int leave, Mask mask) throws Exception {
+        return cut(leave, mask, false);
+    }
+
+    private Clipboard cut(int leave, Mask mask, boolean copyEntities) throws Exception {
         WorldEdit worldEdit = mock(WorldEdit.class);
         when(worldEdit.getOperationScheduler()).thenReturn(new DirectOperationScheduler());
-        ClipboardCommands
-            .cut(worldEdit, player, session, editSession, region, new BlockPattern(new BaseBlock(leave)), false, mask);
+        ClipboardCommands.cut(
+            worldEdit,
+            player,
+            session,
+            editSession,
+            region,
+            new BlockPattern(new BaseBlock(leave)),
+            copyEntities,
+            mask);
         ArgumentCaptor<ClipboardHolder> holder = ArgumentCaptor.forClass(ClipboardHolder.class);
         verify(session).setClipboard(holder.capture());
         return holder.getValue()
@@ -138,5 +158,62 @@ public class ClipboardCommandsTest {
 
         assertEquals(GLASS, typeAt(STONE_POSITION));
         assertEquals(DIRT, typeAt(DIRT_POSITION));
+    }
+
+    private Entity entityAt(Vector position) {
+        Entity entity = mock(Entity.class);
+        when(entity.getState()).thenReturn(new BaseEntity("Pig"));
+        when(entity.getLocation()).thenReturn(new Location(editSession, position));
+        when(entity.remove()).thenAnswer(call -> {
+            events.add("entity");
+            return true;
+        });
+        return entity;
+    }
+
+    @Test
+    public void cutWithEntitiesMovesThemBeforeRemovingBlocks() throws Exception {
+        Entity entity = entityAt(new Vector(0.5, 0, 0));
+        doReturn(Collections.singletonList(entity)).when(editSession)
+            .getEntities(any(Region.class));
+
+        Clipboard clipboard = cut(AIR, null, true);
+
+        assertEquals(
+            1,
+            clipboard.getEntities()
+                .size());
+        assertEquals("entity", events.get(0));
+        assertTrue(events.contains("block"));
+    }
+
+    @Test
+    public void cutSkipsAnEntityThatLeftTheSelection() throws Exception {
+        Entity entity = entityAt(new Vector(10, 0, 0));
+        doReturn(Collections.singletonList(entity)).when(editSession)
+            .getEntities(any(Region.class));
+
+        Clipboard clipboard = cut(AIR, null, true);
+
+        assertEquals(
+            0,
+            clipboard.getEntities()
+                .size());
+        verify(entity, never()).remove();
+    }
+
+    @Test
+    public void cutWithoutEntitiesLeavesThem() throws Exception {
+        Entity entity = entityAt(new Vector(0.5, 0, 0));
+        doReturn(Collections.singletonList(entity)).when(editSession)
+            .getEntities(any(Region.class));
+
+        Clipboard clipboard = cut(AIR, null, false);
+
+        assertEquals(
+            0,
+            clipboard.getEntities()
+                .size());
+        verify(entity, never()).remove();
     }
 }

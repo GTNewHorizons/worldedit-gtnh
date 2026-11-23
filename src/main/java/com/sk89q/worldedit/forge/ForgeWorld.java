@@ -684,7 +684,10 @@ public class ForgeWorld extends AbstractWorld {
                 location.getYaw(),
                 location.getPitch());
 
-            world.spawnEntityInWorld(createdEntity);
+            // Forge refuses a spawn in an unloaded chunk, or when a mod cancels EntityJoinWorldEvent
+            if (!world.spawnEntityInWorld(createdEntity)) {
+                return null;
+            }
             return new ForgeEntity(createdEntity);
         } else {
             return null;

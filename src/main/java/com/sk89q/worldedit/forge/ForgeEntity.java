@@ -23,6 +23,7 @@ import java.lang.ref.WeakReference;
 import javax.annotation.Nullable;
 
 import net.minecraft.entity.EntityList;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
 
 import com.sk89q.worldedit.Vector;
@@ -45,7 +46,8 @@ class ForgeEntity implements Entity {
     @Override
     public BaseEntity getState() {
         net.minecraft.entity.Entity entity = entityRef.get();
-        if (entity != null) {
+        // A dead entity is already gone from the world, e.g. an item frame that dropped off its wall
+        if (entity != null && !entity.isDead) {
             String id = EntityList.getEntityString(entity);
             if (id != null) {
                 NBTTagCompound tag = new NBTTagCompound();
@@ -87,6 +89,14 @@ class ForgeEntity implements Entity {
     public boolean remove() {
         net.minecraft.entity.Entity entity = entityRef.get();
         if (entity != null) {
+            // Some entities, like chest minecarts, drop their inventory in setDead(). WorldEdit saves the
+            // entity's state before removing it, so dropping would duplicate the items.
+            if (entity instanceof IInventory) {
+                IInventory inventory = (IInventory) entity;
+                for (int i = 0; i < inventory.getSizeInventory(); i++) {
+                    inventory.setInventorySlotContents(i, null);
+                }
+            }
             entity.setDead();
         }
         return true;

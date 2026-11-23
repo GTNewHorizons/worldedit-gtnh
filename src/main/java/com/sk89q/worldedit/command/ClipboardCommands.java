@@ -224,6 +224,14 @@ public final class ClipboardCommands {
                     }
 
                     player.print("The clipboard has been pasted at " + to);
+                    int notCreated = operation instanceof ForwardExtentCopy
+                        ? ((ForwardExtentCopy) operation).getEntitiesNotCreated()
+                        : 0;
+                    if (notCreated > 0) {
+                        player.printError(
+                            notCreated + (notCreated == 1 ? " entity was" : " entities were")
+                                + " not placed: the chunk is not loaded or a mod blocked it. They are still in your clipboard.");
+                    }
                 }
 
                 @Override

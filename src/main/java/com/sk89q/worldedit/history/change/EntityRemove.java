@@ -48,7 +48,10 @@ public class EntityRemove implements Change {
 
     @Override
     public void undo(UndoContext context) throws WorldEditException {
-        entity = checkNotNull(context.getExtent()).createEntity(location, state);
+        // An undo that was cancelled partway runs again: don't restore the entity twice
+        if (entity == null) {
+            entity = checkNotNull(context.getExtent()).createEntity(location, state);
+        }
     }
 
     @Override

@@ -43,6 +43,7 @@ public class ExtentEntityCopy implements EntityFunction {
     private final Vector to;
     private final Transform transform;
     private boolean removing;
+    private int notCreated;
 
     /**
      * Create a new instance.
@@ -81,6 +82,15 @@ public class ExtentEntityCopy implements EntityFunction {
         this.removing = removing;
     }
 
+    /**
+     * Get the number of entities the destination refused to create.
+     *
+     * @return the number of entities not created
+     */
+    public int getNotCreated() {
+        return notCreated;
+    }
+
     @Override
     public boolean apply(Entity entity) throws WorldEditException {
         BaseEntity state = entity.getState();
@@ -111,6 +121,9 @@ public class ExtentEntityCopy implements EntityFunction {
             state = transformNbtData(state);
 
             boolean success = destination.createEntity(newLocation, state) != null;
+            if (!success) {
+                notCreated++;
+            }
 
             // Remove
             if (isRemoving() && success) {
