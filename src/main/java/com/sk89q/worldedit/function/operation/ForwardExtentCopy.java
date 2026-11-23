@@ -23,7 +23,6 @@ import java.util.List;
 
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.function.CombinedRegionFunction;
 import com.sk89q.worldedit.function.EntityFunction;
@@ -281,18 +280,33 @@ public class ForwardExtentCopy implements Operation, AffectedCounter {
             ExtentEntityCopy entityCopy = new ExtentEntityCopy(from, destination, to, entityTransform);
             entityCopy.setRemoving(removingEntities);
             lastEntityCopy = entityCopy;
-            List<? extends Entity> entities = source.getEntities(region);
-            // Entities can move between the listing and the copy, which can be ticks apart
+            // Entities can move while the blocks are copied, so they are listed after, and checked again
+            // in case the visitor spans ticks
             EntityFunction inRegion = entity -> region.contains(
                 entity.getLocation()
-                    .toVector())
+                    .toVector()
+                    .toBlockPoint())
                 && entityCopy.apply(entity);
-            EntityVisitor entityVisitor = new EntityVisitor(entities.iterator(), inRegion);
-            // Moving entities go first: once their blocks are gone, a hanging entity like an item frame
-            // drops off and would be copied as well as dropped
-            OperationQueue queue = removingEntities ? new OperationQueue(entityVisitor, blockVisitor)
-                : new OperationQueue(blockVisitor, entityVisitor);
-            return new DelegateOperation(this, queue);
+            Operation entityPass = new Operation() {
+
+                @Override
+                public Operation resume(RunContext run) throws WorldEditException {
+                    EntityVisitor visitor = new EntityVisitor(
+                        source.getEntities(region)
+                            .iterator(),
+                        inRegion);
+                    // Entities go after the blocks, so a cut that fails or is cancelled midway doesn't remove
+                    // them, and they are moved all at once so it can't stop halfway through them either
+                    return removingEntities ? visitor.resume(new RunContext()) : visitor;
+                }
+
+                @Override
+                public void cancel() {}
+
+                @Override
+                public void addStatusMessages(List<String> messages) {}
+            };
+            return new DelegateOperation(this, new OperationQueue(blockVisitor, entityPass));
         } else {
             return null;
         }

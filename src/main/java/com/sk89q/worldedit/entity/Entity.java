@@ -69,4 +69,14 @@ public interface Entity extends Faceted {
      */
     boolean remove();
 
+    /**
+     * Remove this entity without letting it drop anything, such as a chest minecart's items. Use this
+     * only when the entity's state was saved elsewhere, like when it is moved into a clipboard.
+     *
+     * @return true if removal was successful
+     */
+    default boolean removeWithoutDrops() {
+        return remove();
+    }
+
 }

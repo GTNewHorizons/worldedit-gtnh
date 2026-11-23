@@ -32,6 +32,7 @@ import com.sk89q.worldedit.history.change.BlockChange;
 public class UndoContext {
 
     private Extent extent;
+    private int entitiesNotCreated;
 
     /**
      * Get the extent set on this context.
@@ -49,5 +50,21 @@ public class UndoContext {
      */
     public void setExtent(@Nullable Extent extent) {
         this.extent = extent;
+    }
+
+    /**
+     * Count an entity the extent refused to create.
+     */
+    public void addEntityNotCreated() {
+        entitiesNotCreated++;
+    }
+
+    /**
+     * Get the number of entities the extent refused to create.
+     *
+     * @return the number of entities not created
+     */
+    public int getEntitiesNotCreated() {
+        return entitiesNotCreated;
     }
 }

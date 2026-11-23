@@ -121,11 +121,20 @@ public class ChangeSetExtent extends AbstractDelegateExtent {
 
         @Override
         public boolean remove() {
+            return remove(false);
+        }
+
+        @Override
+        public boolean removeWithoutDrops() {
+            return remove(true);
+        }
+
+        private boolean remove(boolean withoutDrops) {
             Location location = entity.getLocation();
             BaseEntity state = entity.getState();
-            boolean success = entity.remove();
+            boolean success = withoutDrops ? entity.removeWithoutDrops() : entity.remove();
             if (state != null && success) {
-                changeSet.add(new EntityRemove(location, state));
+                changeSet.add(new EntityRemove(location, state, withoutDrops));
             }
             return success;
         }

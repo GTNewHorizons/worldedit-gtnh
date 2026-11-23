@@ -125,9 +125,9 @@ public class ExtentEntityCopy implements EntityFunction {
                 notCreated++;
             }
 
-            // Remove
+            // The entity's state is in the destination now, so it must not drop a second copy of its items
             if (isRemoving() && success) {
-                entity.remove();
+                entity.removeWithoutDrops();
             }
 
             return success;

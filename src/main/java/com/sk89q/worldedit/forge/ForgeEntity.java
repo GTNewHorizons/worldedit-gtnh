@@ -89,8 +89,16 @@ class ForgeEntity implements Entity {
     public boolean remove() {
         net.minecraft.entity.Entity entity = entityRef.get();
         if (entity != null) {
-            // Some entities, like chest minecarts, drop their inventory in setDead(). WorldEdit saves the
-            // entity's state before removing it, so dropping would duplicate the items.
+            entity.setDead();
+        }
+        return true;
+    }
+
+    @Override
+    public boolean removeWithoutDrops() {
+        net.minecraft.entity.Entity entity = entityRef.get();
+        if (entity != null) {
+            // Chest minecarts and the like drop their inventory in setDead()
             if (entity instanceof IInventory) {
                 IInventory inventory = (IInventory) entity;
                 for (int i = 0; i < inventory.getSizeInventory(); i++) {

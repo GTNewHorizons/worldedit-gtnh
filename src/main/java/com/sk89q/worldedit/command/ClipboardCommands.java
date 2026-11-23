@@ -230,7 +230,7 @@ public final class ClipboardCommands {
                     if (notCreated > 0) {
                         player.printError(
                             notCreated + (notCreated == 1 ? " entity was" : " entities were")
-                                + " not placed: the chunk is not loaded or a mod blocked it. They are still in your clipboard.");
+                                + " not placed because a mod blocked the spawn. They are still in your clipboard.");
                     }
                 }
 

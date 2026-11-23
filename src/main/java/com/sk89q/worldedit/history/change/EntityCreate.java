@@ -62,6 +62,9 @@ public class EntityCreate implements Change {
         // A redo that was cancelled partway runs again: don't create the entity twice
         if (entity == null) {
             entity = checkNotNull(context.getExtent()).createEntity(location, state);
+            if (entity == null) {
+                context.addEntityNotCreated();
+            }
         }
     }
 

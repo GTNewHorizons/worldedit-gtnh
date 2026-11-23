@@ -80,6 +80,15 @@ public class ChangeSetExecutor implements Operation {
         return null;
     }
 
+    /**
+     * Get the number of entities that could not be restored.
+     *
+     * @return the number of entities not created
+     */
+    public int getEntitiesNotCreated() {
+        return context.getEntitiesNotCreated();
+    }
+
     @Override
     public void cancel() {}
 

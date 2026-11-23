@@ -31,6 +31,7 @@ public class EntityRemove implements Change {
 
     private final Location location;
     private final BaseEntity state;
+    private final boolean withoutDrops;
     private Entity entity;
 
     /**
@@ -40,10 +41,22 @@ public class EntityRemove implements Change {
      * @param state    the state of the created entity
      */
     public EntityRemove(Location location, BaseEntity state) {
+        this(location, state, false);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param location     the location
+     * @param state        the state of the created entity
+     * @param withoutDrops true if the entity was removed without its drops, and redo should do the same
+     */
+    public EntityRemove(Location location, BaseEntity state, boolean withoutDrops) {
         checkNotNull(location);
         checkNotNull(state);
         this.location = location;
         this.state = state;
+        this.withoutDrops = withoutDrops;
     }
 
     @Override
@@ -51,13 +64,20 @@ public class EntityRemove implements Change {
         // An undo that was cancelled partway runs again: don't restore the entity twice
         if (entity == null) {
             entity = checkNotNull(context.getExtent()).createEntity(location, state);
+            if (entity == null) {
+                context.addEntityNotCreated();
+            }
         }
     }
 
     @Override
     public void redo(UndoContext context) throws WorldEditException {
         if (entity != null) {
-            entity.remove();
+            if (withoutDrops) {
+                entity.removeWithoutDrops();
+            } else {
+                entity.remove();
+            }
             entity = null;
         }
     }

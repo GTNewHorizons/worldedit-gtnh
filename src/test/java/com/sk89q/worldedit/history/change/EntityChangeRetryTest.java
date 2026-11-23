@@ -1,7 +1,9 @@
 package com.sk89q.worldedit.history.change;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,5 +63,36 @@ public class EntityChangeRetryTest {
         change.redo(context);
 
         verify(extent, times(1)).createEntity(any(Location.class), any(BaseEntity.class));
+    }
+
+    @Test
+    public void redoOfAMoveRemovesWithoutDrops() throws Exception {
+        EntityRemove change = new EntityRemove(location, state, true);
+
+        change.undo(context);
+        change.redo(context);
+
+        verify(spawned).removeWithoutDrops();
+        verify(spawned, never()).remove();
+    }
+
+    @Test
+    public void redoOfARemovalKeepsDrops() throws Exception {
+        EntityRemove change = new EntityRemove(location, state);
+
+        change.undo(context);
+        change.redo(context);
+
+        verify(spawned).remove();
+        verify(spawned, never()).removeWithoutDrops();
+    }
+
+    @Test
+    public void undoCountsAnEntityThatCouldNotBeRestored() throws Exception {
+        when(extent.createEntity(any(Location.class), any(BaseEntity.class))).thenReturn(null);
+
+        new EntityRemove(location, state).undo(context);
+
+        assertEquals(1, context.getEntitiesNotCreated());
     }
 }

@@ -38,6 +38,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S21PacketChunkData;
 import net.minecraft.server.management.PlayerManager;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
@@ -646,7 +647,7 @@ public class ForgeWorld extends AbstractWorld {
         World world = getWorld();
         List<net.minecraft.entity.Entity> ents = world.loadedEntityList;
         for (net.minecraft.entity.Entity entity : ents) {
-            if (region.contains(new Vector(entity.posX, entity.posY, entity.posZ))) {
+            if (region.contains(Vector.toBlockPoint(entity.posX, entity.posY, entity.posZ))) {
                 entities.add(new ForgeEntity(entity));
             }
         }
@@ -684,7 +685,11 @@ public class ForgeWorld extends AbstractWorld {
                 location.getYaw(),
                 location.getPitch());
 
-            // Forge refuses a spawn in an unloaded chunk, or when a mod cancels EntityJoinWorldEvent
+            // Forge refuses a spawn in an unloaded chunk, so load it like a block write would
+            world.getChunkFromChunkCoords(
+                MathHelper.floor_double(location.getX()) >> 4,
+                MathHelper.floor_double(location.getZ()) >> 4);
+            // A mod can still refuse it by cancelling EntityJoinWorldEvent
             if (!world.spawnEntityInWorld(createdEntity)) {
                 return null;
             }

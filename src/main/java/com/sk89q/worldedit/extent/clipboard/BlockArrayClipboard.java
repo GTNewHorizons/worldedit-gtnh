@@ -103,7 +103,8 @@ public class BlockArrayClipboard implements Clipboard {
         for (Entity entity : entities) {
             if (region.contains(
                 entity.getLocation()
-                    .toVector())) {
+                    .toVector()
+                    .toBlockPoint())) {
                 filtered.add(entity);
             }
         }

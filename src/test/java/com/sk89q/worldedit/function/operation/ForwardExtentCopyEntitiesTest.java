@@ -32,4 +32,17 @@ public class ForwardExtentCopyEntitiesTest {
 
         assertEquals(1, copy.getEntitiesNotCreated());
     }
+
+    @Test
+    public void clipboardFindsAnEntityAnywhereInItsLastBlock() {
+        CuboidRegion region = new CuboidRegion(new Vector(0, 0, 0), new Vector(4, 0, 0));
+        BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
+        clipboard.createEntity(new Location(clipboard, new Vector(4.5, 0.5, 0.5)), new BaseEntity("Pig"));
+        clipboard.createEntity(new Location(clipboard, new Vector(5, 0, 0)), new BaseEntity("Pig"));
+
+        assertEquals(
+            1,
+            clipboard.getEntities(region)
+                .size());
+    }
 }

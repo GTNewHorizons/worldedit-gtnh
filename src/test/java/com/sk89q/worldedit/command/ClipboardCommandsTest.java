@@ -1,11 +1,12 @@
 package com.sk89q.worldedit.command;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -24,6 +25,7 @@ import org.mockito.stubbing.Answer;
 
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.blocks.BaseBlock;
@@ -164,18 +166,23 @@ public class ClipboardCommandsTest {
         Entity entity = mock(Entity.class);
         when(entity.getState()).thenReturn(new BaseEntity("Pig"));
         when(entity.getLocation()).thenReturn(new Location(editSession, position));
-        when(entity.remove()).thenAnswer(call -> {
+        when(entity.removeWithoutDrops()).thenAnswer(call -> {
             events.add("entity");
             return true;
         });
         return entity;
     }
 
-    @Test
-    public void cutWithEntitiesMovesThemBeforeRemovingBlocks() throws Exception {
-        Entity entity = entityAt(new Vector(0.5, 0, 0));
+    private Entity listedEntityAt(Vector position) {
+        Entity entity = entityAt(position);
         doReturn(Collections.singletonList(entity)).when(editSession)
             .getEntities(any(Region.class));
+        return entity;
+    }
+
+    @Test
+    public void cutWithEntitiesMovesThemAfterTheBlocks() throws Exception {
+        Entity entity = listedEntityAt(new Vector(0.5, 0, 0));
 
         Clipboard clipboard = cut(AIR, null, true);
 
@@ -183,15 +190,26 @@ public class ClipboardCommandsTest {
             1,
             clipboard.getEntities()
                 .size());
-        assertEquals("entity", events.get(0));
-        assertTrue(events.contains("block"));
+        verify(entity, never()).remove();
+        assertEquals("block", events.get(0));
+        assertEquals("entity", events.get(events.size() - 1));
+    }
+
+    @Test
+    public void cutTakesAnEntityAnywhereInTheLastBlock() throws Exception {
+        listedEntityAt(new Vector(1.9, 0.9, 0.9));
+
+        Clipboard clipboard = cut(AIR, null, true);
+
+        assertEquals(
+            1,
+            clipboard.getEntities()
+                .size());
     }
 
     @Test
     public void cutSkipsAnEntityThatLeftTheSelection() throws Exception {
-        Entity entity = entityAt(new Vector(10, 0, 0));
-        doReturn(Collections.singletonList(entity)).when(editSession)
-            .getEntities(any(Region.class));
+        Entity entity = listedEntityAt(new Vector(10, 0, 0));
 
         Clipboard clipboard = cut(AIR, null, true);
 
@@ -199,14 +217,12 @@ public class ClipboardCommandsTest {
             0,
             clipboard.getEntities()
                 .size());
-        verify(entity, never()).remove();
+        verify(entity, never()).removeWithoutDrops();
     }
 
     @Test
     public void cutWithoutEntitiesLeavesThem() throws Exception {
-        Entity entity = entityAt(new Vector(0.5, 0, 0));
-        doReturn(Collections.singletonList(entity)).when(editSession)
-            .getEntities(any(Region.class));
+        Entity entity = listedEntityAt(new Vector(0.5, 0, 0));
 
         Clipboard clipboard = cut(AIR, null, false);
 
@@ -214,6 +230,22 @@ public class ClipboardCommandsTest {
             0,
             clipboard.getEntities()
                 .size());
+        verify(entity, never()).removeWithoutDrops();
+    }
+
+    @Test
+    public void cutRejectedByTheBlockLimitLeavesEntities() throws Exception {
+        Entity entity = listedEntityAt(new Vector(0.5, 0, 0));
+        doThrow(new MaxChangedBlocksException(0)).when(editSession)
+            .setBlock(any(Vector.class), any(BaseBlock.class));
+        WorldEdit worldEdit = mock(WorldEdit.class);
+        when(worldEdit.getOperationScheduler()).thenReturn(new DirectOperationScheduler());
+
+        ClipboardCommands
+            .cut(worldEdit, player, session, editSession, region, new BlockPattern(new BaseBlock(AIR)), true, null);
+
+        verify(entity, never()).removeWithoutDrops();
         verify(entity, never()).remove();
+        verify(player).printError(anyString());
     }
 }

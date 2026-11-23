@@ -36,6 +36,7 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.command.brigadier.Nodes;
 import com.sk89q.worldedit.entity.Player;
+import com.sk89q.worldedit.function.operation.ChangeSetExecutor;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.RunContext;
 import com.sk89q.worldedit.util.operation.OperationCompletion;
@@ -127,6 +128,14 @@ public class HistoryCommands {
                     giveBackPlace.run();
                 } else {
                     player.print(message);
+                    int notCreated = operation instanceof ChangeSetExecutor
+                        ? ((ChangeSetExecutor) operation).getEntitiesNotCreated()
+                        : 0;
+                    if (notCreated > 0) {
+                        player.printError(
+                            notCreated + (notCreated == 1 ? " entity was" : " entities were")
+                                + " not restored because a mod blocked the spawn.");
+                    }
                 }
             }
 
